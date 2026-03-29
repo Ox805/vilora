@@ -48,7 +48,11 @@ def login():
     user = User.get_by_email(db, email)
     if user and user.check_password(password):
         login_user(user)
-        return jsonify({'success': True})
+        redirect_url = '/dashboard'
+        pending = session.pop('pending_join', None)
+        if pending:
+            redirect_url = url_for('join_session', code=pending)
+        return jsonify({'success': True, 'redirect': redirect_url})
     return jsonify({'success': False, 'error': 'Invalid email or password'}), 401
 
 
@@ -68,7 +72,11 @@ def register():
 
     user = User.create(db, email, display_name, password)
     login_user(user)
-    return jsonify({'success': True})
+    redirect_url = '/dashboard'
+    pending = session.pop('pending_join', None)
+    if pending:
+        redirect_url = url_for('join_session', code=pending)
+    return jsonify({'success': True, 'redirect': redirect_url})
 
 
 @app.route('/api/logout', methods=['POST'])

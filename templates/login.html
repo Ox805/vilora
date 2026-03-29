@@ -62,7 +62,7 @@ async function handleLogin(e) {
         });
         const data = await res.json();
         if (data.success) {
-            window.location.href = '/dashboard';
+            window.location.href = data.redirect || '/dashboard';
         } else {
             const errEl = document.getElementById('auth-error');
             errEl.textContent = data.error || 'Something went wrong';
