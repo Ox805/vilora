@@ -1,4 +1,6 @@
 import os
+import sys
+import logging
 import secrets
 import uuid
 from datetime import datetime, timedelta
@@ -19,6 +21,10 @@ app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
 app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
 app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_DEFAULT_SENDER', os.environ.get('MAIL_USERNAME'))
 mail = Mail(app)
+
+# Logging setup — ensure output reaches Railway logs
+logging.basicConfig(stream=sys.stderr, level=logging.INFO)
+logger = logging.getLogger('vilora')
 
 # Flask-Login setup
 login_manager = LoginManager()
@@ -122,6 +128,9 @@ def forgot_password():
 
     reset_link = url_for('reset_password_page', token=token, _external=True)
 
+    logger.info(f"Password reset requested for {email}, user found: {user.display_name}")
+    logger.info(f"MAIL_USERNAME={app.config.get('MAIL_USERNAME')}, MAIL_SERVER={app.config.get('MAIL_SERVER')}")
+
     if app.config['MAIL_USERNAME']:
         try:
             msg = MailMessage(
@@ -138,12 +147,12 @@ def forgot_password():
             <p>If you didn't request this, you can safely ignore this email.</p>
             """
             mail.send(msg)
-            print(f"[Vilora] Password reset email sent to {email}")
+            logger.info(f"Password reset email sent to {email}")
         except Exception as e:
-            print(f"[Vilora] Failed to send reset email: {e}")
-            print(f"[Vilora] Reset URL for {email}: {reset_link}")
+            logger.error(f"Failed to send reset email: {e}", exc_info=True)
+            logger.info(f"Reset URL for {email}: {reset_link}")
     else:
-        print(f"[Vilora] Mail not configured (MAIL_USERNAME={app.config['MAIL_USERNAME']}). Reset URL for {email}: {reset_link}")
+        logger.warning(f"Mail not configured. Reset URL for {email}: {reset_link}")
 
     return jsonify({'success': True})
 
