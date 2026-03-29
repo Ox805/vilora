@@ -4,11 +4,21 @@ import uuid
 from datetime import datetime, timedelta
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
+from flask_mail import Mail, Message as MailMessage
 from models.database import db_init, get_db, User, MediationSession, Message
 from mediation.engine import MediationEngine
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(32))
+
+# Flask-Mail setup
+app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
+app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 587))
+app.config['MAIL_USE_TLS'] = os.environ.get('MAIL_USE_TLS', 'true').lower() == 'true'
+app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
+app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
+app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_DEFAULT_SENDER', os.environ.get('MAIL_USERNAME'))
+mail = Mail(app)
 
 # Flask-Login setup
 login_manager = LoginManager()
@@ -111,21 +121,28 @@ def forgot_password():
     db.commit()
 
     reset_link = url_for('reset_password_page', token=token, _external=True)
-    print(f"[Password Reset] Link for {email}: {reset_link}")
 
-    # Send email if mail is configured
-    try:
-        from flask_mail import Mail, Message as MailMessage
-        mail = Mail(app)
-        msg = MailMessage(
-            subject='Vilora — Reset Your Password',
-            sender=app.config.get('MAIL_DEFAULT_SENDER', 'noreply@vilora.app'),
-            recipients=[email],
-            body=f'Click this link to reset your password:\n\n{reset_link}\n\nThis link expires in 1 hour.'
-        )
-        mail.send(msg)
-    except Exception:
-        pass  # Mail not configured — link printed to console
+    if app.config['MAIL_USERNAME']:
+        try:
+            msg = MailMessage(
+                subject='Password Reset - Vilora',
+                recipients=[email]
+            )
+            msg.html = f"""
+            <h2>Password Reset</h2>
+            <p>Hi {user.display_name},</p>
+            <p>You requested a password reset for your Vilora account.</p>
+            <p><a href="{reset_link}" style="display:inline-block;padding:12px 24px;background:#4A6FA5;color:#fff;text-decoration:none;border-radius:4px;font-weight:bold;">Reset Password</a></p>
+            <p>Or copy this link: {reset_link}</p>
+            <p>This link expires in 1 hour.</p>
+            <p>If you didn't request this, you can safely ignore this email.</p>
+            """
+            mail.send(msg)
+        except Exception as e:
+            app.logger.warning(f"Failed to send reset email: {e}")
+            app.logger.info(f"Reset URL for {email}: {reset_link}")
+    else:
+        app.logger.info(f"Mail not configured. Reset URL for {email}: {reset_link}")
 
     return jsonify({'success': True})
 
