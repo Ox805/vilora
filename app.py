@@ -128,8 +128,9 @@ def forgot_password():
 
     reset_link = url_for('reset_password_page', token=token, _external=True)
 
-    logger.info(f"Password reset requested for {email}, user found: {user.display_name}")
-    logger.info(f"MAIL_USERNAME={app.config.get('MAIL_USERNAME')}, MAIL_SERVER={app.config.get('MAIL_SERVER')}")
+    sys.stderr.write(f"[Vilora] Password reset requested for {email}, user found: {user.display_name}\n")
+    sys.stderr.write(f"[Vilora] MAIL_USERNAME={app.config.get('MAIL_USERNAME')}, MAIL_SERVER={app.config.get('MAIL_SERVER')}\n")
+    sys.stderr.flush()
 
     if app.config['MAIL_USERNAME']:
         try:
