@@ -136,6 +136,32 @@ body {
 }
 
 .auth-card h2 { margin-bottom: 1.5rem; }
+
+.password-field {
+    position: relative;
+}
+
+.password-field input {
+    padding-right: 2.5rem;
+}
+
+.password-toggle {
+    position: absolute;
+    right: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-muted);
+    padding: 0.25rem;
+    display: flex;
+    align-items: center;
+}
+
+.password-toggle:hover {
+    color: var(--text);
+}
 .auth-toggle { text-align: center; margin-top: 1rem; font-size: 0.9rem; }
 .auth-toggle a { color: var(--primary); }
 
