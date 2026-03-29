@@ -339,10 +339,12 @@ def session_room(session_id):
     participants = med_session.get_participants(db)
     is_creator = (current_user.id == med_session.creator_id)
     invite_link = url_for('join_session', code=med_session.invite_code, _external=True)
+    creator = User.get_by_id(db, med_session.creator_id)
+    creator_name = creator.display_name if creator else 'Someone'
 
     return render_template('session.html', session=med_session,
                            participants=participants, is_creator=is_creator,
-                           invite_link=invite_link)
+                           invite_link=invite_link, creator_name=creator_name)
 
 
 @app.route('/api/sessions/<int:session_id>/messages', methods=['GET'])

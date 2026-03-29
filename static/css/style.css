@@ -326,6 +326,50 @@ body {
 
 .modal-content h2 { margin-bottom: 1.5rem; }
 
+.welcome-modal-content {
+    max-width: 550px;
+    line-height: 1.7;
+}
+
+.welcome-modal-content p {
+    margin-bottom: 1rem;
+    color: var(--text);
+    font-size: 0.95rem;
+}
+
+.welcome-topic {
+    background: var(--mediator-bg);
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius);
+    font-weight: 600;
+    color: var(--primary-dark);
+    margin-bottom: 1rem;
+    font-size: 1.05rem;
+}
+
+.welcome-tips {
+    background: var(--bg);
+    padding: 1rem 1.25rem;
+    border-radius: var(--radius);
+    margin-bottom: 1.5rem;
+    font-size: 0.9rem;
+}
+
+.welcome-tips strong {
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+.welcome-tips ul {
+    margin: 0;
+    padding-left: 1.25rem;
+}
+
+.welcome-tips li {
+    margin-bottom: 0.25rem;
+    color: var(--text-light);
+}
+
 /* === Invite Card === */
 .invite-card {
     background: var(--intake-bg);

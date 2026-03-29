@@ -22,6 +22,31 @@
             </div>
         </div>
     </div>
+    {% else %}
+    <!-- Welcome modal for invited participants -->
+    <div id="welcome-modal" class="modal">
+        <div class="modal-content welcome-modal-content">
+            <h2>Welcome to Vilora</h2>
+            <p>Hi <strong>{{ current_user.display_name }}</strong>, you've been invited by
+            <strong>{{ creator_name }}</strong> to participate in a collaborative session to discuss:</p>
+            <div class="welcome-topic">{{ session.topic }}</div>
+            <p>Vilora will act as a neutral facilitator to help you both think about and work through
+            this together. There are no right or wrong answers here — just an open space for honest dialogue.</p>
+            <p>Feel free to share your candid thoughts, perspectives, questions, and ideas.
+            Vilora will help guide the conversation toward the best possible outcome for everyone involved.</p>
+            <div class="welcome-tips">
+                <strong>A few tips:</strong>
+                <ul>
+                    <li>Be open and honest — your perspective matters</li>
+                    <li>Vilora will help reframe things constructively if emotions run high</li>
+                    <li>You can request a summary of the conversation at any time</li>
+                </ul>
+            </div>
+            <div class="form-actions">
+                <button onclick="dismissWelcome()" class="btn btn-primary btn-lg">Got it, let's begin</button>
+            </div>
+        </div>
+    </div>
     {% endif %}
 
     <div id="messages" class="message-list">
@@ -137,6 +162,11 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+function dismissWelcome() {
+    document.getElementById('welcome-modal').style.display = 'none';
+    document.getElementById('message-input').focus();
 }
 
 function copyInviteLink() {
