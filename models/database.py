@@ -6,12 +6,19 @@ from flask import g, current_app
 from flask_login import UserMixin
 
 
+def _is_postgres():
+    db_url = os.environ.get('DATABASE_URL')
+    return bool(db_url and db_url.startswith('postgres'))
+
+
 def get_db():
     if 'db' not in g:
-        db_url = os.environ.get('DATABASE_URL')
-        if db_url and db_url.startswith('postgres'):
+        if _is_postgres():
             import psycopg2
+            import psycopg2.extras
+            db_url = os.environ.get('DATABASE_URL')
             g.db = psycopg2.connect(db_url)
+            g.db.autocommit = False
         else:
             db_path = os.path.join(current_app.root_path, 'vilora.db')
             g.db = sqlite3.connect(db_path)
@@ -20,68 +27,139 @@ def get_db():
     return g.db
 
 
+def _cursor(db):
+    """Get a cursor that returns dict-like rows for both SQLite and PostgreSQL."""
+    if _is_postgres():
+        import psycopg2.extras
+        return db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    return db.cursor()
+
+
+def _exec(db, sql, params=None):
+    """Execute a query, adapting placeholders for the database type."""
+    if _is_postgres():
+        sql = sql.replace('?', '%s')
+    cur = _cursor(db)
+    cur.execute(sql, params or ())
+    return cur
+
+
 def db_init():
     db = get_db()
-    db.executescript("""
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            email TEXT UNIQUE NOT NULL,
-            display_name TEXT NOT NULL,
-            password_hash TEXT NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
 
-        CREATE TABLE IF NOT EXISTS mediation_sessions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            creator_id INTEGER NOT NULL,
-            topic TEXT NOT NULL,
-            session_type TEXT DEFAULT 'general',
-            invite_code TEXT UNIQUE NOT NULL,
-            status TEXT DEFAULT 'active',
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (creator_id) REFERENCES users(id)
-        );
+    if _is_postgres():
+        cur = db.cursor()
+        statements = [
+            """CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                email TEXT UNIQUE NOT NULL,
+                display_name TEXT NOT NULL,
+                password_hash TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )""",
+            """CREATE TABLE IF NOT EXISTS mediation_sessions (
+                id SERIAL PRIMARY KEY,
+                creator_id INTEGER NOT NULL REFERENCES users(id),
+                topic TEXT NOT NULL,
+                session_type TEXT DEFAULT 'general',
+                invite_code TEXT UNIQUE NOT NULL,
+                status TEXT DEFAULT 'active',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )""",
+            """CREATE TABLE IF NOT EXISTS session_participants (
+                id SERIAL PRIMARY KEY,
+                session_id INTEGER NOT NULL REFERENCES mediation_sessions(id),
+                user_id INTEGER NOT NULL REFERENCES users(id),
+                joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(session_id, user_id)
+            )""",
+            """CREATE TABLE IF NOT EXISTS messages (
+                id SERIAL PRIMARY KEY,
+                session_id INTEGER NOT NULL REFERENCES mediation_sessions(id),
+                user_id INTEGER REFERENCES users(id),
+                content TEXT NOT NULL,
+                msg_type TEXT DEFAULT 'user',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )""",
+            """CREATE TABLE IF NOT EXISTS agreements (
+                id SERIAL PRIMARY KEY,
+                session_id INTEGER NOT NULL REFERENCES mediation_sessions(id),
+                content TEXT NOT NULL,
+                accepted_by TEXT DEFAULT '',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )""",
+            """CREATE TABLE IF NOT EXISTS password_resets (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL REFERENCES users(id),
+                token TEXT UNIQUE NOT NULL,
+                used INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )""",
+        ]
+        for stmt in statements:
+            cur.execute(stmt)
+        db.commit()
+    else:
+        db.executescript("""
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                email TEXT UNIQUE NOT NULL,
+                display_name TEXT NOT NULL,
+                password_hash TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
 
-        CREATE TABLE IF NOT EXISTS session_participants (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            session_id INTEGER NOT NULL,
-            user_id INTEGER NOT NULL,
-            joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (session_id) REFERENCES mediation_sessions(id),
-            FOREIGN KEY (user_id) REFERENCES users(id),
-            UNIQUE(session_id, user_id)
-        );
+            CREATE TABLE IF NOT EXISTS mediation_sessions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                creator_id INTEGER NOT NULL,
+                topic TEXT NOT NULL,
+                session_type TEXT DEFAULT 'general',
+                invite_code TEXT UNIQUE NOT NULL,
+                status TEXT DEFAULT 'active',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (creator_id) REFERENCES users(id)
+            );
 
-        CREATE TABLE IF NOT EXISTS messages (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            session_id INTEGER NOT NULL,
-            user_id INTEGER,
-            content TEXT NOT NULL,
-            msg_type TEXT DEFAULT 'user',
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (session_id) REFERENCES mediation_sessions(id),
-            FOREIGN KEY (user_id) REFERENCES users(id)
-        );
+            CREATE TABLE IF NOT EXISTS session_participants (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id INTEGER NOT NULL,
+                user_id INTEGER NOT NULL,
+                joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (session_id) REFERENCES mediation_sessions(id),
+                FOREIGN KEY (user_id) REFERENCES users(id),
+                UNIQUE(session_id, user_id)
+            );
 
-        CREATE TABLE IF NOT EXISTS agreements (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            session_id INTEGER NOT NULL,
-            content TEXT NOT NULL,
-            accepted_by TEXT DEFAULT '',
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (session_id) REFERENCES mediation_sessions(id)
-        );
+            CREATE TABLE IF NOT EXISTS messages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id INTEGER NOT NULL,
+                user_id INTEGER,
+                content TEXT NOT NULL,
+                msg_type TEXT DEFAULT 'user',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (session_id) REFERENCES mediation_sessions(id),
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            );
 
-        CREATE TABLE IF NOT EXISTS password_resets (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            token TEXT UNIQUE NOT NULL,
-            used INTEGER DEFAULT 0,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users(id)
-        );
-    """)
-    db.commit()
+            CREATE TABLE IF NOT EXISTS agreements (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id INTEGER NOT NULL,
+                content TEXT NOT NULL,
+                accepted_by TEXT DEFAULT '',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (session_id) REFERENCES mediation_sessions(id)
+            );
+
+            CREATE TABLE IF NOT EXISTS password_resets (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                token TEXT UNIQUE NOT NULL,
+                used INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            );
+        """)
+        db.commit()
 
 
 class User(UserMixin):
@@ -106,30 +184,40 @@ class User(UserMixin):
     @staticmethod
     def create(db, email, display_name, password):
         password_hash = generate_password_hash(password)
-        cursor = db.execute(
-            "INSERT INTO users (email, display_name, password_hash) VALUES (?, ?, ?)",
-            (email, display_name, password_hash)
-        )
+        if _is_postgres():
+            cur = _exec(db,
+                "INSERT INTO users (email, display_name, password_hash) VALUES (?, ?, ?) RETURNING id",
+                (email, display_name, password_hash)
+            )
+            user_id = cur.fetchone()['id']
+        else:
+            cur = _exec(db,
+                "INSERT INTO users (email, display_name, password_hash) VALUES (?, ?, ?)",
+                (email, display_name, password_hash)
+            )
+            user_id = cur.lastrowid
         db.commit()
-        return User(cursor.lastrowid, email, display_name, password_hash)
+        return User(user_id, email, display_name, password_hash)
 
     @staticmethod
     def get_by_id(db, user_id):
-        row = db.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+        cur = _exec(db, "SELECT * FROM users WHERE id = ?", (user_id,))
+        row = cur.fetchone()
         if row:
             return User(row['id'], row['email'], row['display_name'], row['password_hash'], row['created_at'])
         return None
 
     @staticmethod
     def get_by_email(db, email):
-        row = db.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
+        cur = _exec(db, "SELECT * FROM users WHERE email = ?", (email,))
+        row = cur.fetchone()
         if row:
             return User(row['id'], row['email'], row['display_name'], row['password_hash'], row['created_at'])
         return None
 
     def update_password(self, db, new_password):
         self.password_hash = generate_password_hash(new_password)
-        db.execute("UPDATE users SET password_hash = ? WHERE id = ?", (self.password_hash, self.id))
+        _exec(db, "UPDATE users SET password_hash = ? WHERE id = ?", (self.password_hash, self.id))
         db.commit()
 
 
@@ -155,45 +243,55 @@ class MediationSession:
         }
 
     def is_participant(self, db, user_id):
-        row = db.execute(
+        cur = _exec(db,
             "SELECT id FROM session_participants WHERE session_id = ? AND user_id = ?",
             (self.id, user_id)
-        ).fetchone()
-        return row is not None
+        )
+        return cur.fetchone() is not None
 
     def add_participant(self, db, user_id):
         try:
-            db.execute(
+            _exec(db,
                 "INSERT INTO session_participants (session_id, user_id) VALUES (?, ?)",
                 (self.id, user_id)
             )
             db.commit()
-        except (sqlite3.IntegrityError, Exception):
-            pass  # Already a participant
+        except Exception:
+            db.rollback()
 
     def get_participants(self, db):
-        rows = db.execute(
+        cur = _exec(db,
             """SELECT u.* FROM users u
                JOIN session_participants sp ON u.id = sp.user_id
                WHERE sp.session_id = ?""",
             (self.id,)
-        ).fetchall()
+        )
+        rows = cur.fetchall()
         return [User(r['id'], r['email'], r['display_name'], r['password_hash'], r['created_at']) for r in rows]
 
     @staticmethod
     def create(db, creator_id, topic, session_type, invite_code):
-        cursor = db.execute(
-            "INSERT INTO mediation_sessions (creator_id, topic, session_type, invite_code) VALUES (?, ?, ?, ?)",
-            (creator_id, topic, session_type, invite_code)
-        )
+        if _is_postgres():
+            cur = _exec(db,
+                "INSERT INTO mediation_sessions (creator_id, topic, session_type, invite_code) VALUES (?, ?, ?, ?) RETURNING id",
+                (creator_id, topic, session_type, invite_code)
+            )
+            session_id = cur.fetchone()['id']
+        else:
+            cur = _exec(db,
+                "INSERT INTO mediation_sessions (creator_id, topic, session_type, invite_code) VALUES (?, ?, ?, ?)",
+                (creator_id, topic, session_type, invite_code)
+            )
+            session_id = cur.lastrowid
         db.commit()
-        session = MediationSession(cursor.lastrowid, creator_id, topic, session_type, invite_code, 'active')
+        session = MediationSession(session_id, creator_id, topic, session_type, invite_code, 'active')
         session.add_participant(db, creator_id)
         return session
 
     @staticmethod
     def get_by_id(db, session_id):
-        row = db.execute("SELECT * FROM mediation_sessions WHERE id = ?", (session_id,)).fetchone()
+        cur = _exec(db, "SELECT * FROM mediation_sessions WHERE id = ?", (session_id,))
+        row = cur.fetchone()
         if row:
             return MediationSession(
                 row['id'], row['creator_id'], row['topic'], row['session_type'],
@@ -203,7 +301,8 @@ class MediationSession:
 
     @staticmethod
     def get_by_invite_code(db, code):
-        row = db.execute("SELECT * FROM mediation_sessions WHERE invite_code = ?", (code,)).fetchone()
+        cur = _exec(db, "SELECT * FROM mediation_sessions WHERE invite_code = ?", (code,))
+        row = cur.fetchone()
         if row:
             return MediationSession(
                 row['id'], row['creator_id'], row['topic'], row['session_type'],
@@ -213,12 +312,13 @@ class MediationSession:
 
     @staticmethod
     def get_by_user(db, user_id):
-        rows = db.execute(
+        cur = _exec(db,
             """SELECT ms.* FROM mediation_sessions ms
                JOIN session_participants sp ON ms.id = sp.session_id
                WHERE sp.user_id = ? ORDER BY ms.created_at DESC""",
             (user_id,)
-        ).fetchall()
+        )
+        rows = cur.fetchall()
         return [
             MediationSession(r['id'], r['creator_id'], r['topic'], r['session_type'],
                              r['invite_code'], r['status'], r['created_at'])
@@ -247,19 +347,28 @@ class Message:
 
     @staticmethod
     def create(db, session_id, user_id, content, msg_type='user'):
-        cursor = db.execute(
-            "INSERT INTO messages (session_id, user_id, content, msg_type) VALUES (?, ?, ?, ?)",
-            (session_id, user_id, content, msg_type)
-        )
+        if _is_postgres():
+            cur = _exec(db,
+                "INSERT INTO messages (session_id, user_id, content, msg_type) VALUES (?, ?, ?, ?) RETURNING id",
+                (session_id, user_id, content, msg_type)
+            )
+            msg_id = cur.fetchone()['id']
+        else:
+            cur = _exec(db,
+                "INSERT INTO messages (session_id, user_id, content, msg_type) VALUES (?, ?, ?, ?)",
+                (session_id, user_id, content, msg_type)
+            )
+            msg_id = cur.lastrowid
         db.commit()
-        return Message(cursor.lastrowid, session_id, user_id, content, msg_type)
+        return Message(msg_id, session_id, user_id, content, msg_type)
 
     @staticmethod
     def get_by_session(db, session_id):
-        rows = db.execute(
+        cur = _exec(db,
             "SELECT * FROM messages WHERE session_id = ? ORDER BY created_at ASC",
             (session_id,)
-        ).fetchall()
+        )
+        rows = cur.fetchall()
         return [
             Message(r['id'], r['session_id'], r['user_id'], r['content'], r['msg_type'], r['created_at'])
             for r in rows

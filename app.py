@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from flask_mail import Mail, Message as MailMessage
-from models.database import db_init, get_db, User, MediationSession, Message
+from models.database import db_init, get_db, _exec, User, MediationSession, Message
 from mediation.engine import MediationEngine
 
 app = Flask(__name__)
@@ -114,7 +114,7 @@ def forgot_password():
         return jsonify({'success': True})
 
     token = secrets.token_urlsafe(32)
-    db.execute(
+    _exec(db,
         "INSERT INTO password_resets (user_id, token) VALUES (?, ?)",
         (user.id, token)
     )
@@ -150,9 +150,8 @@ def forgot_password():
 @app.route('/reset-password/<token>')
 def reset_password_page(token):
     db = get_db()
-    row = db.execute(
-        "SELECT * FROM password_resets WHERE token = ? AND used = 0", (token,)
-    ).fetchone()
+    cur = _exec(db, "SELECT * FROM password_resets WHERE token = ? AND used = 0", (token,))
+    row = cur.fetchone()
 
     if not row:
         return render_template('error.html', message='This reset link is invalid or has already been used.'), 400
@@ -174,9 +173,8 @@ def reset_password():
         return jsonify({'success': False, 'error': 'Password must be at least 6 characters'}), 400
 
     db = get_db()
-    row = db.execute(
-        "SELECT * FROM password_resets WHERE token = ? AND used = 0", (token,)
-    ).fetchone()
+    cur = _exec(db, "SELECT * FROM password_resets WHERE token = ? AND used = 0", (token,))
+    row = cur.fetchone()
 
     if not row:
         return jsonify({'success': False, 'error': 'Invalid or expired reset link'}), 400
@@ -190,7 +188,7 @@ def reset_password():
         return jsonify({'success': False, 'error': 'User not found'}), 400
 
     user.update_password(db, password)
-    db.execute("UPDATE password_resets SET used = 1 WHERE id = ?", (row['id'],))
+    _exec(db, "UPDATE password_resets SET used = 1 WHERE id = ?", (row['id'],))
     db.commit()
 
     return jsonify({'success': True})
@@ -283,10 +281,10 @@ def delete_session(session_id):
     if med_session.creator_id != current_user.id:
         return jsonify({'success': False, 'error': 'Only the session creator can delete it'}), 403
 
-    db.execute("DELETE FROM messages WHERE session_id = ?", (session_id,))
-    db.execute("DELETE FROM agreements WHERE session_id = ?", (session_id,))
-    db.execute("DELETE FROM session_participants WHERE session_id = ?", (session_id,))
-    db.execute("DELETE FROM mediation_sessions WHERE id = ?", (session_id,))
+    _exec(db, "DELETE FROM messages WHERE session_id = ?", (session_id,))
+    _exec(db, "DELETE FROM agreements WHERE session_id = ?", (session_id,))
+    _exec(db, "DELETE FROM session_participants WHERE session_id = ?", (session_id,))
+    _exec(db, "DELETE FROM mediation_sessions WHERE id = ?", (session_id,))
     db.commit()
     return jsonify({'success': True})
 
