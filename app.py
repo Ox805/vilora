@@ -106,18 +106,6 @@ def logout():
     return jsonify({'success': True})
 
 
-@app.route('/debug/mail')
-def debug_mail():
-    return jsonify({
-        'MAIL_SERVER': app.config.get('MAIL_SERVER'),
-        'MAIL_PORT': app.config.get('MAIL_PORT'),
-        'MAIL_USE_TLS': app.config.get('MAIL_USE_TLS'),
-        'MAIL_USERNAME': app.config.get('MAIL_USERNAME'),
-        'MAIL_DEFAULT_SENDER': app.config.get('MAIL_DEFAULT_SENDER'),
-        'MAIL_PASSWORD_SET': bool(app.config.get('MAIL_PASSWORD')),
-    })
-
-
 @app.route('/forgot-password')
 def forgot_password_page():
     return render_template('forgot_password.html')
