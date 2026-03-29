@@ -22,6 +22,10 @@ app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
 app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_DEFAULT_SENDER', os.environ.get('MAIL_USERNAME'))
 mail = Mail(app)
 
+# Trust Railway's reverse proxy headers
+from werkzeug.middleware.proxy_fix import ProxyFix
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
+
 # Logging setup — ensure output reaches Railway logs
 logging.basicConfig(stream=sys.stderr, level=logging.INFO)
 logger = logging.getLogger('vilora')
@@ -100,6 +104,18 @@ def register():
 def logout():
     logout_user()
     return jsonify({'success': True})
+
+
+@app.route('/debug/mail')
+def debug_mail():
+    return jsonify({
+        'MAIL_SERVER': app.config.get('MAIL_SERVER'),
+        'MAIL_PORT': app.config.get('MAIL_PORT'),
+        'MAIL_USE_TLS': app.config.get('MAIL_USE_TLS'),
+        'MAIL_USERNAME': app.config.get('MAIL_USERNAME'),
+        'MAIL_DEFAULT_SENDER': app.config.get('MAIL_DEFAULT_SENDER'),
+        'MAIL_PASSWORD_SET': bool(app.config.get('MAIL_PASSWORD')),
+    })
 
 
 @app.route('/forgot-password')
