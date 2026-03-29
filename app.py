@@ -138,11 +138,12 @@ def forgot_password():
             <p>If you didn't request this, you can safely ignore this email.</p>
             """
             mail.send(msg)
+            print(f"[Vilora] Password reset email sent to {email}")
         except Exception as e:
-            app.logger.warning(f"Failed to send reset email: {e}")
-            app.logger.info(f"Reset URL for {email}: {reset_link}")
+            print(f"[Vilora] Failed to send reset email: {e}")
+            print(f"[Vilora] Reset URL for {email}: {reset_link}")
     else:
-        app.logger.info(f"Mail not configured. Reset URL for {email}: {reset_link}")
+        print(f"[Vilora] Mail not configured (MAIL_USERNAME={app.config['MAIL_USERNAME']}). Reset URL for {email}: {reset_link}")
 
     return jsonify({'success': True})
 
