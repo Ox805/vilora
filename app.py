@@ -1,7 +1,7 @@
 import os
 import secrets
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from models.database import db_init, get_db, User, MediationSession, Message
@@ -83,6 +83,99 @@ def register():
 @login_required
 def logout():
     logout_user()
+    return jsonify({'success': True})
+
+
+@app.route('/forgot-password')
+def forgot_password_page():
+    return render_template('forgot_password.html')
+
+
+@app.route('/api/forgot-password', methods=['POST'])
+def forgot_password():
+    data = request.get_json()
+    email = data.get('email', '').strip().lower()
+
+    db = get_db()
+    user = User.get_by_email(db, email)
+
+    # Always return success to avoid leaking whether an email exists
+    if not user:
+        return jsonify({'success': True})
+
+    token = secrets.token_urlsafe(32)
+    db.execute(
+        "INSERT INTO password_resets (user_id, token) VALUES (?, ?)",
+        (user.id, token)
+    )
+    db.commit()
+
+    reset_link = url_for('reset_password_page', token=token, _external=True)
+    print(f"[Password Reset] Link for {email}: {reset_link}")
+
+    # Send email if mail is configured
+    try:
+        from flask_mail import Mail, Message as MailMessage
+        mail = Mail(app)
+        msg = MailMessage(
+            subject='Vilora — Reset Your Password',
+            sender=app.config.get('MAIL_DEFAULT_SENDER', 'noreply@vilora.app'),
+            recipients=[email],
+            body=f'Click this link to reset your password:\n\n{reset_link}\n\nThis link expires in 1 hour.'
+        )
+        mail.send(msg)
+    except Exception:
+        pass  # Mail not configured — link printed to console
+
+    return jsonify({'success': True})
+
+
+@app.route('/reset-password/<token>')
+def reset_password_page(token):
+    db = get_db()
+    row = db.execute(
+        "SELECT * FROM password_resets WHERE token = ? AND used = 0", (token,)
+    ).fetchone()
+
+    if not row:
+        return render_template('error.html', message='This reset link is invalid or has already been used.'), 400
+
+    created_at = datetime.fromisoformat(str(row['created_at']))
+    if datetime.utcnow() - created_at > timedelta(hours=1):
+        return render_template('error.html', message='This reset link has expired. Please request a new one.'), 400
+
+    return render_template('reset_password.html', token=token)
+
+
+@app.route('/api/reset-password', methods=['POST'])
+def reset_password():
+    data = request.get_json()
+    token = data.get('token', '')
+    password = data.get('password', '')
+
+    if not password or len(password) < 6:
+        return jsonify({'success': False, 'error': 'Password must be at least 6 characters'}), 400
+
+    db = get_db()
+    row = db.execute(
+        "SELECT * FROM password_resets WHERE token = ? AND used = 0", (token,)
+    ).fetchone()
+
+    if not row:
+        return jsonify({'success': False, 'error': 'Invalid or expired reset link'}), 400
+
+    created_at = datetime.fromisoformat(str(row['created_at']))
+    if datetime.utcnow() - created_at > timedelta(hours=1):
+        return jsonify({'success': False, 'error': 'Reset link has expired'}), 400
+
+    user = User.get_by_id(db, row['user_id'])
+    if not user:
+        return jsonify({'success': False, 'error': 'User not found'}), 400
+
+    user.update_password(db, password)
+    db.execute("UPDATE password_resets SET used = 1 WHERE id = ?", (row['id'],))
+    db.commit()
+
     return jsonify({'success': True})
 
 

@@ -71,6 +71,15 @@ def db_init():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (session_id) REFERENCES mediation_sessions(id)
         );
+
+        CREATE TABLE IF NOT EXISTS password_resets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            token TEXT UNIQUE NOT NULL,
+            used INTEGER DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        );
     """)
     db.commit()
 
@@ -117,6 +126,11 @@ class User(UserMixin):
         if row:
             return User(row['id'], row['email'], row['display_name'], row['password_hash'], row['created_at'])
         return None
+
+    def update_password(self, db, new_password):
+        self.password_hash = generate_password_hash(new_password)
+        db.execute("UPDATE users SET password_hash = ? WHERE id = ?", (self.password_hash, self.id))
+        db.commit()
 
 
 class MediationSession:
