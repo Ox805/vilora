@@ -29,7 +29,12 @@
                         <option value="political">Political / Social Issues</option>
                         <option value="neighbor">Neighbor Dispute</option>
                         <option value="business">Business Partnership</option>
+                        <option value="other">Other...</option>
                     </select>
+                </div>
+                <div class="form-group" id="other-type-group" style="display:none">
+                    <label for="other-type">Describe the type of mediation</label>
+                    <input type="text" id="other-type" placeholder="e.g. Community dispute, school conflict, etc." maxlength="80">
                 </div>
                 <div class="form-group">
                     <label for="perspective">Your perspective (private — shared only with the mediator)</label>
@@ -71,18 +76,33 @@ function hideNewSession() {
     document.getElementById('new-session-modal').style.display = 'none';
 }
 
+document.getElementById('session-type').addEventListener('change', function() {
+    const otherGroup = document.getElementById('other-type-group');
+    otherGroup.style.display = this.value === 'other' ? 'block' : 'none';
+    if (this.value === 'other') document.getElementById('other-type').focus();
+});
+
 async function createSession(e) {
     e.preventDefault();
     const topic = document.getElementById('topic').value;
-    const type = document.getElementById('session-type').value;
+    let type = document.getElementById('session-type').value;
+    if (type === 'other') {
+        type = document.getElementById('other-type').value.trim() || 'general';
+    }
     const perspective = document.getElementById('perspective').value;
 
-    const res = await fetch('/api/sessions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topic, type, perspective })
-    });
-    const data = await res.json();
+    let res, data;
+    try {
+        res = await fetch('/api/sessions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ topic, type, perspective })
+        });
+        data = await res.json();
+    } catch (err) {
+        alert('Error creating session: ' + err.message);
+        return;
+    }
     if (data.success) {
         currentSessionId = data.session.id;
         document.getElementById('invite-link').value = data.invite_link;
@@ -115,15 +135,27 @@ async function loadSessions() {
     }
 
     list.innerHTML = data.sessions.map(s => `
-        <a href="/session/${s.id}" class="session-card">
-            <div class="session-card-header">
-                <span class="session-type-badge">${s.session_type}</span>
-                <span class="session-status ${s.status}">${s.status}</span>
-            </div>
-            <h3>${escapeHtml(s.topic)}</h3>
-            <p class="session-date">${new Date(s.created_at).toLocaleDateString()}</p>
-        </a>
+        <div class="session-card-wrapper">
+            <a href="/session/${s.id}" class="session-card">
+                <div class="session-card-header">
+                    <span class="session-type-badge">${s.session_type}</span>
+                    <span class="session-status ${s.status}">${s.status}</span>
+                </div>
+                <h3>${escapeHtml(s.topic)}</h3>
+                <p class="session-date">${new Date(s.created_at).toLocaleDateString()} ${new Date(s.created_at).toLocaleTimeString()}</p>
+            </a>
+            <button onclick="deleteSession(${s.id}, event)" class="btn btn-sm btn-delete" title="Delete session">Delete</button>
+        </div>
     `).join('');
+}
+
+async function deleteSession(id, e) {
+    e.stopPropagation();
+    if (!confirm('Delete this session? This cannot be undone.')) return;
+
+    const res = await fetch(`/api/sessions/${id}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (data.success) loadSessions();
 }
 
 function escapeHtml(text) {

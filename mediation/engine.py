@@ -57,6 +57,36 @@ class MediationEngine:
         else:
             self.client = None
 
+    def welcome(self, topic, session_type, perspective, creator_name):
+        if not self.client:
+            return (
+                f"Thank you for sharing your perspective, {creator_name}. "
+                "I'm ready to help mediate once the other party joins. "
+                "Please share the invite link with them so we can begin."
+            )
+
+        prompt = (
+            f"Mediation Topic: {topic}\n"
+            f"Type: {session_type}\n\n"
+            f"{creator_name} has started this mediation session and shared their initial perspective:\n\n"
+            f"\"{perspective}\"\n\n"
+            f"The other party has not joined yet. Please:\n"
+            f"1. Acknowledge {creator_name}'s perspective warmly\n"
+            f"2. Let them know you understand the situation\n"
+            f"3. Remind them to share the invite link with the other party\n"
+            f"4. Let them know you'll facilitate once both parties are present\n"
+            f"Keep it concise — 2-3 short paragraphs."
+        )
+
+        response = self.client.messages.create(
+            model="claude-sonnet-4-6-20250514",
+            max_tokens=512,
+            system=SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": prompt}]
+        )
+
+        return response.content[0].text
+
     def mediate(self, topic, session_type, messages, participants):
         if not self.client:
             return self._fallback_response(messages)

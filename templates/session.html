@@ -7,9 +7,22 @@
         <h2>{{ session.topic }}</h2>
         <div class="room-actions">
             <span class="session-type-badge">{{ session.session_type }}</span>
+            <span id="participant-status" class="participant-status"></span>
             <button onclick="getSummary()" class="btn btn-sm">Get Summary</button>
         </div>
     </div>
+
+    {% if is_creator %}
+    <div id="invite-banner" class="invite-banner">
+        <div class="invite-banner-content">
+            <strong>Share this link</strong> with the other party so they can join:
+            <div class="invite-link-row">
+                <input type="text" id="invite-link" value="{{ invite_link }}" readonly>
+                <button onclick="copyInviteLink()" class="btn btn-sm" id="copy-btn">Copy</button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
     <div id="messages" class="message-list">
         <div class="loading">Loading conversation...</div>
@@ -126,8 +139,37 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-// Initial load and polling for new messages
+function copyInviteLink() {
+    const input = document.getElementById('invite-link');
+    navigator.clipboard.writeText(input.value);
+    const btn = document.getElementById('copy-btn');
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy', 2000);
+}
+
+async function checkParticipants() {
+    const res = await fetch(`/api/sessions/${SESSION_ID}/participants`);
+    const data = await res.json();
+    const statusEl = document.getElementById('participant-status');
+    const banner = document.getElementById('invite-banner');
+    const count = (data.participants || []).length;
+
+    if (count >= 2) {
+        statusEl.textContent = `${count} participants`;
+        statusEl.className = 'participant-status joined';
+        if (banner) banner.style.display = 'none';
+    } else {
+        statusEl.textContent = 'Waiting for other party...';
+        statusEl.className = 'participant-status waiting';
+    }
+}
+
+// Initial load and polling
 loadMessages();
-polling = setInterval(loadMessages, 5000);
+checkParticipants();
+polling = setInterval(() => {
+    loadMessages();
+    checkParticipants();
+}, 5000);
 </script>
 {% endblock %}

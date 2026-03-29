@@ -233,6 +233,24 @@ body {
 }
 .session-card:hover { box-shadow: var(--shadow-lg); }
 
+.session-card-wrapper {
+    position: relative;
+}
+
+.session-card-wrapper .btn-delete {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    color: var(--error);
+    border-color: var(--error);
+    background: var(--bg-card);
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+.session-card-wrapper:hover .btn-delete { opacity: 1; }
+.session-card-wrapper .btn-delete:hover { background: #FFF5F5; }
+
 .session-card-header { display: flex; justify-content: space-between; margin-bottom: 0.5rem; }
 .session-card h3 { margin-bottom: 0.25rem; }
 .session-date { color: var(--text-muted); font-size: 0.85rem; }
@@ -303,6 +321,42 @@ body {
     border: 1px solid var(--border);
     border-radius: var(--radius);
     font-size: 0.85rem;
+}
+
+/* === Invite Banner (Session Room) === */
+.invite-banner {
+    background: var(--intake-bg);
+    border: 1px solid #C6F6D5;
+    border-radius: var(--radius);
+    padding: 1rem 1.25rem;
+    margin-bottom: 1rem;
+    flex-shrink: 0;
+}
+
+.invite-banner-content strong {
+    color: var(--text);
+}
+
+.invite-banner .invite-link-row {
+    margin-top: 0.5rem;
+    margin-bottom: 0;
+}
+
+.participant-status {
+    font-size: 0.8rem;
+    font-weight: 500;
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+}
+
+.participant-status.waiting {
+    color: #B7791F;
+    background: #FEFCBF;
+}
+
+.participant-status.joined {
+    color: #276749;
+    background: #C6F6D5;
 }
 
 /* === Mediation Room === */

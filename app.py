@@ -121,6 +121,18 @@ def create_session():
     if perspective:
         Message.create(db, med_session.id, current_user.id, perspective, msg_type='intake')
 
+        # Generate initial mediator acknowledgment
+        try:
+            ai_response = mediation_engine.welcome(
+                topic=topic,
+                session_type=session_type,
+                perspective=perspective,
+                creator_name=current_user.display_name
+            )
+            Message.create(db, med_session.id, None, ai_response, msg_type='mediator')
+        except Exception as e:
+            print(f"Warning: Could not generate welcome message: {e}")
+
     return jsonify({
         'success': True,
         'session': med_session.to_dict(),
@@ -141,6 +153,24 @@ def join_session(code):
 
     med_session.add_participant(db, current_user.id)
     return redirect(url_for('session_room', session_id=med_session.id))
+
+
+@app.route('/api/sessions/<int:session_id>', methods=['DELETE'])
+@login_required
+def delete_session(session_id):
+    db = get_db()
+    med_session = MediationSession.get_by_id(db, session_id)
+    if not med_session:
+        return jsonify({'success': False, 'error': 'Session not found'}), 404
+    if med_session.creator_id != current_user.id:
+        return jsonify({'success': False, 'error': 'Only the session creator can delete it'}), 403
+
+    db.execute("DELETE FROM messages WHERE session_id = ?", (session_id,))
+    db.execute("DELETE FROM agreements WHERE session_id = ?", (session_id,))
+    db.execute("DELETE FROM session_participants WHERE session_id = ?", (session_id,))
+    db.execute("DELETE FROM mediation_sessions WHERE id = ?", (session_id,))
+    db.commit()
+    return jsonify({'success': True})
 
 
 @app.route('/api/sessions/<int:session_id>/join', methods=['POST'])
@@ -175,7 +205,13 @@ def session_room(session_id):
     if not med_session.is_participant(db, current_user.id):
         return render_template('error.html', message='You are not a participant in this session'), 403
 
-    return render_template('session.html', session=med_session)
+    participants = med_session.get_participants(db)
+    is_creator = (current_user.id == med_session.creator_id)
+    invite_link = url_for('join_session', code=med_session.invite_code, _external=True)
+
+    return render_template('session.html', session=med_session,
+                           participants=participants, is_creator=is_creator,
+                           invite_link=invite_link)
 
 
 @app.route('/api/sessions/<int:session_id>/messages', methods=['GET'])
@@ -226,6 +262,21 @@ def send_message(session_id):
     })
 
 
+@app.route('/api/sessions/<int:session_id>/participants', methods=['GET'])
+@login_required
+def get_participants(session_id):
+    db = get_db()
+    med_session = MediationSession.get_by_id(db, session_id)
+    if not med_session or not med_session.is_participant(db, current_user.id):
+        return jsonify({'success': False, 'error': 'Access denied'}), 403
+
+    participants = med_session.get_participants(db)
+    return jsonify({
+        'success': True,
+        'participants': [{'id': p.id, 'display_name': p.display_name} for p in participants]
+    })
+
+
 @app.route('/api/sessions/<int:session_id>/summary', methods=['GET'])
 @login_required
 def get_summary(session_id):
@@ -251,4 +302,4 @@ with app.app_context():
     db_init()
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5001)
+    app.run(debug=True, port=int(os.environ.get('PORT', 5001)), host='0.0.0.0')
