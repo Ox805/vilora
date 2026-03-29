@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <div class="dashboard-header">
+        <h1>Your Sessions</h1>
+        <button onclick="showNewSession()" class="btn btn-primary">New Session</button>
+    </div>
+
+    <!-- New Session Modal -->
+    <div id="new-session-modal" class="modal" style="display:none">
+        <div class="modal-content">
+            <h2>Start a New Mediation</h2>
+            <form id="new-session-form" onsubmit="createSession(event)">
+                <div class="form-group">
+                    <label for="topic">What's the issue?</label>
+                    <textarea id="topic" rows="2" required
+                        placeholder="Brief description of the disagreement or issue"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="session-type">Type of mediation</label>
+                    <select id="session-type">
+                        <option value="general">General</option>
+                        <option value="relationship">Relationship</option>
+                        <option value="family">Family</option>
+                        <option value="workplace">Workplace</option>
+                        <option value="roommate">Roommate / Housemate</option>
+                        <option value="political">Political / Social Issues</option>
+                        <option value="neighbor">Neighbor Dispute</option>
+                        <option value="business">Business Partnership</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="perspective">Your perspective (private — shared only with the mediator)</label>
+                    <textarea id="perspective" rows="4"
+                        placeholder="Share your side of the story. This helps Vilora understand both viewpoints."></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="button" onclick="hideNewSession()" class="btn">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create & Get Invite Link</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Invite Link Display -->
+    <div id="invite-display" class="invite-card" style="display:none">
+        <h3>Session Created!</h3>
+        <p>Share this link with the other party:</p>
+        <div class="invite-link-row">
+            <input type="text" id="invite-link" readonly>
+            <button onclick="copyInviteLink()" class="btn btn-sm">Copy</button>
+        </div>
+        <button onclick="goToSession()" class="btn btn-primary">Enter Session</button>
+    </div>
+
+    <!-- Session List -->
+    <div id="session-list" class="session-list">
+        <p class="loading">Loading your sessions...</p>
+    </div>
+</div>
+
+<script>
+let currentSessionId = null;
+
+function showNewSession() {
+    document.getElementById('new-session-modal').style.display = 'flex';
+}
+function hideNewSession() {
+    document.getElementById('new-session-modal').style.display = 'none';
+}
+
+async function createSession(e) {
+    e.preventDefault();
+    const topic = document.getElementById('topic').value;
+    const type = document.getElementById('session-type').value;
+    const perspective = document.getElementById('perspective').value;
+
+    const res = await fetch('/api/sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topic, type, perspective })
+    });
+    const data = await res.json();
+    if (data.success) {
+        currentSessionId = data.session.id;
+        document.getElementById('invite-link').value = data.invite_link;
+        hideNewSession();
+        document.getElementById('invite-display').style.display = 'block';
+        loadSessions();
+    }
+}
+
+function copyInviteLink() {
+    const input = document.getElementById('invite-link');
+    input.select();
+    navigator.clipboard.writeText(input.value);
+}
+
+function goToSession() {
+    if (currentSessionId) {
+        window.location.href = '/session/' + currentSessionId;
+    }
+}
+
+async function loadSessions() {
+    const res = await fetch('/api/sessions');
+    const data = await res.json();
+    const list = document.getElementById('session-list');
+
+    if (!data.sessions || data.sessions.length === 0) {
+        list.innerHTML = '<p class="empty-state">No sessions yet. Start one to begin mediating.</p>';
+        return;
+    }
+
+    list.innerHTML = data.sessions.map(s => `
+        <a href="/session/${s.id}" class="session-card">
+            <div class="session-card-header">
+                <span class="session-type-badge">${s.session_type}</span>
+                <span class="session-status ${s.status}">${s.status}</span>
+            </div>
+            <h3>${escapeHtml(s.topic)}</h3>
+            <p class="session-date">${new Date(s.created_at).toLocaleDateString()}</p>
+        </a>
+    `).join('');
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+loadSessions();
+</script>
+{% endblock %}

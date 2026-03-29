@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block title %}Session: {{ session.topic }}{% endblock %}
+
+{% block content %}
+<div class="mediation-room">
+    <div class="room-header">
+        <h2>{{ session.topic }}</h2>
+        <div class="room-actions">
+            <span class="session-type-badge">{{ session.session_type }}</span>
+            <button onclick="getSummary()" class="btn btn-sm">Get Summary</button>
+        </div>
+    </div>
+
+    <div id="messages" class="message-list">
+        <div class="loading">Loading conversation...</div>
+    </div>
+
+    <!-- Summary Display -->
+    <div id="summary-panel" class="summary-panel" style="display:none">
+        <div class="summary-header">
+            <h3>Session Summary</h3>
+            <button onclick="closeSummary()" class="btn btn-sm">Close</button>
+        </div>
+        <div id="summary-content" class="summary-content"></div>
+    </div>
+
+    <div class="message-input-area">
+        <form id="message-form" onsubmit="sendMessage(event)">
+            <textarea id="message-input" rows="3"
+                placeholder="Share your thoughts... Vilora will help facilitate the conversation."
+                onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault();sendMessage(event)}"></textarea>
+            <button type="submit" class="btn btn-primary" id="send-btn">Send</button>
+        </form>
+    </div>
+</div>
+
+<script>
+const SESSION_ID = {{ session.id }};
+let polling = null;
+
+async function loadMessages() {
+    const res = await fetch(`/api/sessions/${SESSION_ID}/messages`);
+    const data = await res.json();
+    renderMessages(data.messages || []);
+}
+
+function renderMessages(messages) {
+    const container = document.getElementById('messages');
+    if (messages.length === 0) {
+        container.innerHTML = `
+            <div class="mediator-welcome">
+                <p><strong>Vilora</strong>: Welcome to this mediation session.
+                I'm here to help you both work through this constructively.
+                Share your thoughts whenever you're ready, and I'll help guide the conversation.</p>
+            </div>`;
+        return;
+    }
+
+    container.innerHTML = messages.map(m => {
+        if (m.msg_type === 'mediator') {
+            return `<div class="message message-mediator">
+                <div class="message-author">Vilora</div>
+                <div class="message-content">${escapeHtml(m.content)}</div>
+            </div>`;
+        } else if (m.msg_type === 'intake') {
+            return `<div class="message message-intake">
+                <div class="message-author">Initial Perspective</div>
+                <div class="message-content">${escapeHtml(m.content)}</div>
+            </div>`;
+        } else {
+            return `<div class="message message-user">
+                <div class="message-content">${escapeHtml(m.content)}</div>
+                <div class="message-time">${new Date(m.created_at).toLocaleTimeString()}</div>
+            </div>`;
+        }
+    }).join('');
+
+    container.scrollTop = container.scrollHeight;
+}
+
+async function sendMessage(e) {
+    e.preventDefault();
+    const input = document.getElementById('message-input');
+    const content = input.value.trim();
+    if (!content) return;
+
+    const sendBtn = document.getElementById('send-btn');
+    sendBtn.disabled = true;
+    sendBtn.textContent = 'Sending...';
+    input.value = '';
+
+    try {
+        const res = await fetch(`/api/sessions/${SESSION_ID}/messages`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content })
+        });
+        const data = await res.json();
+        if (data.success) {
+            loadMessages();
+        }
+    } finally {
+        sendBtn.disabled = false;
+        sendBtn.textContent = 'Send';
+    }
+}
+
+async function getSummary() {
+    const panel = document.getElementById('summary-panel');
+    const content = document.getElementById('summary-content');
+    content.innerHTML = '<p class="loading">Generating summary...</p>';
+    panel.style.display = 'block';
+
+    const res = await fetch(`/api/sessions/${SESSION_ID}/summary`);
+    const data = await res.json();
+    content.innerHTML = `<pre class="summary-text">${escapeHtml(data.summary)}</pre>`;
+}
+
+function closeSummary() {
+    document.getElementById('summary-panel').style.display = 'none';
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Initial load and polling for new messages
+loadMessages();
+polling = setInterval(loadMessages, 5000);
+</script>
+{% endblock %}
