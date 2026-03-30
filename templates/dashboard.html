@@ -8,10 +8,54 @@
         <button onclick="showNewSession()" class="btn btn-primary">New Session</button>
     </div>
 
-    <!-- New Session Modal -->
+    <!-- Step 1: Choose path -->
+    <div id="new-session-chooser" class="modal" style="display:none">
+        <div class="modal-content chooser-content">
+            <h2>Start a New Mediation</h2>
+            <p class="chooser-subtitle">How would you like to get started?</p>
+            <div class="chooser-options">
+                <button onclick="showFramingAssist()" class="chooser-option">
+                    <div class="chooser-option-title">Help me frame this</div>
+                    <p>Describe your situation in your own words and Vilora will help you organize your thoughts into a clear mediation request.</p>
+                </button>
+                <button onclick="showDirectForm()" class="chooser-option">
+                    <div class="chooser-option-title">I know what I want to say</div>
+                    <p>Go straight to the session form and fill in the details yourself.</p>
+                </button>
+            </div>
+            <div class="form-actions">
+                <button type="button" onclick="hideAllModals()" class="btn">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 2a: Framing assist -->
+    <div id="framing-modal" class="modal" style="display:none">
+        <div class="modal-content">
+            <h2>Tell Vilora what's going on</h2>
+            <p style="color: var(--text-light); margin-bottom: 1rem; font-size: 0.9rem;">
+                Just write freely — describe the situation, how you feel, what happened.
+                Vilora will help organize this into a clear mediation request.
+            </p>
+            <div class="form-group">
+                <label for="raw-input">Your perspective (private — shared only with the mediator)</label>
+                <textarea id="raw-input" rows="8"
+                    placeholder="Write whatever comes to mind about the situation. For example: 'My roommate keeps leaving dishes in the sink and it's driving me crazy. I've asked them to clean up but nothing changes. I don't want to fight about it but I need things to be more fair around here.'"></textarea>
+            </div>
+            <div class="form-actions">
+                <button type="button" onclick="backToChooser()" class="btn">Back</button>
+                <button type="button" onclick="submitFraming()" class="btn btn-primary" id="frame-btn">
+                    Help me frame this
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 2b / Step 3: Session form (direct or pre-filled) -->
     <div id="new-session-modal" class="modal" style="display:none">
         <div class="modal-content">
-            <h2>Start a New Mediation</h2>
+            <h2 id="form-title">Start a New Mediation</h2>
+            <div id="frame-tips" class="frame-tips" style="display:none"></div>
             <form id="new-session-form" onsubmit="createSession(event)">
                 <div class="form-group">
                     <label for="topic">What's the issue?</label>
@@ -40,19 +84,9 @@
                     <label for="perspective">Your perspective (private — shared only with the mediator)</label>
                     <textarea id="perspective" rows="4"
                         placeholder="Share your side of the story. This helps Vilora understand both viewpoints."></textarea>
-                    <button type="button" onclick="helpFrame()" class="btn btn-sm btn-frame" id="frame-btn">
-                        Help me frame this
-                    </button>
-                </div>
-                <div id="frame-suggestion" class="frame-suggestion" style="display:none">
-                    <div class="frame-suggestion-header">
-                        <strong>Vilora's suggestions</strong>
-                        <button type="button" onclick="dismissFraming()" class="btn btn-sm">Dismiss</button>
-                    </div>
-                    <div id="frame-content" class="frame-content"></div>
                 </div>
                 <div class="form-actions">
-                    <button type="button" onclick="hideNewSession()" class="btn">Cancel</button>
+                    <button type="button" onclick="hideAllModals()" class="btn">Cancel</button>
                     <button type="submit" class="btn btn-primary">Create & Get Invite Link</button>
                 </div>
             </form>
@@ -80,41 +114,92 @@
 let currentSessionId = null;
 
 function showNewSession() {
+    document.getElementById('new-session-chooser').style.display = 'flex';
+}
+
+function hideAllModals() {
+    document.getElementById('new-session-chooser').style.display = 'none';
+    document.getElementById('framing-modal').style.display = 'none';
+    document.getElementById('new-session-modal').style.display = 'none';
+    resetForm();
+}
+
+function resetForm() {
+    document.getElementById('topic').value = '';
+    document.getElementById('perspective').value = '';
+    document.getElementById('session-type').value = 'general';
+    document.getElementById('raw-input').value = '';
+    document.getElementById('frame-tips').style.display = 'none';
+    document.getElementById('other-type-group').style.display = 'none';
+    document.getElementById('form-title').textContent = 'Start a New Mediation';
+}
+
+function backToChooser() {
+    document.getElementById('framing-modal').style.display = 'none';
+    document.getElementById('new-session-chooser').style.display = 'flex';
+}
+
+function showFramingAssist() {
+    document.getElementById('new-session-chooser').style.display = 'none';
+    document.getElementById('framing-modal').style.display = 'flex';
+    document.getElementById('raw-input').focus();
+}
+
+function showDirectForm() {
+    document.getElementById('new-session-chooser').style.display = 'none';
+    document.getElementById('form-title').textContent = 'Start a New Mediation';
+    document.getElementById('frame-tips').style.display = 'none';
     document.getElementById('new-session-modal').style.display = 'flex';
 }
-function hideNewSession() {
-    document.getElementById('new-session-modal').style.display = 'none';
-}
 
-async function helpFrame() {
-    const topic = document.getElementById('topic').value.trim();
-    const perspective = document.getElementById('perspective').value.trim();
-    let type = document.getElementById('session-type').value;
-    if (type === 'other') {
-        type = document.getElementById('other-type').value.trim() || 'general';
-    }
-
-    if (!topic && !perspective) {
-        alert('Please describe the issue or share your perspective first.');
+async function submitFraming() {
+    const rawText = document.getElementById('raw-input').value.trim();
+    if (!rawText) {
+        alert('Please describe the situation first.');
         return;
     }
 
     const btn = document.getElementById('frame-btn');
     btn.disabled = true;
-    btn.textContent = 'Thinking...';
+    btn.textContent = 'Vilora is thinking...';
 
     try {
         const res = await fetch('/api/frame', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ topic, perspective, type })
+            body: JSON.stringify({ text: rawText })
         });
         const data = await res.json();
-        if (data.success) {
-            const container = document.getElementById('frame-suggestion');
-            const content = document.getElementById('frame-content');
-            content.innerHTML = formatFraming(data.suggestion);
-            container.style.display = 'block';
+        if (data.success && data.framed) {
+            const f = data.framed;
+
+            // Fill in the form
+            document.getElementById('topic').value = f.topic || '';
+            document.getElementById('perspective').value = f.perspective || rawText;
+
+            // Set the mediation type
+            const typeSelect = document.getElementById('session-type');
+            const validTypes = [...typeSelect.options].map(o => o.value);
+            if (f.type && validTypes.includes(f.type)) {
+                typeSelect.value = f.type;
+            } else if (f.type) {
+                typeSelect.value = 'other';
+                document.getElementById('other-type-group').style.display = 'block';
+                document.getElementById('other-type').value = f.type;
+            }
+
+            // Show tips if provided
+            if (f.tips) {
+                const tipsEl = document.getElementById('frame-tips');
+                tipsEl.innerHTML = '<strong>Vilora\'s tips for this mediation:</strong><p>' +
+                    escapeHtml(f.tips) + '</p>';
+                tipsEl.style.display = 'block';
+            }
+
+            // Switch to the form for review
+            document.getElementById('framing-modal').style.display = 'none';
+            document.getElementById('form-title').textContent = 'Review & Edit';
+            document.getElementById('new-session-modal').style.display = 'flex';
         } else {
             alert(data.error || 'Could not generate suggestion.');
         }
@@ -124,16 +209,6 @@ async function helpFrame() {
         btn.disabled = false;
         btn.textContent = 'Help me frame this';
     }
-}
-
-function formatFraming(text) {
-    return text
-        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-        .replace(/\n/g, '<br>');
-}
-
-function dismissFraming() {
-    document.getElementById('frame-suggestion').style.display = 'none';
 }
 
 document.getElementById('session-type').addEventListener('change', function() {
@@ -166,7 +241,7 @@ async function createSession(e) {
     if (data.success) {
         currentSessionId = data.session.id;
         document.getElementById('invite-link').value = data.invite_link;
-        hideNewSession();
+        hideAllModals();
         document.getElementById('invite-display').style.display = 'block';
         loadSessions();
     }

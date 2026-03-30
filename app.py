@@ -231,20 +231,20 @@ def list_sessions():
 @login_required
 def frame_issue():
     data = request.get_json()
-    topic = data.get('topic', '').strip()
-    perspective = data.get('perspective', '').strip()
-    session_type = data.get('type', 'general')
+    raw_text = data.get('text', '').strip()
 
-    if not topic and not perspective:
+    if not raw_text:
         return jsonify({'success': False, 'error': 'Please describe the issue first'}), 400
 
     try:
-        suggestion = mediation_engine.frame(
-            topic=topic,
-            perspective=perspective,
-            session_type=session_type
-        )
-        return jsonify({'success': True, 'suggestion': suggestion})
+        result = mediation_engine.frame(raw_text)
+        if not result:
+            return jsonify({'success': False, 'error': 'Framing requires API key'}), 500
+        import json
+        parsed = json.loads(result)
+        return jsonify({'success': True, 'framed': parsed})
+    except json.JSONDecodeError:
+        return jsonify({'success': True, 'framed': {'topic': '', 'type': 'general', 'perspective': raw_text, 'tips': ''}})
     except Exception as e:
         sys.stderr.write(f"[Vilora] Framing error: {e}\n")
         return jsonify({'success': False, 'error': 'Could not generate suggestion. Please try again.'}), 500

@@ -78,44 +78,35 @@ class MediationEngine:
         else:
             self.client = None
 
-    def frame(self, topic, perspective, session_type):
+    def frame(self, raw_text):
         if not self.client:
-            return "Framing suggestions require an API key to be configured."
-
-        text = ""
-        if topic:
-            text += f"Topic: {topic}\n"
-        if perspective:
-            text += f"Their perspective: {perspective}\n"
-        if session_type and session_type != 'general':
-            text += f"Context: {session_type} mediation\n"
+            return None
 
         prompt = (
-            f"A user is about to start a mediation session and has written the following:\n\n"
-            f"{text}\n"
-            f"Help them frame this for a productive mediation. IMPORTANT: preserve their voice, "
-            f"tone, and intent — do NOT heavily rewrite or sanitize their words. Only make small, "
-            f"targeted adjustments. If their phrasing is already clear and genuine, leave it mostly as-is. "
-            f"The goal is to help, not to put words in their mouth.\n\n"
-            f"Provide:\n\n"
-            f"1. **Suggested topic** — A clear, neutral one-line description of the issue "
-            f"(not blaming either side). Keep it close to what they wrote.\n\n"
-            f"2. **Suggested perspective** — Their perspective with only light edits to:\n"
-            f"   - Soften any accusatory language (but keep the substance)\n"
-            f"   - Add 'I feel' or 'I need' framing where it fits naturally\n"
-            f"   - Keep their original examples, details, and personality\n"
-            f"   - Do NOT add things they didn't say or imply\n\n"
-            f"3. **Tips** — 2-3 brief, practical tips for this specific situation\n\n"
-            f"Keep the tone warm and encouraging. Format with clear headers."
+            f"A user wants to start a mediation session. They've described their situation "
+            f"in their own words:\n\n"
+            f"\"{raw_text}\"\n\n"
+            f"Help them prepare by extracting and lightly refining their input into structured fields. "
+            f"IMPORTANT: preserve their voice, tone, and intent. Only make small, targeted adjustments. "
+            f"If their phrasing is already clear and genuine, leave it mostly as-is. "
+            f"Do NOT put words in their mouth or add things they didn't say.\n\n"
+            f"Respond in EXACTLY this JSON format (no markdown, no code fences, just raw JSON):\n"
+            f'{{\n'
+            f'  "topic": "A clear, neutral one-line description of the issue (not blaming either side)",\n'
+            f'  "type": "one of: general, relationship, family, workplace, roommate, political, neighbor, business",\n'
+            f'  "perspective": "Their perspective with only light edits — soften accusatory language, '
+            f'add I-feel/I-need framing where natural, keep their original examples and personality",\n'
+            f'  "tips": "2-3 brief practical tips for approaching this mediation, as a single string"\n'
+            f'}}'
         )
 
         response = self.client.messages.create(
             model="claude-sonnet-4-20250514",
             max_tokens=1024,
             system=(
-                "You are Vilora, an AI mediation assistant. You're helping someone "
-                "prepare for a mediation session by framing their issue constructively. "
-                "Be warm, supportive, and practical."
+                "You are Vilora, an AI mediation assistant. You help people frame their "
+                "issues for productive mediation. Always respond with valid JSON only — "
+                "no markdown, no code fences, no extra text."
             ),
             messages=[{"role": "user", "content": prompt}]
         )
