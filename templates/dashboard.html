@@ -40,6 +40,16 @@
                     <label for="perspective">Your perspective (private — shared only with the mediator)</label>
                     <textarea id="perspective" rows="4"
                         placeholder="Share your side of the story. This helps Vilora understand both viewpoints."></textarea>
+                    <button type="button" onclick="helpFrame()" class="btn btn-sm btn-frame" id="frame-btn">
+                        Help me frame this
+                    </button>
+                </div>
+                <div id="frame-suggestion" class="frame-suggestion" style="display:none">
+                    <div class="frame-suggestion-header">
+                        <strong>Vilora's suggestions</strong>
+                        <button type="button" onclick="dismissFraming()" class="btn btn-sm">Dismiss</button>
+                    </div>
+                    <div id="frame-content" class="frame-content"></div>
                 </div>
                 <div class="form-actions">
                     <button type="button" onclick="hideNewSession()" class="btn">Cancel</button>
@@ -74,6 +84,56 @@ function showNewSession() {
 }
 function hideNewSession() {
     document.getElementById('new-session-modal').style.display = 'none';
+}
+
+async function helpFrame() {
+    const topic = document.getElementById('topic').value.trim();
+    const perspective = document.getElementById('perspective').value.trim();
+    let type = document.getElementById('session-type').value;
+    if (type === 'other') {
+        type = document.getElementById('other-type').value.trim() || 'general';
+    }
+
+    if (!topic && !perspective) {
+        alert('Please describe the issue or share your perspective first.');
+        return;
+    }
+
+    const btn = document.getElementById('frame-btn');
+    btn.disabled = true;
+    btn.textContent = 'Thinking...';
+
+    try {
+        const res = await fetch('/api/frame', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ topic, perspective, type })
+        });
+        const data = await res.json();
+        if (data.success) {
+            const container = document.getElementById('frame-suggestion');
+            const content = document.getElementById('frame-content');
+            content.innerHTML = formatFraming(data.suggestion);
+            container.style.display = 'block';
+        } else {
+            alert(data.error || 'Could not generate suggestion.');
+        }
+    } catch (err) {
+        alert('Error: ' + err.message);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Help me frame this';
+    }
+}
+
+function formatFraming(text) {
+    return text
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\n/g, '<br>');
+}
+
+function dismissFraming() {
+    document.getElementById('frame-suggestion').style.display = 'none';
 }
 
 document.getElementById('session-type').addEventListener('change', function() {

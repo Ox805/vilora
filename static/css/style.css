@@ -315,6 +315,38 @@ body {
 .session-status.active { color: var(--accent); }
 .session-status.closed { color: var(--text-muted); }
 
+.btn-frame {
+    margin-top: 0.5rem;
+    color: var(--primary);
+    border-color: var(--primary);
+}
+.btn-frame:hover {
+    background: var(--pale);
+}
+
+.frame-suggestion {
+    background: var(--pale);
+    border: 1px solid var(--primary-light);
+    border-radius: var(--radius);
+    padding: 1rem 1.25rem;
+    margin-bottom: 1rem;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.frame-suggestion-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.frame-content {
+    font-size: 0.9rem;
+    line-height: 1.7;
+    color: var(--text);
+}
+
 .empty-state { text-align: center; color: var(--text-muted); padding: 3rem 0; }
 .loading { text-align: center; color: var(--text-muted); padding: 2rem 0; }
 

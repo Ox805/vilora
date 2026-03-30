@@ -78,6 +78,46 @@ class MediationEngine:
         else:
             self.client = None
 
+    def frame(self, topic, perspective, session_type):
+        if not self.client:
+            return "Framing suggestions require an API key to be configured."
+
+        text = ""
+        if topic:
+            text += f"Topic: {topic}\n"
+        if perspective:
+            text += f"Their perspective: {perspective}\n"
+        if session_type and session_type != 'general':
+            text += f"Context: {session_type} mediation\n"
+
+        prompt = (
+            f"A user is about to start a mediation session and has written the following:\n\n"
+            f"{text}\n"
+            f"Help them frame this more effectively for a productive mediation. Provide:\n\n"
+            f"1. **Suggested topic** — A clear, neutral one-line description of the issue "
+            f"(not blaming either side)\n\n"
+            f"2. **Suggested perspective** — A reframed version of their perspective that:\n"
+            f"   - Focuses on feelings and needs rather than blame\n"
+            f"   - Uses 'I' statements where possible\n"
+            f"   - Acknowledges the other person's likely perspective\n"
+            f"   - Is specific about what they'd like to resolve\n\n"
+            f"3. **Tips** — 2-3 brief tips for how to approach this mediation constructively\n\n"
+            f"Keep the tone warm and encouraging. Format with clear headers."
+        )
+
+        response = self.client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=1024,
+            system=(
+                "You are Vilora, an AI mediation assistant. You're helping someone "
+                "prepare for a mediation session by framing their issue constructively. "
+                "Be warm, supportive, and practical."
+            ),
+            messages=[{"role": "user", "content": prompt}]
+        )
+
+        return response.content[0].text
+
     def welcome(self, topic, session_type, perspective, creator_name):
         if not self.client:
             return (
