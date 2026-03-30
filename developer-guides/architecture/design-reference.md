@@ -19,10 +19,16 @@ The Vilora mark is an abstract symbol of two paths converging to a shared point,
 
 ### Icon Mark Geometry
 
+ViewBox: `0 0 58 58`
+
 The icon consists of:
-- Two pairs of curved lines (bezier paths) converging downward — stroke color `#1D9E75` (Teal)
-- A filled circle at the convergence point — fill `#085041` (Dark)
-- Lines use `stroke-linecap: round`
+- **Left arm:** `M 8 9 C 6 26,23 43,29 47 M 18 9 C 17 28,25 44,29 47 M 8 9 L 18 9`
+- **Right arm:** `M 50 9 C 52 26,35 43,29 47 M 40 9 C 41 28,33 44,29 47 M 40 9 L 50 9`
+- **Dot:** `cx=29 cy=47 r=3`
+- All strokes: `stroke-width="1.8" stroke-linecap="round"`
+- Stroke on light bg: `#1D9E75` / Dot fill: `#085041`
+- Stroke on dark bg: `#5DCAA5` / Dot fill: `#9FE1CB`
+- Stroke on teal bg: `rgba(255,255,255,0.92)` / Dot fill: `white`
 
 ### Wordmark
 
