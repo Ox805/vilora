@@ -431,8 +431,19 @@ def get_summary(session_id):
         return jsonify({'success': False, 'error': 'Access denied'}), 403
 
     messages = Message.get_by_session(db, session_id)
-    participants = med_session.get_participants(db)
+    message_count = len(messages)
 
+    # Check for cached summary with same message count
+    cur = _exec(db,
+        "SELECT summary FROM session_summaries WHERE session_id = ? AND message_count = ? ORDER BY created_at DESC",
+        (session_id, message_count)
+    )
+    cached = cur.fetchone()
+    if cached:
+        return jsonify({'success': True, 'summary': cached['summary']})
+
+    # Generate new summary
+    participants = med_session.get_participants(db)
     try:
         summary = mediation_engine.summarize(
             topic=med_session.topic,
@@ -442,6 +453,13 @@ def get_summary(session_id):
     except Exception as e:
         sys.stderr.write(f"[Vilora] Summary error: {e}\n")
         return jsonify({'success': False, 'error': 'Failed to generate summary. Please try again.'}), 500
+
+    # Cache the summary
+    _exec(db,
+        "INSERT INTO session_summaries (session_id, message_count, summary) VALUES (?, ?, ?)",
+        (session_id, message_count, summary)
+    )
+    db.commit()
 
     return jsonify({'success': True, 'summary': summary})
 
