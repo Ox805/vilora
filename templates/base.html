@@ -4,12 +4,28 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Vilora{% endblock %} — Vilora</title>
+    <meta name="description" content="Vilora is an AI-powered mediation platform that helps people work through disagreements constructively.">
+    <meta property="og:title" content="Vilora — AI-Powered Mediation">
+    <meta property="og:description" content="Find common ground. Together. An impartial AI mediator for disagreements, conflicts, and misunderstandings.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://www.vilora.io">
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/favicon.svg') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     {% block head %}{% endblock %}
 </head>
 <body>
     <nav class="navbar">
-        <a href="/" class="nav-brand">Vilora</a>
+        <a href="/" class="nav-brand">
+            <svg class="nav-logo-mark" width="36" height="36" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+                <path d="M 9 4 C 7.5 12,14 20,16 22 M 13 4 C 12.5 13,15 21,16 22 M 9 4 L 13 4" fill="none" stroke="#1D9E75" stroke-width="2" stroke-linecap="round"/>
+                <path d="M 23 4 C 24.5 12,18 20,16 22 M 19 4 C 19.5 13,17 21,16 22 M 19 4 L 23 4" fill="none" stroke="#1D9E75" stroke-width="2" stroke-linecap="round"/>
+                <circle cx="16" cy="22" r="2.5" fill="#085041"/>
+            </svg>
+            <span class="nav-wordmark">VILORA</span>
+        </a>
         <div class="nav-links">
             {% if current_user.is_authenticated %}
                 <a href="/dashboard">Dashboard</a>

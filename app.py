@@ -146,7 +146,7 @@ def forgot_password():
             <h2>Password Reset</h2>
             <p>Hi {user.display_name},</p>
             <p>You requested a password reset for your Vilora account.</p>
-            <p><a href="{reset_link}" style="display:inline-block;padding:12px 24px;background:#4A6FA5;color:#fff;text-decoration:none;border-radius:4px;font-weight:bold;">Reset Password</a></p>
+            <p><a href="{reset_link}" style="display:inline-block;padding:12px 24px;background:#1D9E75;color:#fff;text-decoration:none;border-radius:4px;font-weight:bold;">Reset Password</a></p>
             <p>Or copy this link: {reset_link}</p>
             <p>This link expires in 1 hour.</p>
             <p>If you didn't request this, you can safely ignore this email.</p>
