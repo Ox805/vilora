@@ -356,7 +356,15 @@ def get_messages(session_id):
         return jsonify({'success': False, 'error': 'Access denied'}), 403
 
     messages = Message.get_by_session(db, session_id)
-    return jsonify({'messages': [m.to_dict() for m in messages]})
+    participants = med_session.get_participants(db)
+    name_map = {p.id: p.display_name for p in participants}
+    msg_list = []
+    for m in messages:
+        d = m.to_dict()
+        d['display_name'] = name_map.get(m.user_id)
+        d['is_self'] = (m.user_id == current_user.id)
+        msg_list.append(d)
+    return jsonify({'messages': msg_list})
 
 
 @app.route('/api/sessions/<int:session_id>/messages', methods=['POST'])

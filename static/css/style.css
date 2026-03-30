@@ -470,10 +470,24 @@ body {
     max-width: 90%;
 }
 
-.message-user {
+.message-self {
     background: var(--primary);
     color: white;
     align-self: flex-end;
+}
+
+.message-other {
+    background: #E6F4F1;
+    align-self: flex-start;
+    max-width: 80%;
+}
+
+.message-other .message-author {
+    color: #2B7A6B;
+}
+
+.message-other .message-time {
+    color: var(--text-muted);
 }
 
 .message-intake {

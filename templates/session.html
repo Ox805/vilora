@@ -102,11 +102,17 @@ function renderMessages(messages) {
             </div>`;
         } else if (m.msg_type === 'intake') {
             return `<div class="message message-intake">
-                <div class="message-author">Initial Perspective</div>
+                <div class="message-author">${escapeHtml(m.display_name || 'Participant')}'s Initial Perspective</div>
                 <div class="message-content">${escapeHtml(m.content)}</div>
             </div>`;
+        } else if (m.is_self) {
+            return `<div class="message message-self">
+                <div class="message-content">${escapeHtml(m.content)}</div>
+                <div class="message-time">${new Date(m.created_at).toLocaleTimeString()}</div>
+            </div>`;
         } else {
-            return `<div class="message message-user">
+            return `<div class="message message-other">
+                <div class="message-author">${escapeHtml(m.display_name || 'Participant')}</div>
                 <div class="message-content">${escapeHtml(m.content)}</div>
                 <div class="message-time">${new Date(m.created_at).toLocaleTimeString()}</div>
             </div>`;
