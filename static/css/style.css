@@ -562,13 +562,12 @@ body {
     position: fixed;
     right: 0;
     top: 0;
+    bottom: 0;
     width: 500px;
-    height: 100vh;
     background: var(--bg-card);
     box-shadow: -4px 0 12px rgba(0,0,0,0.1);
     z-index: 200;
-    display: flex;
-    flex-direction: column;
+    overflow: hidden;
 }
 
 .summary-header {
@@ -577,14 +576,16 @@ body {
     align-items: center;
     padding: 1rem 1.5rem;
     border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
 }
 
 .summary-content {
-    flex: 1;
-    overflow-y: auto;
+    position: absolute;
+    top: 56px;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    overflow-y: scroll;
     padding: 1.5rem;
-    min-height: 0;
 }
 
 .summary-text {
