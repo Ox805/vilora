@@ -569,6 +569,7 @@ body {
     z-index: 50;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
 }
 
 .summary-header {
@@ -582,7 +583,9 @@ body {
 .summary-content {
     flex: 1;
     overflow-y: auto;
+    overflow-x: hidden;
     padding: 1.5rem;
+    min-height: 0;
 }
 
 .summary-text {
