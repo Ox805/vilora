@@ -384,23 +384,27 @@ def send_message(session_id):
     # Save the user's message
     user_msg = Message.create(db, session_id, current_user.id, content, msg_type='user')
 
-    # Get AI mediator response
+    # Check if Vilora should chime in
     messages = Message.get_by_session(db, session_id)
     participants = med_session.get_participants(db)
-    ai_response = mediation_engine.mediate(
-        topic=med_session.topic,
-        session_type=med_session.session_type,
-        messages=messages,
-        participants=participants
-    )
 
-    ai_msg = Message.create(db, session_id, None, ai_response, msg_type='mediator')
+    ai_msg = None
+    try:
+        if mediation_engine.should_respond(med_session.topic, messages, participants):
+            ai_response = mediation_engine.mediate(
+                topic=med_session.topic,
+                session_type=med_session.session_type,
+                messages=messages,
+                participants=participants
+            )
+            ai_msg = Message.create(db, session_id, None, ai_response, msg_type='mediator')
+    except Exception as e:
+        sys.stderr.write(f"[Vilora] Mediation error: {e}\n")
 
-    return jsonify({
-        'success': True,
-        'user_message': user_msg.to_dict(),
-        'mediator_message': ai_msg.to_dict()
-    })
+    result = {'success': True, 'user_message': user_msg.to_dict()}
+    if ai_msg:
+        result['mediator_message'] = ai_msg.to_dict()
+    return jsonify(result)
 
 
 @app.route('/api/sessions/<int:session_id>/participants', methods=['GET'])

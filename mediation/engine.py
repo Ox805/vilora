@@ -1,4 +1,5 @@
 import os
+import sys
 from anthropic import Anthropic
 
 SYSTEM_PROMPT = """You are Vilora, an expert AI mediator. Your role is to facilitate productive dialogue \
@@ -48,6 +49,26 @@ address related issues that emerge. Keep track of what has been agreed upon and 
 When participants reach agreements, clearly state them and confirm both parties accept.
 """
 
+SHOULD_RESPOND_PROMPT = """You are analyzing a mediation conversation to decide if the mediator (Vilora) \
+should chime in right now, or let the participants continue talking.
+
+Vilora should chime in when:
+- There have been several exchanges (3+) between participants without mediator input
+- A participant directly asks Vilora a question or asks for help
+- The conversation is escalating or getting heated
+- There's a misunderstanding that needs reframing
+- Someone has made a concession or shown willingness to compromise (acknowledge it)
+- The conversation seems stuck or going in circles
+- There's an opportunity to highlight common ground
+- A new participant has just shared their first message in the session
+
+Vilora should stay silent when:
+- Participants are having a productive back-and-forth on their own
+- Only 1-2 messages have been exchanged since the last mediator input
+- The participants are actively building on each other's ideas without conflict
+
+Respond with ONLY "YES" or "NO" — nothing else."""
+
 
 class MediationEngine:
     def __init__(self):
@@ -86,6 +107,68 @@ class MediationEngine:
         )
 
         return response.content[0].text
+
+    def should_respond(self, topic, messages, participants):
+        """Decide whether Vilora should chime in based on conversation state."""
+        if not self.client:
+            return True
+
+        participant_names = {p.id: p.display_name for p in participants}
+
+        # Always respond to the very first user message in the session
+        user_messages = [m for m in messages if m.msg_type == 'user']
+        if len(user_messages) <= 1:
+            return True
+
+        # Count user messages since last mediator response
+        msgs_since_mediator = 0
+        for m in reversed(messages):
+            if m.msg_type == 'mediator':
+                break
+            if m.msg_type == 'user':
+                msgs_since_mediator += 1
+
+        # If many messages have passed, always respond
+        if msgs_since_mediator >= 5:
+            return True
+
+        # If only 1 message since last mediator response, usually skip
+        if msgs_since_mediator <= 1:
+            return False
+
+        # For 2-4 messages, ask Claude to decide
+        recent = messages[-8:]  # last 8 messages for context
+        conversation_text = ""
+        for msg in recent:
+            if msg.msg_type == 'mediator':
+                conversation_text += f"[Vilora]: {msg.content}\n\n"
+            elif msg.msg_type == 'user':
+                name = participant_names.get(msg.user_id, 'Unknown')
+                conversation_text += f"[{name}]: {msg.content}\n\n"
+            elif msg.msg_type == 'intake':
+                name = participant_names.get(msg.user_id, 'Unknown')
+                conversation_text += f"[{name}'s initial perspective]: {msg.content}\n\n"
+
+        prompt = (
+            f"Mediation topic: {topic}\n\n"
+            f"Recent conversation:\n{conversation_text}\n"
+            f"Messages since last mediator input: {msgs_since_mediator}\n\n"
+            f"Should the mediator chime in now?"
+        )
+
+        try:
+            response = self.client.messages.create(
+                model="claude-sonnet-4-6-20250514",
+                max_tokens=10,
+                system=SHOULD_RESPOND_PROMPT,
+                messages=[{"role": "user", "content": prompt}]
+            )
+            answer = response.content[0].text.strip().upper()
+            return answer.startswith("YES")
+        except Exception as e:
+            sys.stderr.write(f"[Vilora] Error in should_respond: {e}\n")
+            # Default to responding if we can't decide
+            return msgs_since_mediator >= 3
 
     def mediate(self, topic, session_type, messages, participants):
         if not self.client:
