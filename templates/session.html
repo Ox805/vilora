@@ -53,15 +53,6 @@
         <div class="loading">Loading conversation...</div>
     </div>
 
-    <!-- Summary Display -->
-    <div id="summary-panel" class="summary-panel" style="display:none">
-        <div class="summary-header">
-            <h3>Session Summary</h3>
-            <button onclick="closeSummary()" class="btn btn-sm">Close</button>
-        </div>
-        <div id="summary-content" class="summary-content"></div>
-    </div>
-
     <div class="message-input-area">
         <form id="message-form" onsubmit="sendMessage(event)">
             <textarea id="message-input" rows="3"
@@ -70,6 +61,15 @@
             <button type="submit" class="btn btn-primary" id="send-btn">Send</button>
         </form>
     </div>
+</div>
+
+<!-- Summary panel — outside mediation room so it overlays properly -->
+<div id="summary-panel" class="summary-panel" style="display:none">
+    <div class="summary-header">
+        <h3>Session Summary</h3>
+        <button onclick="closeSummary()" class="btn btn-sm">Close</button>
+    </div>
+    <div id="summary-content" class="summary-content"></div>
 </div>
 
 <script>

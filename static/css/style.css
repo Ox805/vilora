@@ -562,14 +562,13 @@ body {
     position: fixed;
     right: 0;
     top: 0;
-    bottom: 0;
-    width: 400px;
+    width: 500px;
+    height: 100vh;
     background: var(--bg-card);
     box-shadow: -4px 0 12px rgba(0,0,0,0.1);
-    z-index: 50;
+    z-index: 200;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
 }
 
 .summary-header {
@@ -578,12 +577,12 @@ body {
     align-items: center;
     padding: 1rem 1.5rem;
     border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
 }
 
 .summary-content {
     flex: 1;
     overflow-y: auto;
-    overflow-x: hidden;
     padding: 1.5rem;
     min-height: 0;
 }
@@ -593,6 +592,7 @@ body {
     font-family: inherit;
     font-size: 0.9rem;
     line-height: 1.6;
+    margin: 0;
 }
 
 /* === Error Page === */
