@@ -56,8 +56,8 @@
     <div class="message-input-area">
         <form id="message-form" onsubmit="sendMessage(event)">
             <textarea id="message-input" rows="3"
-                placeholder="Share your thoughts... Vilora will help facilitate the conversation."
-                onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault();sendMessage(event)}"></textarea>
+                placeholder="Share your thoughts... (Ctrl+Enter to send)"
+                onkeydown="if(event.key==='Enter' && event.ctrlKey){event.preventDefault();sendMessage(event)}"></textarea>
             <button type="submit" class="btn btn-primary" id="send-btn">Send</button>
         </form>
     </div>
