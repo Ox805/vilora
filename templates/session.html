@@ -158,6 +158,7 @@ async function getSummary() {
     const content = document.getElementById('summary-content');
     content.innerHTML = '<p class="loading">Generating summary...</p>';
     panel.style.display = 'block';
+    document.body.style.overflow = 'hidden';
 
     try {
         const res = await fetch(`/api/sessions/${SESSION_ID}/summary`);
@@ -174,6 +175,7 @@ async function getSummary() {
 
 function closeSummary() {
     document.getElementById('summary-panel').style.display = 'none';
+    document.body.style.overflow = '';
 }
 
 function escapeHtml(text) {
