@@ -119,7 +119,11 @@ function renderMessages(messages) {
         }
     }).join('');
 
-    container.scrollTop = container.scrollHeight;
+    // Only auto-scroll if user is near the bottom (within 150px)
+    const isNearBottom = (container.scrollHeight - container.scrollTop - container.clientHeight) < 150;
+    if (isNearBottom) {
+        container.scrollTop = container.scrollHeight;
+    }
 }
 
 async function sendMessage(e) {
