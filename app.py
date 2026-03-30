@@ -432,11 +432,16 @@ def get_summary(session_id):
 
     messages = Message.get_by_session(db, session_id)
     participants = med_session.get_participants(db)
-    summary = mediation_engine.summarize(
-        topic=med_session.topic,
-        messages=messages,
-        participants=participants
-    )
+
+    try:
+        summary = mediation_engine.summarize(
+            topic=med_session.topic,
+            messages=messages,
+            participants=participants
+        )
+    except Exception as e:
+        sys.stderr.write(f"[Vilora] Summary error: {e}\n")
+        return jsonify({'success': False, 'error': 'Failed to generate summary. Please try again.'}), 500
 
     return jsonify({'success': True, 'summary': summary})
 

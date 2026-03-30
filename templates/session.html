@@ -155,9 +155,17 @@ async function getSummary() {
     content.innerHTML = '<p class="loading">Generating summary...</p>';
     panel.style.display = 'block';
 
-    const res = await fetch(`/api/sessions/${SESSION_ID}/summary`);
-    const data = await res.json();
-    content.innerHTML = `<pre class="summary-text">${escapeHtml(data.summary)}</pre>`;
+    try {
+        const res = await fetch(`/api/sessions/${SESSION_ID}/summary`);
+        const data = await res.json();
+        if (data.success) {
+            content.innerHTML = `<pre class="summary-text">${escapeHtml(data.summary)}</pre>`;
+        } else {
+            content.innerHTML = `<p class="error-msg">${escapeHtml(data.error || 'Failed to generate summary.')}</p>`;
+        }
+    } catch (err) {
+        content.innerHTML = '<p class="error-msg">Failed to generate summary. Please try again.</p>';
+    }
 }
 
 function closeSummary() {
