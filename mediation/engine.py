@@ -100,7 +100,7 @@ class MediationEngine:
         )
 
         response = self.client.messages.create(
-            model="claude-sonnet-4-6-20250514",
+            model="claude-sonnet-4-5-20250514",
             max_tokens=512,
             system=SYSTEM_PROMPT,
             messages=[{"role": "user", "content": prompt}]
@@ -158,7 +158,7 @@ class MediationEngine:
 
         try:
             response = self.client.messages.create(
-                model="claude-sonnet-4-6-20250514",
+                model="claude-sonnet-4-5-20250514",
                 max_tokens=10,
                 system=SHOULD_RESPOND_PROMPT,
                 messages=[{"role": "user", "content": prompt}]
@@ -178,7 +178,7 @@ class MediationEngine:
         conversation = self._build_conversation(topic, session_type, messages, participant_names)
 
         response = self.client.messages.create(
-            model="claude-sonnet-4-6-20250514",
+            model="claude-sonnet-4-5-20250514",
             max_tokens=1024,
             system=SYSTEM_PROMPT,
             messages=conversation
@@ -210,7 +210,7 @@ class MediationEngine:
                 summary_prompt += f"[Vilora]: {msg.content}\n"
 
         response = self.client.messages.create(
-            model="claude-sonnet-4-6-20250514",
+            model="claude-sonnet-4-5-20250514",
             max_tokens=2048,
             system="You are a mediation session summarizer. Provide clear, neutral summaries.",
             messages=[{"role": "user", "content": summary_prompt}]
