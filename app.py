@@ -225,6 +225,95 @@ def list_sessions():
     return jsonify({'sessions': [s.to_dict() for s in sessions]})
 
 
+# --- Memory Helpers ---
+
+def get_user_memories(db, user_id):
+    """Load all active memories for a user as a list of dicts."""
+    cur = _exec(db, "SELECT * FROM user_memories WHERE user_id = ? AND active = 1 ORDER BY category, created_at", (user_id,))
+    rows = cur.fetchall()
+    return [{'id': r['id'], 'category': r['category'], 'content': r['content'],
+             'source_type': r['source_type'], 'confidence': r['confidence']} for r in rows]
+
+
+def save_extracted_memories(db, user_id, session_id, memories):
+    """Save AI-extracted memories to the database."""
+    for m in memories:
+        _exec(db,
+            "INSERT INTO user_memories (user_id, category, content, source_type, source_session_id, confidence) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (user_id, m.get('category', 'profile'), m.get('content', ''),
+             'session', session_id, m.get('confidence', 0.8))
+        )
+    db.commit()
+
+
+# --- About Me Page ---
+
+@app.route('/about-me')
+@login_required
+def about_me():
+    return render_template('about_me.html')
+
+
+# --- Memory API ---
+
+@app.route('/api/user/memories', methods=['GET'])
+@login_required
+def list_memories():
+    db = get_db()
+    memories = get_user_memories(db, current_user.id)
+    return jsonify({'success': True, 'memories': memories})
+
+
+@app.route('/api/user/memories', methods=['POST'])
+@login_required
+def add_memory():
+    data = request.get_json()
+    content = data.get('content', '').strip()
+    category = data.get('category', 'profile')
+
+    if not content:
+        return jsonify({'success': False, 'error': 'Content is required'}), 400
+
+    db = get_db()
+    _exec(db,
+        "INSERT INTO user_memories (user_id, category, content, source_type, confidence) VALUES (?, ?, ?, ?, ?)",
+        (current_user.id, category, content, 'explicit', 1.0)
+    )
+    db.commit()
+    return jsonify({'success': True})
+
+
+@app.route('/api/user/memories/<int:memory_id>', methods=['PUT'])
+@login_required
+def edit_memory(memory_id):
+    data = request.get_json()
+    content = data.get('content', '').strip()
+
+    if not content:
+        return jsonify({'success': False, 'error': 'Content is required'}), 400
+
+    db = get_db()
+    _exec(db,
+        "UPDATE user_memories SET content = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?",
+        (content, memory_id, current_user.id)
+    )
+    db.commit()
+    return jsonify({'success': True})
+
+
+@app.route('/api/user/memories/<int:memory_id>', methods=['DELETE'])
+@login_required
+def delete_memory(memory_id):
+    db = get_db()
+    _exec(db,
+        "UPDATE user_memories SET active = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?",
+        (memory_id, current_user.id)
+    )
+    db.commit()
+    return jsonify({'success': True})
+
+
 # --- Framing Helper ---
 
 @app.route('/api/frame', methods=['POST'])
@@ -237,7 +326,9 @@ def frame_issue():
         return jsonify({'success': False, 'error': 'Please describe the issue first'}), 400
 
     try:
-        result = mediation_engine.frame(raw_text)
+        db = get_db()
+        memories = get_user_memories(db, current_user.id)
+        result = mediation_engine.frame(raw_text, user_memories=memories or None)
         if not result:
             return jsonify({'success': False, 'error': 'Framing requires API key'}), 500
         import json
@@ -416,11 +507,19 @@ def send_message(session_id):
     ai_msg = None
     try:
         if mediation_engine.should_respond(med_session.topic, messages, participants):
+            # Load memories for all participants
+            participant_memories = {}
+            for p in participants:
+                memories = get_user_memories(db, p.id)
+                if memories:
+                    participant_memories[p.id] = memories
+
             ai_response = mediation_engine.mediate(
                 topic=med_session.topic,
                 session_type=med_session.session_type,
                 messages=messages,
-                participants=participants
+                participants=participants,
+                participant_memories=participant_memories or None
             )
             ai_msg = Message.create(db, session_id, None, ai_response, msg_type='mediator')
     except Exception as e:
@@ -485,6 +584,24 @@ def get_summary(session_id):
         (session_id, message_count, summary)
     )
     db.commit()
+
+    # Extract memories for each participant (runs in background after response)
+    try:
+        for p in participants:
+            existing = get_user_memories(db, p.id)
+            new_memories = mediation_engine.extract_memories(
+                user_name=p.display_name,
+                user_id=p.id,
+                topic=med_session.topic,
+                messages=messages,
+                participants=participants,
+                existing_memories=existing
+            )
+            if new_memories:
+                save_extracted_memories(db, p.id, session_id, new_memories)
+                sys.stderr.write(f"[Vilora] Extracted {len(new_memories)} memories for {p.display_name}\n")
+    except Exception as e:
+        sys.stderr.write(f"[Vilora] Memory extraction error: {e}\n")
 
     return jsonify({'success': True, 'summary': summary})
 

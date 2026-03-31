@@ -78,9 +78,19 @@ class MediationEngine:
         else:
             self.client = None
 
-    def frame(self, raw_text):
+    def frame(self, raw_text, user_memories=None):
         if not self.client:
             return None
+
+        memory_context = ""
+        if user_memories:
+            context = self._build_memory_context(user_memories)
+            if context:
+                memory_context = (
+                    f"\n\nYou know the following about this user from past sessions:\n{context}\n"
+                    f"Use this to make your framing suggestions more attuned to who they are — "
+                    f"but don't explicitly reference what you know. Just let it inform your tone and advice."
+                )
 
         prompt = (
             f"A user wants to start a mediation session. They've described their situation "
@@ -89,7 +99,7 @@ class MediationEngine:
             f"Help them prepare by extracting and lightly refining their input into structured fields. "
             f"IMPORTANT: preserve their voice, tone, and intent. Only make small, targeted adjustments. "
             f"If their phrasing is already clear and genuine, leave it mostly as-is. "
-            f"Do NOT put words in their mouth or add things they didn't say.\n\n"
+            f"Do NOT put words in their mouth or add things they didn't say.{memory_context}\n\n"
             f"Respond in EXACTLY this JSON format (no markdown, no code fences, just raw JSON):\n"
             f'{{\n'
             f'  "topic": "A clear, neutral one-line description of the issue (not blaming either side)",\n'
@@ -205,17 +215,35 @@ class MediationEngine:
             # Default to responding if we can't decide
             return msgs_since_mediator >= 3
 
-    def mediate(self, topic, session_type, messages, participants):
+    def mediate(self, topic, session_type, messages, participants, participant_memories=None):
         if not self.client:
             return self._fallback_response(messages)
 
         participant_names = {p.id: p.display_name for p in participants}
         conversation = self._build_conversation(topic, session_type, messages, participant_names)
 
+        # Build personalized system prompt with memories
+        system = SYSTEM_PROMPT
+        if participant_memories:
+            memory_sections = []
+            for user_id, memories in participant_memories.items():
+                name = participant_names.get(user_id, 'Unknown')
+                context = self._build_memory_context(memories)
+                if context:
+                    memory_sections.append(f"\n## What you know about {name}:\n{context}")
+            if memory_sections:
+                system += (
+                    "\n\n## Participant Knowledge\n"
+                    "Use this knowledge naturally — don't explicitly reference it unless directly relevant. "
+                    "The goal is for your responses to feel attuned and personal. "
+                    "NEVER reveal one participant's memories to another participant."
+                    + "\n".join(memory_sections)
+                )
+
         response = self.client.messages.create(
             model="claude-sonnet-4-20250514",
             max_tokens=1024,
-            system=SYSTEM_PROMPT,
+            system=system,
             messages=conversation
         )
 
@@ -288,6 +316,94 @@ class MediationEngine:
                 })
 
         return conversation
+
+    def extract_memories(self, user_name, user_id, topic, messages, participants, existing_memories=None):
+        """Extract new memories about a user from a session transcript."""
+        if not self.client:
+            return []
+
+        participant_names = {p.id: p.display_name for p in participants}
+
+        # Build transcript
+        transcript = f"Topic: {topic}\n\n"
+        for msg in messages:
+            if msg.msg_type == 'intake':
+                name = participant_names.get(msg.user_id, 'Unknown')
+                transcript += f"[{name}'s initial perspective]: {msg.content}\n\n"
+            elif msg.msg_type == 'user':
+                name = participant_names.get(msg.user_id, 'Unknown')
+                transcript += f"[{name}]: {msg.content}\n\n"
+            elif msg.msg_type == 'mediator':
+                transcript += f"[Vilora]: {msg.content}\n\n"
+
+        # Format existing memories
+        existing_text = "None yet."
+        if existing_memories:
+            existing_text = "\n".join(
+                f"- [{m['category']}] {m['content']}" for m in existing_memories
+            )
+
+        prompt = (
+            f"You are analyzing a mediation session to learn about the participant named "
+            f"**{user_name}**. Extract insights that would help you be a better, more personal "
+            f"mediator for them in future sessions.\n\n"
+            f"Only extract things that are genuinely useful and clearly demonstrated — not "
+            f"trivial details or wild guesses. Focus on what makes this person tick: their values, "
+            f"how they communicate, what matters to them, what triggers them, and how they handle conflict.\n\n"
+            f"Do NOT duplicate existing memories. If an existing memory should be updated or "
+            f"refined based on new evidence, include it with the updated content.\n\n"
+            f"**Existing memories about {user_name}:**\n{existing_text}\n\n"
+            f"**Session transcript:**\n{transcript}\n\n"
+            f"Respond with ONLY a JSON array (no markdown, no code fences). Each item:\n"
+            f'{{"category": "profile|communication|history|pattern|preference", '
+            f'"content": "the insight in natural language", '
+            f'"confidence": 0.0-1.0}}\n\n'
+            f"If there are no meaningful new insights, return an empty array: []"
+        )
+
+        try:
+            response = self.client.messages.create(
+                model="claude-sonnet-4-20250514",
+                max_tokens=1024,
+                system=(
+                    "You extract personal insights about mediation participants to help "
+                    "personalize future sessions. Return valid JSON only — no markdown, "
+                    "no code fences, no extra text. Be selective — quality over quantity."
+                ),
+                messages=[{"role": "user", "content": prompt}]
+            )
+            import json
+            return json.loads(response.content[0].text)
+        except Exception as e:
+            sys.stderr.write(f"[Vilora] Memory extraction error: {e}\n")
+            return []
+
+    def _build_memory_context(self, user_memories):
+        """Format user memories for inclusion in system prompt."""
+        if not user_memories:
+            return ""
+
+        sections = {}
+        for m in user_memories:
+            cat = m.get('category', 'other')
+            if cat not in sections:
+                sections[cat] = []
+            sections[cat].append(m['content'])
+
+        labels = {
+            'profile': 'About them',
+            'communication': 'Communication style',
+            'history': 'Past mediations',
+            'pattern': 'Patterns noticed',
+            'preference': 'Their preferences for how you interact'
+        }
+
+        lines = []
+        for cat, items in sections.items():
+            label = labels.get(cat, cat.title())
+            lines.append(f"**{label}:** " + "; ".join(items))
+
+        return "\n".join(lines)
 
     def _fallback_response(self, messages):
         return (

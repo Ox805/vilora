@@ -676,6 +676,93 @@ body.summary-open .container {
     margin: 0;
 }
 
+/* === About Me / Memories === */
+.about-me-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 2rem;
+}
+
+.about-me-header h1 { margin-bottom: 0.25rem; }
+
+.about-me-subtitle {
+    color: var(--text-light);
+    font-size: 0.9rem;
+}
+
+.memory-category {
+    margin-bottom: 2rem;
+}
+
+.memory-category-header h3 {
+    color: var(--accent);
+    margin-bottom: 0.15rem;
+}
+
+.memory-category-desc {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    margin-bottom: 0.75rem;
+}
+
+.memory-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.memory-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--bg-card);
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+}
+
+.memory-content {
+    flex: 1;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    margin-right: 1rem;
+}
+
+.memory-actions {
+    display: flex;
+    gap: 0.4rem;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.memory-confidence {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    background: var(--bg);
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+}
+
+.memory-actions .btn-delete {
+    color: var(--error);
+    border-color: var(--error);
+}
+.memory-actions .btn-delete:hover { background: #FFF5F5; }
+
+@media (max-width: 768px) {
+    .about-me-header {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    .memory-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+    .memory-content { margin-right: 0; }
+}
+
 /* === Error Page === */
 .error-page {
     text-align: center;

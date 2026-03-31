@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+{% block title %}About Me{% endblock %}
+
+{% block content %}
+<div class="about-me">
+    <div class="about-me-header">
+        <div>
+            <h1>What Vilora knows about you</h1>
+            <p class="about-me-subtitle">
+                Vilora learns from your sessions to provide more personal, attuned mediation.
+                You're always in control — edit or remove anything here.
+            </p>
+        </div>
+        <button onclick="showAddMemory()" class="btn btn-primary">Add something</button>
+    </div>
+
+    <!-- Add Memory Modal -->
+    <div id="add-memory-modal" class="modal" style="display:none">
+        <div class="modal-content" style="max-width: 480px;">
+            <h2>Tell Vilora something about you</h2>
+            <p style="color: var(--text-light); margin-bottom: 1rem; font-size: 0.9rem;">
+                Share something that would help Vilora be a better mediator for you.
+            </p>
+            <div class="form-group">
+                <label for="memory-category">Category</label>
+                <select id="memory-category">
+                    <option value="profile">About me</option>
+                    <option value="communication">How I communicate</option>
+                    <option value="preference">How I want Vilora to interact</option>
+                    <option value="pattern">Something I'm working on</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="memory-content">What would you like Vilora to know?</label>
+                <textarea id="memory-content" rows="3"
+                    placeholder="e.g., 'I have two kids and family time is really important to me' or 'I tend to avoid confrontation and need encouragement to speak up'"></textarea>
+            </div>
+            <div class="form-actions">
+                <button type="button" onclick="hideAddMemory()" class="btn">Cancel</button>
+                <button type="button" onclick="saveNewMemory()" class="btn btn-primary">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Memory Modal -->
+    <div id="edit-memory-modal" class="modal" style="display:none">
+        <div class="modal-content" style="max-width: 480px;">
+            <h2>Edit memory</h2>
+            <div class="form-group">
+                <textarea id="edit-memory-content" rows="3"></textarea>
+            </div>
+            <div class="form-actions">
+                <button type="button" onclick="hideEditMemory()" class="btn">Cancel</button>
+                <button type="button" onclick="saveEditMemory()" class="btn btn-primary">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="memories-container">
+        <p class="loading">Loading...</p>
+    </div>
+
+    <div id="empty-state" class="empty-state" style="display:none">
+        <p>Vilora doesn't know anything about you yet.</p>
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.5rem;">
+            Memories are learned from your mediation sessions, or you can add them manually.
+        </p>
+    </div>
+</div>
+
+<script>
+let editingMemoryId = null;
+
+const CATEGORY_LABELS = {
+    profile: 'About you',
+    communication: 'Communication style',
+    history: 'Session history',
+    pattern: 'Patterns & growth',
+    preference: 'Preferences'
+};
+
+const CATEGORY_DESCRIPTIONS = {
+    profile: 'Who you are, your relationships, values, and life context',
+    communication: 'How you express yourself and what works for you',
+    history: 'What you\'ve mediated and what happened',
+    pattern: 'Recurring themes, triggers, and growth areas',
+    preference: 'How you want Vilora to interact with you'
+};
+
+async function loadMemories() {
+    const res = await fetch('/api/user/memories');
+    const data = await res.json();
+    const container = document.getElementById('memories-container');
+    const emptyState = document.getElementById('empty-state');
+
+    if (!data.memories || data.memories.length === 0) {
+        container.innerHTML = '';
+        emptyState.style.display = 'block';
+        return;
+    }
+
+    emptyState.style.display = 'none';
+
+    // Group by category
+    const grouped = {};
+    for (const m of data.memories) {
+        if (!grouped[m.category]) grouped[m.category] = [];
+        grouped[m.category].push(m);
+    }
+
+    // Render in consistent order
+    const order = ['profile', 'communication', 'history', 'pattern', 'preference'];
+    let html = '';
+    for (const cat of order) {
+        const items = grouped[cat];
+        if (!items) continue;
+        html += `
+            <div class="memory-category">
+                <div class="memory-category-header">
+                    <h3>${CATEGORY_LABELS[cat] || cat}</h3>
+                    <p class="memory-category-desc">${CATEGORY_DESCRIPTIONS[cat] || ''}</p>
+                </div>
+                <div class="memory-list">
+                    ${items.map(m => `
+                        <div class="memory-item">
+                            <p class="memory-content">${escapeHtml(m.content)}</p>
+                            <div class="memory-actions">
+                                ${m.confidence < 1.0 ? `<span class="memory-confidence" title="Confidence: ${Math.round(m.confidence * 100)}%">AI-detected</span>` : ''}
+                                <button onclick="editMemory(${m.id}, '${escapeAttr(m.content)}')" class="btn btn-sm">Edit</button>
+                                <button onclick="deleteMemory(${m.id})" class="btn btn-sm btn-delete">Remove</button>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+    container.innerHTML = html;
+}
+
+function showAddMemory() {
+    document.getElementById('add-memory-modal').style.display = 'flex';
+    document.getElementById('memory-content').focus();
+}
+
+function hideAddMemory() {
+    document.getElementById('add-memory-modal').style.display = 'none';
+    document.getElementById('memory-content').value = '';
+}
+
+async function saveNewMemory() {
+    const category = document.getElementById('memory-category').value;
+    const content = document.getElementById('memory-content').value.trim();
+    if (!content) return;
+
+    await fetch('/api/user/memories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ category, content })
+    });
+    hideAddMemory();
+    loadMemories();
+}
+
+function editMemory(id, content) {
+    editingMemoryId = id;
+    document.getElementById('edit-memory-content').value = content;
+    document.getElementById('edit-memory-modal').style.display = 'flex';
+}
+
+function hideEditMemory() {
+    document.getElementById('edit-memory-modal').style.display = 'none';
+    editingMemoryId = null;
+}
+
+async function saveEditMemory() {
+    const content = document.getElementById('edit-memory-content').value.trim();
+    if (!content || !editingMemoryId) return;
+
+    await fetch(`/api/user/memories/${editingMemoryId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content })
+    });
+    hideEditMemory();
+    loadMemories();
+}
+
+async function deleteMemory(id) {
+    if (!confirm('Remove this memory? Vilora will no longer use it.')) return;
+    await fetch(`/api/user/memories/${id}`, { method: 'DELETE' });
+    loadMemories();
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function escapeAttr(text) {
+    return text.replace(/'/g, "\\'").replace(/\n/g, ' ');
+}
+
+loadMemories();
+</script>
+{% endblock %}

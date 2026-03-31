@@ -102,6 +102,19 @@ def db_init():
                 summary TEXT NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )""",
+            """CREATE TABLE IF NOT EXISTS user_memories (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL REFERENCES users(id),
+                category TEXT NOT NULL,
+                content TEXT NOT NULL,
+                source_type TEXT NOT NULL,
+                source_session_id INTEGER REFERENCES mediation_sessions(id),
+                confidence REAL DEFAULT 1.0,
+                active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )""",
+            "CREATE INDEX IF NOT EXISTS idx_user_memories_user ON user_memories(user_id, active)",
         ]
         for stmt in statements:
             cur.execute(stmt)
@@ -173,6 +186,21 @@ def db_init():
                 summary TEXT NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (session_id) REFERENCES mediation_sessions(id)
+            );
+
+            CREATE TABLE IF NOT EXISTS user_memories (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                category TEXT NOT NULL,
+                content TEXT NOT NULL,
+                source_type TEXT NOT NULL,
+                source_session_id INTEGER,
+                confidence REAL DEFAULT 1.0,
+                active INTEGER DEFAULT 1,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id),
+                FOREIGN KEY (source_session_id) REFERENCES mediation_sessions(id)
             );
         """)
         db.commit()
