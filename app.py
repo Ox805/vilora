@@ -352,9 +352,15 @@ def create_session():
     session_mode = data.get('mode', 'mediation')
     perspective = data.get('perspective', '').strip()
 
-    # For personal sessions, use the topic as the perspective if none provided
-    if session_mode == 'personal' and not perspective:
+    # For personal sessions, use the topic as the perspective and generate a short title
+    if session_mode == 'personal':
         perspective = topic
+        try:
+            topic = mediation_engine.generate_title(perspective)
+        except Exception as e:
+            print(f"Warning: Could not generate title: {e}")
+            # Fallback: truncate
+            topic = topic[:60] + ('...' if len(topic) > 60 else '')
 
     if not topic:
         return jsonify({'success': False, 'error': 'Topic is required'}), 400
@@ -623,4 +629,23 @@ with app.app_context():
     db_init()
 
 if __name__ == '__main__':
-    app.run(debug=True, port=int(os.environ.get('PORT', 5001)), host='0.0.0.0')
+    if len(sys.argv) > 1 and sys.argv[1] == 'fix-titles':
+        with app.app_context():
+            db = get_db()
+            cur = _exec(db, "SELECT id, topic FROM mediation_sessions WHERE session_mode = 'personal'")
+            sessions = cur.fetchall()
+            print(f"Found {len(sessions)} personal sessions to fix.")
+            for s in sessions:
+                if len(s['topic']) <= 60:
+                    print(f"  Session {s['id']}: already short, skipping.")
+                    continue
+                try:
+                    new_title = mediation_engine.generate_title(s['topic'])
+                    _exec(db, "UPDATE mediation_sessions SET topic = ? WHERE id = ?", (new_title, s['id']))
+                    db.commit()
+                    print(f"  Session {s['id']}: '{new_title}'")
+                except Exception as e:
+                    print(f"  Session {s['id']}: ERROR — {e}")
+            print("Done.")
+    else:
+        app.run(debug=True, port=int(os.environ.get('PORT', 5001)), host='0.0.0.0')

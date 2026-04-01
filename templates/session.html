@@ -6,7 +6,7 @@
     <div class="room-header">
         <h2>{{ session.topic }}</h2>
         <div class="room-actions">
-            <span class="session-type-badge">{{ session.session_type }}</span>
+            <span class="session-type-badge">{% if is_personal %}Personal{% else %}{{ session.session_type }}{% endif %}</span>
             {% if not is_personal %}<span id="participant-status" class="participant-status"></span>{% endif %}
             <button onclick="getSummary()" class="btn btn-sm">Get Summary</button>
         </div>

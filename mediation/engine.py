@@ -118,6 +118,26 @@ class MediationEngine:
         else:
             self.client = None
 
+    def generate_title(self, text):
+        """Generate a short session title from the user's input."""
+        if not self.client:
+            # Fallback: truncate to first sentence or 60 chars
+            first_line = text.split('.')[0].split('\n')[0].strip()
+            return first_line[:60] if len(first_line) > 60 else first_line
+
+        response = self.client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=60,
+            system=(
+                "Generate a brief, empathetic session title (under 60 characters) from the user's message. "
+                "The title should capture the core theme without being clinical or judgmental. "
+                "Examples: 'Feeling overwhelmed at work', 'Navigating a tough conversation with my partner'. "
+                "Respond with ONLY the title text — no quotes, no punctuation at the end, no explanation."
+            ),
+            messages=[{"role": "user", "content": text}]
+        )
+        return response.content[0].text.strip().strip('"\'')
+
     def frame(self, raw_text, user_memories=None):
         if not self.client:
             return None
