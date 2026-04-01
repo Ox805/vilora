@@ -412,6 +412,8 @@ def delete_session(session_id):
     if med_session.creator_id != current_user.id:
         return jsonify({'success': False, 'error': 'Only the session creator can delete it'}), 403
 
+    _exec(db, "DELETE FROM session_summaries WHERE session_id = ?", (session_id,))
+    _exec(db, "DELETE FROM user_memories WHERE source_session_id = ?", (session_id,))
     _exec(db, "DELETE FROM messages WHERE session_id = ?", (session_id,))
     _exec(db, "DELETE FROM agreements WHERE session_id = ?", (session_id,))
     _exec(db, "DELETE FROM session_participants WHERE session_id = ?", (session_id,))
