@@ -11,10 +11,7 @@
                 You're always in control — edit or remove anything here.
             </p>
         </div>
-        <div class="about-me-actions">
-            <button onclick="startOnboarding()" class="btn">Get to know me</button>
-            <button onclick="showAddMemory()" class="btn btn-primary">Add something</button>
-        </div>
+        <div class="about-me-actions" id="header-actions"></div>
     </div>
 
     <!-- Onboarding banner (shown when no profile memories exist) -->
@@ -273,10 +270,13 @@ async function loadMemories() {
     const emptyState = document.getElementById('empty-state');
     const banner = document.getElementById('onboarding-banner');
 
+    const headerActions = document.getElementById('header-actions');
+
     if (!data.memories || data.memories.length === 0) {
         container.innerHTML = '';
         emptyState.style.display = 'block';
         banner.style.display = 'flex';
+        headerActions.innerHTML = '<button onclick="startOnboarding()" class="btn btn-primary">Get to know me</button>';
         return;
     }
 
@@ -285,6 +285,15 @@ async function loadMemories() {
     // Show onboarding banner if no profile memories
     const hasProfile = data.memories.some(m => m.category === 'profile');
     banner.style.display = hasProfile ? 'none' : 'flex';
+
+    if (hasProfile) {
+        headerActions.innerHTML =
+            '<button onclick="startOnboarding()" class="btn btn-sm">Update my profile</button> ' +
+            '<button onclick="showAddMemory()" class="btn btn-primary">Add something</button>';
+    } else {
+        headerActions.innerHTML =
+            '<button onclick="startOnboarding()" class="btn btn-primary">Get to know me</button>';
+    }
 
     // Group by category
     const grouped = {};
