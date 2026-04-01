@@ -134,6 +134,12 @@
 </div>
 
 <script>
+function localTime(ts) {
+    if (!ts) return '';
+    const d = new Date(ts.endsWith('Z') ? ts : ts + 'Z');
+    return d.toLocaleDateString() + ' ' + d.toLocaleTimeString();
+}
+
 let currentSessionId = null;
 
 function showNewSession() {
@@ -335,7 +341,7 @@ async function loadSessions() {
                     <span class="session-status ${s.status}">${s.status}</span>
                 </div>
                 <h3>${escapeHtml(s.topic)}</h3>
-                <p class="session-date">${new Date(s.created_at).toLocaleDateString()} ${new Date(s.created_at).toLocaleTimeString()}</p>
+                <p class="session-date">${localTime(s.created_at)}</p>
             </a>
             <button onclick="deleteSession(${s.id}, event)" class="btn btn-sm btn-delete" title="Delete session">Delete</button>
         </div>
