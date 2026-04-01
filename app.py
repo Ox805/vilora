@@ -376,7 +376,8 @@ def create_session():
                 topic=topic,
                 session_type=session_type,
                 perspective=perspective,
-                creator_name=current_user.display_name
+                creator_name=current_user.display_name,
+                session_mode=session_mode
             )
             Message.create(db, med_session.id, None, ai_response, msg_type='mediator')
         except Exception as e:

@@ -348,7 +348,7 @@ class MediationSession:
         return MediationSession(
             row['id'], row['creator_id'], row['topic'], row['session_type'],
             row['invite_code'], row['status'], row['created_at'],
-            session_mode=row.get('session_mode', 'mediation')
+            session_mode=row['session_mode'] if 'session_mode' in row.keys() else 'mediation'
         )
 
     @staticmethod

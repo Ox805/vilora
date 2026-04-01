@@ -230,6 +230,7 @@ function renderStep() {
     }
 
     document.getElementById('onboarding-step').innerHTML = html;
+    if (window.VoiceInput) VoiceInput.attachAll();
 }
 
 function saveCurrentStepAnswers() {

@@ -163,31 +163,50 @@ class MediationEngine:
 
         return response.content[0].text
 
-    def welcome(self, topic, session_type, perspective, creator_name):
+    def welcome(self, topic, session_type, perspective, creator_name, session_mode='mediation'):
         if not self.client:
+            if session_mode == 'personal':
+                return (
+                    f"Thanks for sharing that, {creator_name}. "
+                    "I'm here to help you think this through. What would be most helpful right now?"
+                )
             return (
                 f"Thank you for sharing your perspective, {creator_name}. "
                 "I'm ready to help mediate once the other party joins. "
                 "Please share the invite link with them so we can begin."
             )
 
-        prompt = (
-            f"Mediation Topic: {topic}\n"
-            f"Type: {session_type}\n\n"
-            f"{creator_name} has started this mediation session and shared their initial perspective:\n\n"
-            f"\"{perspective}\"\n\n"
-            f"The other party has not joined yet. Please:\n"
-            f"1. Acknowledge {creator_name}'s perspective warmly\n"
-            f"2. Let them know you understand the situation\n"
-            f"3. Remind them to share the invite link with the other party\n"
-            f"4. Let them know you'll facilitate once both parties are present\n"
-            f"Keep it concise — 2-3 short paragraphs."
-        )
+        if session_mode == 'personal':
+            prompt = (
+                f"Topic: {topic}\n\n"
+                f"{creator_name} wants to talk one-on-one about something:\n\n"
+                f"\"{perspective}\"\n\n"
+                f"Respond warmly and personally. This is a private conversation, not a mediation.\n"
+                f"1. Acknowledge what they've shared with genuine empathy\n"
+                f"2. Show you understand the situation and how they might be feeling\n"
+                f"3. Ask a thoughtful follow-up question to help them explore further\n"
+                f"Keep it concise and conversational — like a caring friend, not a therapist."
+            )
+            system = COUNSELOR_PROMPT
+        else:
+            prompt = (
+                f"Mediation Topic: {topic}\n"
+                f"Type: {session_type}\n\n"
+                f"{creator_name} has started this mediation session and shared their initial perspective:\n\n"
+                f"\"{perspective}\"\n\n"
+                f"The other party has not joined yet. Please:\n"
+                f"1. Acknowledge {creator_name}'s perspective warmly\n"
+                f"2. Let them know you understand the situation\n"
+                f"3. Remind them to share the invite link with the other party\n"
+                f"4. Let them know you'll facilitate once both parties are present\n"
+                f"Keep it concise — 2-3 short paragraphs."
+            )
+            system = SYSTEM_PROMPT
 
         response = self.client.messages.create(
             model="claude-sonnet-4-20250514",
             max_tokens=512,
-            system=SYSTEM_PROMPT,
+            system=system,
             messages=[{"role": "user", "content": prompt}]
         )
 

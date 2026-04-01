@@ -637,15 +637,29 @@ body {
     border-color: var(--primary);
 }
 
+.form-group .btn-mic {
+    position: absolute;
+    right: 8px;
+    bottom: 8px;
+}
+
+.form-group:has(.btn-mic) {
+    position: relative;
+}
+
+.form-group:has(.btn-mic) textarea {
+    padding-right: 2.5rem;
+}
+
 .btn-mic {
     background: none;
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    padding: 0.6rem;
+    padding: 0.4rem;
     cursor: pointer;
     color: var(--text-light);
     transition: all 0.2s ease;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
 }
@@ -665,6 +679,16 @@ body {
 @keyframes pulse-mic {
     0%, 100% { box-shadow: 0 0 0 0 rgba(29, 158, 117, 0.4); }
     50% { box-shadow: 0 0 0 8px rgba(29, 158, 117, 0); }
+}
+
+.mic-help {
+    background: #FFF8E7;
+    border: 1px solid #E8D5A3;
+    border-radius: var(--radius);
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.75rem;
+    font-size: 0.85rem;
+    color: var(--text);
 }
 
 /* === Summary Panel === */
