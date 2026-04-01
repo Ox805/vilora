@@ -63,13 +63,9 @@
                 What's on your mind? Vilora is here to listen, help you think things through, and offer perspective.
             </p>
             <div class="form-group">
-                <label for="personal-topic">What would you like to talk about?</label>
-                <input type="text" id="personal-topic" placeholder="e.g., Feeling overwhelmed at work, Struggling with a decision, Relationship advice">
-            </div>
-            <div class="form-group">
-                <label for="personal-context">Share some context (optional)</label>
-                <textarea id="personal-context" rows="5"
-                    placeholder="Tell Vilora what's going on. The more context you share, the more helpful the conversation will be."></textarea>
+                <label for="personal-topic">What's on your mind?</label>
+                <textarea id="personal-topic" rows="4"
+                    placeholder="e.g., I've been feeling overwhelmed at work and it's starting to affect my relationship. I don't know how to bring it up without starting a fight."></textarea>
             </div>
             <div class="form-actions">
                 <button type="button" onclick="backToChooser()" class="btn">Back</button>
@@ -158,7 +154,6 @@ function resetForm() {
     document.getElementById('session-type').value = 'general';
     document.getElementById('raw-input').value = '';
     document.getElementById('personal-topic').value = '';
-    document.getElementById('personal-context').value = '';
     document.getElementById('frame-tips').style.display = 'none';
     document.getElementById('other-type-group').style.display = 'none';
     document.getElementById('form-title').textContent = 'Start a New Mediation';
@@ -178,10 +173,9 @@ function showPersonalSession() {
 
 async function createPersonalSession() {
     const topic = document.getElementById('personal-topic').value.trim();
-    const context = document.getElementById('personal-context').value.trim();
 
     if (!topic) {
-        alert('Please enter what you\'d like to talk about.');
+        alert('Please share what\'s on your mind.');
         return;
     }
 
@@ -190,7 +184,7 @@ async function createPersonalSession() {
         res = await fetch('/api/sessions', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ topic, type: 'personal', mode: 'personal', perspective: context })
+            body: JSON.stringify({ topic, type: 'personal', mode: 'personal' })
         });
         data = await res.json();
     } catch (err) {

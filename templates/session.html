@@ -60,6 +60,14 @@
             <textarea id="message-input" rows="3"
                 placeholder="Share your thoughts... (Enter → new line, Ctrl+Enter to send)"
                 onkeydown="if(event.key==='Enter' && event.ctrlKey){event.preventDefault();sendMessage(event)}"></textarea>
+            <button type="button" id="mic-btn" class="btn btn-mic" onclick="toggleVoice()" title="Voice input">
+                <svg id="mic-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                    <line x1="12" y1="19" x2="12" y2="23"></line>
+                    <line x1="8" y1="23" x2="16" y2="23"></line>
+                </svg>
+            </button>
             <button type="submit" class="btn btn-primary" id="send-btn">Send</button>
         </form>
     </div>
@@ -77,6 +85,91 @@
 <script>
 const SESSION_ID = {{ session.id }};
 let polling = null;
+
+// --- Voice Input ---
+let recognition = null;
+let isListening = false;
+
+function initVoice() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+        document.getElementById('mic-btn').style.display = 'none';
+        return;
+    }
+    recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
+
+    let finalTranscript = '';
+
+    recognition.onresult = (event) => {
+        const input = document.getElementById('message-input');
+        let interim = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+            if (event.results[i].isFinal) {
+                finalTranscript += event.results[i][0].transcript;
+            } else {
+                interim += event.results[i][0].transcript;
+            }
+        }
+        input.value = finalTranscript + interim;
+    };
+
+    recognition.onend = () => {
+        if (isListening) {
+            // Restart if user hasn't toggled off (browser may stop after silence)
+            recognition.start();
+        }
+    };
+
+    recognition.onerror = (event) => {
+        if (event.error !== 'no-speech' && event.error !== 'aborted') {
+            stopVoice();
+        }
+    };
+}
+
+function toggleVoice() {
+    if (isListening) {
+        stopVoice();
+    } else {
+        startVoice();
+    }
+}
+
+function startVoice() {
+    if (!recognition) return;
+    const input = document.getElementById('message-input');
+    // Preserve any existing text
+    recognition.finalTranscript = '';
+    // Reset finalTranscript in the closure by reattaching
+    let finalTranscript = input.value ? input.value + ' ' : '';
+
+    recognition.onresult = (event) => {
+        let interim = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+            if (event.results[i].isFinal) {
+                finalTranscript += event.results[i][0].transcript;
+            } else {
+                interim += event.results[i][0].transcript;
+            }
+        }
+        input.value = finalTranscript + interim;
+    };
+
+    isListening = true;
+    document.getElementById('mic-btn').classList.add('btn-mic-active');
+    recognition.start();
+}
+
+function stopVoice() {
+    isListening = false;
+    document.getElementById('mic-btn').classList.remove('btn-mic-active');
+    if (recognition) recognition.stop();
+}
+
+initVoice();
 
 async function loadMessages() {
     const res = await fetch(`/api/sessions/${SESSION_ID}/messages`);
@@ -130,6 +223,7 @@ function renderMessages(messages) {
 
 async function sendMessage(e) {
     e.preventDefault();
+    if (isListening) stopVoice();
     const input = document.getElementById('message-input');
     const content = input.value.trim();
     if (!content) return;

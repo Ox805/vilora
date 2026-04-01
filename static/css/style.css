@@ -637,6 +637,36 @@ body {
     border-color: var(--primary);
 }
 
+.btn-mic {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.6rem;
+    cursor: pointer;
+    color: var(--text-light);
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-mic:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.btn-mic-active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: white;
+    animation: pulse-mic 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-mic {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(29, 158, 117, 0.4); }
+    50% { box-shadow: 0 0 0 8px rgba(29, 158, 117, 0); }
+}
+
 /* === Summary Panel === */
 .summary-panel {
     position: fixed;
