@@ -112,6 +112,8 @@
         btn.className = 'btn btn-mic';
         btn.title = 'Voice input';
         btn.innerHTML = MIC_SVG;
+        // Prevent mic button from stealing focus/selection from textarea
+        btn.addEventListener('mousedown', (e) => e.preventDefault());
         btn.addEventListener('click', (e) => {
             e.preventDefault();
             toggleMic(btn, textarea);

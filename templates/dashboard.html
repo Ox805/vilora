@@ -46,6 +46,18 @@
                 <textarea id="raw-input" rows="8"
                     placeholder="Write whatever comes to mind about the situation. For example: 'My roommate keeps leaving dishes in the sink and it's driving me crazy. I've asked them to clean up but nothing changes. I don't want to fight about it but I need things to be more fair around here.'"></textarea>
             </div>
+            <div class="session-tone">
+                <label>How should Vilora approach this mediation?</label>
+                <div class="tone-chips framing-tone-chips">
+                    <button type="button" class="med-tone-chip" data-tone="Focus on finding common ground and shared interests">Find common ground</button>
+                    <button type="button" class="med-tone-chip" data-tone="Help us communicate more clearly and understand each other">Improve communication</button>
+                    <button type="button" class="med-tone-chip" data-tone="Be direct and help us get to a resolution quickly">Get to resolution</button>
+                    <button type="button" class="med-tone-chip" data-tone="Make sure both sides feel fully heard before moving forward">Make sure we're heard</button>
+                    <button type="button" class="med-tone-chip" data-tone="Help us establish fair boundaries and agreements">Set boundaries</button>
+                    <button type="button" class="med-tone-chip" data-tone="Help de-escalate emotions and keep things calm and productive">Keep things calm</button>
+                </div>
+                <p class="tone-hint">Select any that apply. You can also adjust how Vilora works for you in <a href="/settings">Settings</a>.</p>
+            </div>
             <div class="form-actions">
                 <button type="button" onclick="backToChooser()" class="btn">Back</button>
                 <button type="button" onclick="submitFraming()" class="btn btn-primary" id="frame-btn">
@@ -67,9 +79,21 @@
                 <textarea id="personal-topic" rows="4"
                     placeholder="e.g., I've been feeling overwhelmed at work and it's starting to affect my relationship. I don't know how to bring it up without starting a fight."></textarea>
             </div>
+            <div class="session-tone">
+                <label>How should Vilora approach this?</label>
+                <div class="tone-chips">
+                    <button type="button" class="tone-chip" data-tone="Give me quick, direct advice">Quick advice</button>
+                    <button type="button" class="tone-chip" data-tone="Help me explore this deeply and think it through">Help me explore</button>
+                    <button type="button" class="tone-chip" data-tone="Just listen and help me process my feelings">Just listen</button>
+                    <button type="button" class="tone-chip" data-tone="Play devil's advocate and challenge my thinking">Devil's advocate</button>
+                    <button type="button" class="tone-chip" data-tone="Push back on me and help me see other perspectives">Expand my perspective</button>
+                    <button type="button" class="tone-chip" data-tone="Help me figure out what to actually do next">Action plan</button>
+                </div>
+                <p class="tone-hint">Select any that apply. You can also fine-tune how Vilora works for you in <a href="/settings">Settings</a>.</p>
+            </div>
             <div class="form-actions">
                 <button type="button" onclick="backToChooser()" class="btn">Back</button>
-                <button type="button" onclick="createPersonalSession()" class="btn btn-primary">Start conversation</button>
+                <button type="button" onclick="createPersonalSession()" class="btn btn-primary" id="personal-start-btn">Start conversation</button>
             </div>
         </div>
     </div>
@@ -108,9 +132,21 @@
                     <textarea id="perspective" rows="4"
                         placeholder="Share your side of the story. This helps Vilora understand both viewpoints."></textarea>
                 </div>
+                <div class="session-tone">
+                    <label>How should Vilora approach this mediation?</label>
+                    <div class="tone-chips mediation-tone-chips">
+                        <button type="button" class="med-tone-chip" data-tone="Focus on finding common ground and shared interests">Find common ground</button>
+                        <button type="button" class="med-tone-chip" data-tone="Help us communicate more clearly and understand each other">Improve communication</button>
+                        <button type="button" class="med-tone-chip" data-tone="Be direct and help us get to a resolution quickly">Get to resolution</button>
+                        <button type="button" class="med-tone-chip" data-tone="Make sure both sides feel fully heard before moving forward">Make sure we're heard</button>
+                        <button type="button" class="med-tone-chip" data-tone="Help us establish fair boundaries and agreements">Set boundaries</button>
+                        <button type="button" class="med-tone-chip" data-tone="Help de-escalate emotions and keep things calm and productive">Keep things calm</button>
+                    </div>
+                    <p class="tone-hint">Select any that apply. You can also adjust how Vilora works for you in <a href="/settings">Settings</a>.</p>
+                </div>
                 <div class="form-actions">
                     <button type="button" onclick="hideAllModals()" class="btn">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Create & Get Invite Link</button>
+                    <button type="submit" class="btn btn-primary" id="create-session-btn">Create & Get Invite Link</button>
                 </div>
             </form>
         </div>
@@ -160,10 +196,18 @@ function resetForm() {
     document.getElementById('session-type').value = 'general';
     document.getElementById('raw-input').value = '';
     document.getElementById('personal-topic').value = '';
+    document.querySelectorAll('.tone-chip, .med-tone-chip').forEach(c => c.classList.remove('active'));
     document.getElementById('frame-tips').style.display = 'none';
     document.getElementById('other-type-group').style.display = 'none';
     document.getElementById('form-title').textContent = 'Start a New Mediation';
 }
+
+// Tone chip selection (multi-select toggle)
+document.querySelectorAll('.tone-chip, .med-tone-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+        chip.classList.toggle('active');
+    });
+});
 
 function backToChooser() {
     document.getElementById('framing-modal').style.display = 'none';
@@ -185,21 +229,37 @@ async function createPersonalSession() {
         return;
     }
 
+    const activeChips = document.querySelectorAll('.tone-chip.active');
+    const tones = Array.from(activeChips).map(c => c.dataset.tone);
+    const tone = tones.length > 0 ? tones.join('; ') : null;
+
+    const btn = document.getElementById('personal-start-btn');
+    btn.disabled = true;
+    btn.textContent = 'Starting...';
+
+    const payload = { topic, type: 'personal', mode: 'personal' };
+    if (tone) payload.tone = tone;
+
     let res, data;
     try {
         res = await fetch('/api/sessions', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ topic, type: 'personal', mode: 'personal' })
+            body: JSON.stringify(payload)
         });
         data = await res.json();
     } catch (err) {
         alert('Error creating session: ' + err.message);
+        btn.disabled = false;
+        btn.textContent = 'Start conversation';
         return;
     }
     if (data.success) {
         hideAllModals();
         window.location.href = '/session/' + data.session.id;
+    } else {
+        btn.disabled = false;
+        btn.textContent = 'Start conversation';
     }
 }
 
@@ -260,6 +320,13 @@ async function submitFraming() {
                 tipsEl.style.display = 'block';
             }
 
+            // Carry tone selections from framing modal to mediation form
+            const framingTones = document.querySelectorAll('.framing-tone-chips .med-tone-chip.active');
+            const selectedTones = new Set(Array.from(framingTones).map(c => c.dataset.tone));
+            document.querySelectorAll('.mediation-tone-chips .med-tone-chip').forEach(c => {
+                c.classList.toggle('active', selectedTones.has(c.dataset.tone));
+            });
+
             // Switch to the form for review
             document.getElementById('framing-modal').style.display = 'none';
             document.getElementById('form-title').textContent = 'Review & Edit';
@@ -290,16 +357,29 @@ async function createSession(e) {
     }
     const perspective = document.getElementById('perspective').value;
 
+    const activeMedChips = document.querySelectorAll('.med-tone-chip.active');
+    const medTones = Array.from(activeMedChips).map(c => c.dataset.tone);
+    const tone = medTones.length > 0 ? medTones.join('; ') : null;
+
+    const btn = document.getElementById('create-session-btn');
+    btn.disabled = true;
+    btn.textContent = 'Creating...';
+
+    const payload = { topic, type, perspective };
+    if (tone) payload.tone = tone;
+
     let res, data;
     try {
         res = await fetch('/api/sessions', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ topic, type, perspective })
+            body: JSON.stringify(payload)
         });
         data = await res.json();
     } catch (err) {
         alert('Error creating session: ' + err.message);
+        btn.disabled = false;
+        btn.textContent = 'Create & Get Invite Link';
         return;
     }
     if (data.success) {
@@ -309,6 +389,8 @@ async function createSession(e) {
         document.getElementById('invite-display').style.display = 'block';
         loadSessions();
     }
+    btn.disabled = false;
+    btn.textContent = 'Create & Get Invite Link';
 }
 
 function copyInviteLink() {

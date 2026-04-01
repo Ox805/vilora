@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+{% block title %}Settings{% endblock %}
+
+{% block content %}
+<div class="settings-page">
+    <div class="about-me-header">
+        <div>
+            <h1>How Vilora works for you</h1>
+            <p class="about-me-subtitle">
+                Adjust how Vilora communicates with you. Changes take effect in your next session.
+            </p>
+        </div>
+    </div>
+
+    <div class="settings-sections">
+        <div class="settings-section">
+            <h3>What I'm usually looking for</h3>
+            <p class="settings-desc">When you share a problem, what kind of help do you usually want?</p>
+            <div class="settings-options" data-key="goal">
+                <button class="settings-chip" data-value="Help me think it through without telling me what to do">Help me think it through</button>
+                <button class="settings-chip" data-value="Give me direct advice and concrete suggestions">Give me direct advice</button>
+                <button class="settings-chip" data-value="Mostly just listen and help me feel heard before offering input">Mostly just listen</button>
+                <button class="settings-chip" data-value="Challenge my thinking and point out blind spots I might be missing">Challenge my thinking</button>
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <h3>Communication style</h3>
+            <p class="settings-desc">How would you like Vilora to talk to you?</p>
+            <div class="settings-options" data-key="style">
+                <button class="settings-chip" data-value="Be warm, gentle, and supportive in your responses">Warm and supportive</button>
+                <button class="settings-chip" data-value="Be straightforward and direct, don't sugarcoat things">Straightforward and direct</button>
+                <button class="settings-chip" data-value="Keep a calm, balanced tone — not too warm, not too blunt">Calm and balanced</button>
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <h3>Response length</h3>
+            <p class="settings-desc">How much detail do you prefer?</p>
+            <div class="settings-options" data-key="length">
+                <button class="settings-chip" data-value="Keep responses brief and to the point, a few sentences at most">Brief and to the point</button>
+                <button class="settings-chip" data-value="Give moderate-length responses with some detail and nuance">Moderate detail</button>
+                <button class="settings-chip" data-value="Give thorough, detailed responses that explore the topic fully">Thorough and detailed</button>
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <h3>Things to keep in mind</h3>
+            <p class="settings-desc">Is there anything else Vilora should know about how to help you best?</p>
+            <textarea id="custom-preference" rows="5" style="width: 100%;"
+                placeholder="e.g., 'I tend to overthink things, so help me simplify' or 'Don't assume I want to save a relationship just because I'm talking about it'"></textarea>
+            <button onclick="saveCustomPreference()" class="btn btn-primary btn-sm" id="save-custom-btn" style="margin-top: 0.5rem;">Save</button>
+        </div>
+    </div>
+
+    <div id="settings-saved" class="settings-saved" style="display:none">
+        Saved
+    </div>
+</div>
+
+<script>
+let currentPreferences = {};
+
+const PREF_KEYS = {
+    goal: 'Interaction goal',
+    style: 'Communication style preference',
+    length: 'Response length preference'
+};
+
+async function loadPreferences() {
+    const res = await fetch('/api/user/memories');
+    const data = await res.json();
+    const prefs = (data.memories || []).filter(m => m.category === 'preference');
+
+    // Match existing preferences to chips
+    document.querySelectorAll('.settings-options').forEach(group => {
+        const key = group.dataset.key;
+        const chips = group.querySelectorAll('.settings-chip');
+
+        chips.forEach(chip => {
+            const matchingPref = prefs.find(p => p.content === chip.dataset.value);
+            if (matchingPref) {
+                chip.classList.add('active');
+                currentPreferences[key] = { id: matchingPref.id, value: chip.dataset.value };
+            }
+        });
+    });
+
+    // Load custom preference
+    const customPref = prefs.find(p =>
+        !Object.values(currentPreferences).some(cp => cp && cp.id === p.id)
+        && !p.content.startsWith('Interaction goal:')
+        && !p.content.startsWith('Communication style')
+        && !p.content.startsWith('Response length')
+    );
+    // Find any preference that doesn't match a chip value
+    const allChipValues = new Set();
+    document.querySelectorAll('.settings-chip').forEach(c => allChipValues.add(c.dataset.value));
+    const customPrefs = prefs.filter(p => !allChipValues.has(p.content));
+    if (customPrefs.length > 0) {
+        document.getElementById('custom-preference').value = customPrefs.map(p => p.content).join('\n');
+        currentPreferences.custom = customPrefs.map(p => ({ id: p.id, content: p.content }));
+    }
+}
+
+function showSaved() {
+    const el = document.getElementById('settings-saved');
+    el.style.display = 'block';
+    setTimeout(() => el.style.display = 'none', 2000);
+}
+
+// Chip click handler
+document.querySelectorAll('.settings-options').forEach(group => {
+    const key = group.dataset.key;
+    group.querySelectorAll('.settings-chip').forEach(chip => {
+        chip.addEventListener('click', async () => {
+            // Deselect siblings
+            group.querySelectorAll('.settings-chip').forEach(c => c.classList.remove('active'));
+            chip.classList.add('active');
+
+            const value = chip.dataset.value;
+            const existing = currentPreferences[key];
+
+            if (existing && existing.id) {
+                // Update existing
+                await fetch(`/api/user/memories/${existing.id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content: value })
+                });
+                currentPreferences[key].value = value;
+            } else {
+                // Create new
+                const res = await fetch('/api/user/memories', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ category: 'preference', content: value })
+                });
+                // Reload to get the ID
+                await loadPreferences();
+            }
+            showSaved();
+        });
+    });
+});
+
+async function saveCustomPreference() {
+    const content = document.getElementById('custom-preference').value.trim();
+    const btn = document.getElementById('save-custom-btn');
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+
+    // Delete old custom preferences
+    if (currentPreferences.custom) {
+        for (const old of currentPreferences.custom) {
+            await fetch(`/api/user/memories/${old.id}`, { method: 'DELETE' });
+        }
+    }
+
+    // Save new one if not empty
+    if (content) {
+        await fetch('/api/user/memories', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ category: 'preference', content })
+        });
+    }
+
+    btn.disabled = false;
+    btn.textContent = 'Save';
+    await loadPreferences();
+    showSaved();
+}
+
+loadPreferences();
+</script>
+{% endblock %}

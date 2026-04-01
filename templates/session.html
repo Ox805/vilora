@@ -77,12 +77,20 @@
 <script>
 const SESSION_ID = {{ session.id }};
 let polling = null;
-
+let lastMessageCount = 0;
 
 async function loadMessages() {
     const res = await fetch(`/api/sessions/${SESSION_ID}/messages`);
     const data = await res.json();
-    renderMessages(data.messages || []);
+    const messages = data.messages || [];
+
+    // Skip re-render if nothing changed and user might be selecting text
+    if (messages.length === lastMessageCount) {
+        const sel = window.getSelection();
+        if (sel && sel.toString().length > 0) return;
+    }
+    lastMessageCount = messages.length;
+    renderMessages(messages);
 }
 
 function localTime(ts) {

@@ -255,6 +255,12 @@ def about_me():
     return render_template('about_me.html')
 
 
+@app.route('/settings')
+@login_required
+def settings():
+    return render_template('settings.html')
+
+
 # --- Memory API ---
 
 @app.route('/api/user/memories', methods=['GET'])
@@ -352,15 +358,21 @@ def create_session():
     session_mode = data.get('mode', 'mediation')
     perspective = data.get('perspective', '').strip()
 
+    tone = data.get('tone', '').strip()
+
     # For personal sessions, use the topic as the perspective and generate a short title
     if session_mode == 'personal':
         perspective = topic
+        if tone:
+            perspective = f"[Session tone: {tone}]\n\n{perspective}"
         try:
-            topic = mediation_engine.generate_title(perspective)
+            topic = mediation_engine.generate_title(data.get('topic', '').strip())
         except Exception as e:
             print(f"Warning: Could not generate title: {e}")
             # Fallback: truncate
             topic = topic[:60] + ('...' if len(topic) > 60 else '')
+    elif tone and perspective:
+        perspective = f"[Session tone: {tone}]\n\n{perspective}"
 
     if not topic:
         return jsonify({'success': False, 'error': 'Topic is required'}), 400

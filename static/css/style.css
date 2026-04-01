@@ -899,6 +899,119 @@ body.summary-open .container {
     .memory-content { margin-right: 0; }
 }
 
+/* === Settings === */
+.settings-page { max-width: 640px; }
+
+.settings-section {
+    margin-bottom: 2rem;
+}
+
+.settings-section h3 {
+    color: var(--accent);
+    margin-bottom: 0.15rem;
+}
+
+.settings-desc {
+    color: var(--text-light);
+    font-size: 0.85rem;
+    margin-bottom: 0.75rem;
+}
+
+.settings-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.settings-chip {
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: 2rem;
+    background: white;
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: var(--text);
+    transition: all 0.15s ease;
+}
+
+.settings-chip:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.settings-chip.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: white;
+}
+
+.settings-saved {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    background: var(--primary);
+    color: white;
+    padding: 0.6rem 1.2rem;
+    border-radius: var(--radius);
+    font-size: 0.9rem;
+    animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* === Session Tone Chips === */
+.session-tone {
+    margin-bottom: 1rem;
+}
+
+.session-tone label {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--text-light);
+    margin-bottom: 0.5rem;
+}
+
+.tone-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.tone-chip, .med-tone-chip {
+    padding: 0.35rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 2rem;
+    background: white;
+    cursor: pointer;
+    font-size: 0.8rem;
+    color: var(--text);
+    transition: all 0.15s ease;
+}
+
+.tone-chip:hover, .med-tone-chip:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.tone-chip.active, .med-tone-chip.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: white;
+}
+
+.tone-hint {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-top: 0.5rem;
+}
+
+.tone-hint a {
+    color: var(--primary);
+}
+
 /* === Error Page === */
 .error-page {
     text-align: center;

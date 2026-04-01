@@ -197,6 +197,9 @@ class MediationEngine:
             )
 
         if session_mode == 'personal':
+            tone_instruction = ""
+            if "[Session tone:" in perspective:
+                tone_instruction = "\nIMPORTANT: The user has indicated how they want you to approach this conversation. Follow that guidance closely.\n"
             prompt = (
                 f"Topic: {topic}\n\n"
                 f"{creator_name} wants to talk one-on-one about something:\n\n"
@@ -206,6 +209,7 @@ class MediationEngine:
                 f"2. Show you understand the situation and how they might be feeling\n"
                 f"3. Ask a thoughtful follow-up question to help them explore further\n"
                 f"Keep it concise and conversational — like a caring friend, not a therapist."
+                f"{tone_instruction}"
             )
             system = COUNSELOR_PROMPT
         else:
