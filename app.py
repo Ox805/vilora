@@ -229,7 +229,7 @@ def list_sessions():
 
 def get_user_memories(db, user_id):
     """Load all active memories for a user as a list of dicts."""
-    cur = _exec(db, "SELECT * FROM user_memories WHERE user_id = ? AND active = 1 ORDER BY category, created_at", (user_id,))
+    cur = _exec(db, "SELECT * FROM user_memories WHERE user_id = ? AND active = ? ORDER BY category, created_at", (user_id, True))
     rows = cur.fetchall()
     return [{'id': r['id'], 'category': r['category'], 'content': r['content'],
              'source_type': r['source_type'], 'confidence': r['confidence']} for r in rows]
@@ -307,8 +307,8 @@ def edit_memory(memory_id):
 def delete_memory(memory_id):
     db = get_db()
     _exec(db,
-        "UPDATE user_memories SET active = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?",
-        (memory_id, current_user.id)
+        "UPDATE user_memories SET active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?",
+        (False, memory_id, current_user.id)
     )
     db.commit()
     return jsonify({'success': True})
