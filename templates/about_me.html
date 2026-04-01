@@ -98,6 +98,7 @@
 let editingMemoryId = null;
 let currentStep = 0;
 let onboardingAnswers = {};
+let existingProfileMemories = [];
 
 const CATEGORY_LABELS = {
     profile: 'About you',
@@ -161,9 +162,29 @@ const ONBOARDING_STEPS = [
     }
 ];
 
-function startOnboarding() {
+async function startOnboarding() {
     currentStep = 0;
     onboardingAnswers = {};
+
+    // Pre-populate from existing profile memories
+    const res = await fetch('/api/user/memories');
+    const data = await res.json();
+    existingProfileMemories = (data.memories || []).filter(m => m.category === 'profile');
+
+    for (const step of ONBOARDING_STEPS) {
+        for (const field of step.fields) {
+            // Turn memory template "Age range: {value}" into a regex to extract the value
+            const prefix = field.memory.split('{value}')[0];
+            const suffix = field.memory.split('{value}')[1] || '';
+            for (const mem of existingProfileMemories) {
+                if (mem.content.startsWith(prefix) && mem.content.endsWith(suffix)) {
+                    const extracted = mem.content.slice(prefix.length, suffix ? -suffix.length || undefined : undefined);
+                    if (extracted) onboardingAnswers[field.id] = extracted;
+                }
+            }
+        }
+    }
+
     document.getElementById('onboarding-modal').style.display = 'flex';
     renderStep();
 }
@@ -241,24 +262,39 @@ async function nextStep() {
 }
 
 async function saveOnboardingMemories() {
-    const memories = [];
     for (const step of ONBOARDING_STEPS) {
         for (const field of step.fields) {
             const val = onboardingAnswers[field.id];
-            if (val) {
-                const content = field.memory.replace('{value}', val);
-                memories.push({ category: 'profile', content });
+            const content = val ? field.memory.replace('{value}', val) : null;
+
+            // Find existing memory for this field
+            const prefix = field.memory.split('{value}')[0];
+            const suffix = field.memory.split('{value}')[1] || '';
+            const existing = existingProfileMemories.find(
+                m => m.content.startsWith(prefix) && m.content.endsWith(suffix)
+            );
+
+            if (existing && content) {
+                // Update if changed
+                if (existing.content !== content) {
+                    await fetch(`/api/user/memories/${existing.id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ content })
+                    });
+                }
+            } else if (existing && !content) {
+                // Field was cleared — remove the memory
+                await fetch(`/api/user/memories/${existing.id}`, { method: 'DELETE' });
+            } else if (!existing && content) {
+                // New answer — create memory
+                await fetch('/api/user/memories', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ category: 'profile', content })
+                });
             }
         }
-    }
-
-    // Save all at once
-    for (const m of memories) {
-        await fetch('/api/user/memories', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(m)
-        });
     }
 }
 
