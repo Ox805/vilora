@@ -352,6 +352,10 @@ def create_session():
     session_mode = data.get('mode', 'mediation')
     perspective = data.get('perspective', '').strip()
 
+    # For personal sessions, use the topic as the perspective if none provided
+    if session_mode == 'personal' and not perspective:
+        perspective = topic
+
     if not topic:
         return jsonify({'success': False, 'error': 'Topic is required'}), 400
 
