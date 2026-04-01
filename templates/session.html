@@ -17,10 +17,35 @@
     {% elif is_creator %}
     <div id="invite-banner" class="invite-banner">
         <div class="invite-banner-content">
-            <strong>Share this link</strong> with the other party so they can join:
+            <strong>Invite the other party</strong> — send them an email or share the link:
             <div class="invite-link-row">
+                <button onclick="showInviteModal()" class="btn btn-primary btn-sm">Send Invite</button>
                 <input type="text" id="invite-link" value="{{ invite_link }}" readonly>
                 <button onclick="copyInviteLink()" class="btn btn-sm" id="copy-btn">Copy</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Email Invite Modal -->
+    <div id="invite-modal" class="modal" style="display:none">
+        <div class="modal-content" style="max-width: 460px;">
+            <h2>Send an Invite</h2>
+            <p style="color: var(--text-light); margin-bottom: 1rem; font-size: 0.9rem;">
+                They'll receive a branded email from Vilora with a link to join this session.
+            </p>
+            <div class="form-group">
+                <label for="invite-email">Their email address</label>
+                <input type="email" id="invite-email" required placeholder="name@example.com">
+            </div>
+            <div class="form-group">
+                <label for="invite-message">Add a personal note (optional)</label>
+                <textarea id="invite-message" rows="2"
+                    placeholder="e.g., Hey, I thought it might help to talk this through with some guidance."></textarea>
+            </div>
+            <div id="invite-status" style="display:none"></div>
+            <div class="form-actions">
+                <button type="button" onclick="hideInviteModal()" class="btn">Cancel</button>
+                <button type="button" onclick="sendInviteEmail()" class="btn btn-primary" id="send-invite-btn">Send Invite</button>
             </div>
         </div>
     </div>
@@ -204,6 +229,60 @@ function escapeHtml(text) {
 function dismissWelcome() {
     document.getElementById('welcome-modal').style.display = 'none';
     document.getElementById('message-input').focus();
+}
+
+function showInviteModal() {
+    document.getElementById('invite-modal').style.display = 'flex';
+    document.getElementById('invite-email').focus();
+}
+
+function hideInviteModal() {
+    document.getElementById('invite-modal').style.display = 'none';
+    document.getElementById('invite-email').value = '';
+    document.getElementById('invite-message').value = '';
+    document.getElementById('invite-status').style.display = 'none';
+}
+
+async function sendInviteEmail() {
+    const email = document.getElementById('invite-email').value.trim();
+    const message = document.getElementById('invite-message').value.trim();
+    const statusEl = document.getElementById('invite-status');
+    const btn = document.getElementById('send-invite-btn');
+
+    if (!email) {
+        statusEl.innerHTML = '<p class="error-msg">Please enter an email address.</p>';
+        statusEl.style.display = 'block';
+        return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Sending...';
+    statusEl.style.display = 'none';
+
+    try {
+        const res = await fetch(`/api/sessions/${SESSION_ID}/invite`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, message })
+        });
+        const data = await res.json();
+        if (data.success) {
+            statusEl.innerHTML = '<p style="color: var(--primary); background: var(--pale); padding: 0.5rem; border-radius: var(--radius); font-size: 0.9rem;">Invite sent!</p>';
+            statusEl.style.display = 'block';
+            document.getElementById('invite-email').value = '';
+            document.getElementById('invite-message').value = '';
+            setTimeout(hideInviteModal, 2000);
+        } else {
+            statusEl.innerHTML = `<p class="error-msg">${escapeHtml(data.error || 'Failed to send invite.')}</p>`;
+            statusEl.style.display = 'block';
+        }
+    } catch (err) {
+        statusEl.innerHTML = '<p class="error-msg">Failed to send invite. Please try again.</p>';
+        statusEl.style.display = 'block';
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Send Invite';
+    }
 }
 
 function copyInviteLink() {

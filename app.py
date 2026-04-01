@@ -6,21 +6,12 @@ import uuid
 from datetime import datetime, timedelta
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
-from flask_mail import Mail, Message as MailMessage
 from models.database import db_init, get_db, _exec, User, MediationSession, Message
 from mediation.engine import MediationEngine
+from notifications import send_invite_email, send_password_reset_email
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(32))
-
-# Flask-Mail setup
-app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
-app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 587))
-app.config['MAIL_USE_TLS'] = os.environ.get('MAIL_USE_TLS', 'true').lower() == 'true'
-app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
-app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
-app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_DEFAULT_SENDER', os.environ.get('MAIL_USERNAME'))
-mail = Mail(app)
 
 # Trust Railway's reverse proxy headers
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -132,32 +123,7 @@ def forgot_password():
 
     reset_link = url_for('reset_password_page', token=token, _external=True)
 
-    sys.stderr.write(f"[Vilora] Password reset requested for {email}, user found: {user.display_name}\n")
-    sys.stderr.write(f"[Vilora] MAIL_USERNAME={app.config.get('MAIL_USERNAME')}, MAIL_SERVER={app.config.get('MAIL_SERVER')}\n")
-    sys.stderr.flush()
-
-    if app.config['MAIL_USERNAME']:
-        try:
-            msg = MailMessage(
-                subject='Password Reset - Vilora',
-                recipients=[email]
-            )
-            msg.html = f"""
-            <h2>Password Reset</h2>
-            <p>Hi {user.display_name},</p>
-            <p>You requested a password reset for your Vilora account.</p>
-            <p><a href="{reset_link}" style="display:inline-block;padding:12px 24px;background:#1D9E75;color:#fff;text-decoration:none;border-radius:4px;font-weight:bold;">Reset Password</a></p>
-            <p>Or copy this link: {reset_link}</p>
-            <p>This link expires in 1 hour.</p>
-            <p>If you didn't request this, you can safely ignore this email.</p>
-            """
-            mail.send(msg)
-            logger.info(f"Password reset email sent to {email}")
-        except Exception as e:
-            logger.error(f"Failed to send reset email: {e}", exc_info=True)
-            logger.info(f"Reset URL for {email}: {reset_link}")
-    else:
-        logger.warning(f"Mail not configured. Reset URL for {email}: {reset_link}")
+    send_password_reset_email(email, user.display_name, reset_link)
 
     return jsonify({'success': True})
 
@@ -425,6 +391,39 @@ def join_session(code):
 
     med_session.add_participant(db, current_user.id)
     return redirect(url_for('session_room', session_id=med_session.id))
+
+
+@app.route('/api/sessions/<int:session_id>/invite', methods=['POST'])
+@login_required
+def invite_to_session(session_id):
+    data = request.get_json()
+    email = data.get('email', '').strip().lower()
+    personal_message = data.get('message', '').strip()
+
+    if not email or '@' not in email:
+        return jsonify({'success': False, 'error': 'Please enter a valid email address'}), 400
+
+    db = get_db()
+    med_session = MediationSession.get_by_id(db, session_id)
+    if not med_session:
+        return jsonify({'success': False, 'error': 'Session not found'}), 404
+    if med_session.creator_id != current_user.id:
+        return jsonify({'success': False, 'error': 'Only the session creator can send invites'}), 403
+
+    join_link = url_for('join_session', code=med_session.invite_code, _external=True)
+
+    success = send_invite_email(
+        to_email=email,
+        creator_name=current_user.display_name,
+        topic=med_session.topic,
+        join_link=join_link,
+        personal_message=personal_message or None
+    )
+
+    if success:
+        return jsonify({'success': True})
+    else:
+        return jsonify({'success': False, 'error': 'Failed to send invite. Please try again or copy the link instead.'}), 500
 
 
 @app.route('/api/sessions/<int:session_id>', methods=['DELETE'])
