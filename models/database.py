@@ -62,6 +62,7 @@ def db_init():
                 creator_id INTEGER NOT NULL REFERENCES users(id),
                 topic TEXT NOT NULL,
                 session_type TEXT DEFAULT 'general',
+                session_mode TEXT DEFAULT 'mediation',
                 invite_code TEXT UNIQUE NOT NULL,
                 status TEXT DEFAULT 'active',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -118,6 +119,13 @@ def db_init():
         ]
         for stmt in statements:
             cur.execute(stmt)
+
+        # Migrations for existing tables
+        try:
+            cur.execute("ALTER TABLE mediation_sessions ADD COLUMN session_mode TEXT DEFAULT 'mediation'")
+        except Exception:
+            db.rollback()
+
         db.commit()
     else:
         db.executescript("""
@@ -134,6 +142,7 @@ def db_init():
                 creator_id INTEGER NOT NULL,
                 topic TEXT NOT NULL,
                 session_type TEXT DEFAULT 'general',
+                session_mode TEXT DEFAULT 'mediation',
                 invite_code TEXT UNIQUE NOT NULL,
                 status TEXT DEFAULT 'active',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -266,11 +275,12 @@ class User(UserMixin):
 
 
 class MediationSession:
-    def __init__(self, id, creator_id, topic, session_type, invite_code, status, created_at=None):
+    def __init__(self, id, creator_id, topic, session_type, invite_code, status, created_at=None, session_mode='mediation'):
         self.id = id
         self.creator_id = creator_id
         self.topic = topic
         self.session_type = session_type
+        self.session_mode = session_mode or 'mediation'
         self.invite_code = invite_code
         self.status = status
         self.created_at = created_at
@@ -281,6 +291,7 @@ class MediationSession:
             'creator_id': self.creator_id,
             'topic': self.topic,
             'session_type': self.session_type,
+            'session_mode': self.session_mode,
             'invite_code': self.invite_code,
             'status': self.status,
             'created_at': str(self.created_at) if self.created_at else None
@@ -314,45 +325,43 @@ class MediationSession:
         return [User(r['id'], r['email'], r['display_name'], r['password_hash'], r['created_at']) for r in rows]
 
     @staticmethod
-    def create(db, creator_id, topic, session_type, invite_code):
+    def create(db, creator_id, topic, session_type, invite_code, session_mode='mediation'):
         if _is_postgres():
             cur = _exec(db,
-                "INSERT INTO mediation_sessions (creator_id, topic, session_type, invite_code) VALUES (?, ?, ?, ?) RETURNING id",
-                (creator_id, topic, session_type, invite_code)
+                "INSERT INTO mediation_sessions (creator_id, topic, session_type, session_mode, invite_code) VALUES (?, ?, ?, ?, ?) RETURNING id",
+                (creator_id, topic, session_type, session_mode, invite_code)
             )
             session_id = cur.fetchone()['id']
         else:
             cur = _exec(db,
-                "INSERT INTO mediation_sessions (creator_id, topic, session_type, invite_code) VALUES (?, ?, ?, ?)",
-                (creator_id, topic, session_type, invite_code)
+                "INSERT INTO mediation_sessions (creator_id, topic, session_type, session_mode, invite_code) VALUES (?, ?, ?, ?, ?)",
+                (creator_id, topic, session_type, session_mode, invite_code)
             )
             session_id = cur.lastrowid
         db.commit()
-        session = MediationSession(session_id, creator_id, topic, session_type, invite_code, 'active')
+        session = MediationSession(session_id, creator_id, topic, session_type, invite_code, 'active', session_mode=session_mode)
         session.add_participant(db, creator_id)
         return session
+
+    @staticmethod
+    def _from_row(row):
+        return MediationSession(
+            row['id'], row['creator_id'], row['topic'], row['session_type'],
+            row['invite_code'], row['status'], row['created_at'],
+            session_mode=row.get('session_mode', 'mediation')
+        )
 
     @staticmethod
     def get_by_id(db, session_id):
         cur = _exec(db, "SELECT * FROM mediation_sessions WHERE id = ?", (session_id,))
         row = cur.fetchone()
-        if row:
-            return MediationSession(
-                row['id'], row['creator_id'], row['topic'], row['session_type'],
-                row['invite_code'], row['status'], row['created_at']
-            )
-        return None
+        return MediationSession._from_row(row) if row else None
 
     @staticmethod
     def get_by_invite_code(db, code):
         cur = _exec(db, "SELECT * FROM mediation_sessions WHERE invite_code = ?", (code,))
         row = cur.fetchone()
-        if row:
-            return MediationSession(
-                row['id'], row['creator_id'], row['topic'], row['session_type'],
-                row['invite_code'], row['status'], row['created_at']
-            )
-        return None
+        return MediationSession._from_row(row) if row else None
 
     @staticmethod
     def get_by_user(db, user_id):
@@ -362,12 +371,7 @@ class MediationSession:
                WHERE sp.user_id = ? ORDER BY ms.created_at DESC""",
             (user_id,)
         )
-        rows = cur.fetchall()
-        return [
-            MediationSession(r['id'], r['creator_id'], r['topic'], r['session_type'],
-                             r['invite_code'], r['status'], r['created_at'])
-            for r in rows
-        ]
+        return [MediationSession._from_row(r) for r in cur.fetchall()]
 
 
 class Message:

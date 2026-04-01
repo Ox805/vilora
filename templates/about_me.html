@@ -7,11 +7,40 @@
         <div>
             <h1>What Vilora knows about you</h1>
             <p class="about-me-subtitle">
-                Vilora learns from your sessions to provide more personal, attuned mediation.
+                Vilora learns from your sessions to provide more personal, attuned guidance.
                 You're always in control — edit or remove anything here.
             </p>
         </div>
-        <button onclick="showAddMemory()" class="btn btn-primary">Add something</button>
+        <div class="about-me-actions">
+            <button onclick="startOnboarding()" class="btn">Get to know me</button>
+            <button onclick="showAddMemory()" class="btn btn-primary">Add something</button>
+        </div>
+    </div>
+
+    <!-- Onboarding banner (shown when no profile memories exist) -->
+    <div id="onboarding-banner" class="onboarding-banner" style="display:none">
+        <div class="onboarding-banner-content">
+            <strong>Help Vilora get to know you</strong>
+            <p>Answer a few optional questions so Vilora can provide more personal, attuned guidance from the start.</p>
+        </div>
+        <button onclick="startOnboarding()" class="btn btn-primary">Get started</button>
+    </div>
+
+    <!-- Onboarding Modal -->
+    <div id="onboarding-modal" class="modal" style="display:none">
+        <div class="modal-content onboarding-content">
+            <div class="onboarding-progress">
+                <div class="onboarding-progress-bar" id="onboarding-bar" style="width: 0%"></div>
+            </div>
+            <div id="onboarding-step"></div>
+            <div class="form-actions onboarding-actions">
+                <button type="button" onclick="skipOnboarding()" class="btn btn-sm" id="skip-btn">Skip for now</button>
+                <div>
+                    <button type="button" onclick="prevStep()" class="btn" id="prev-btn" style="display:none">Back</button>
+                    <button type="button" onclick="nextStep()" class="btn btn-primary" id="next-btn">Next</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Add Memory Modal -->
@@ -19,7 +48,7 @@
         <div class="modal-content" style="max-width: 480px;">
             <h2>Tell Vilora something about you</h2>
             <p style="color: var(--text-light); margin-bottom: 1rem; font-size: 0.9rem;">
-                Share something that would help Vilora be a better mediator for you.
+                Share something that would help Vilora be a better advisor for you.
             </p>
             <div class="form-group">
                 <label for="memory-category">Category</label>
@@ -63,13 +92,15 @@
     <div id="empty-state" class="empty-state" style="display:none">
         <p>Vilora doesn't know anything about you yet.</p>
         <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.5rem;">
-            Memories are learned from your mediation sessions, or you can add them manually.
+            Click "Get to know me" to answer a few questions, or memories will be learned from your sessions.
         </p>
     </div>
 </div>
 
 <script>
 let editingMemoryId = null;
+let currentStep = 0;
+let onboardingAnswers = {};
 
 const CATEGORY_LABELS = {
     profile: 'About you',
@@ -87,19 +118,173 @@ const CATEGORY_DESCRIPTIONS = {
     preference: 'How you want Vilora to interact with you'
 };
 
+// --- Onboarding Steps ---
+const ONBOARDING_STEPS = [
+    {
+        title: 'A little about you',
+        subtitle: 'This helps Vilora understand your perspective. All fields are optional.',
+        fields: [
+            { id: 'ob-age', label: 'Age range', type: 'select', options: ['', 'Under 18', '18-24', '25-34', '35-44', '45-54', '55-64', '65+'], memory: 'Age range: {value}' },
+            { id: 'ob-gender', label: 'How do you identify?', type: 'text', placeholder: 'e.g., Male, Female, Non-binary, Prefer not to say', memory: 'Identifies as: {value}' },
+            { id: 'ob-location', label: 'Where do you live?', type: 'text', placeholder: 'e.g., Austin, TX or just a region', memory: 'Lives in: {value}' },
+        ]
+    },
+    {
+        title: 'Relationships & family',
+        subtitle: 'Understanding your relationships helps Vilora provide more relevant guidance.',
+        fields: [
+            { id: 'ob-relationship', label: 'Relationship status', type: 'select', options: ['', 'Single', 'In a relationship', 'Married', 'Divorced', 'Separated', 'Widowed', 'It\'s complicated', 'Prefer not to say'], memory: 'Relationship status: {value}' },
+            { id: 'ob-partner', label: 'Partner\'s name (if applicable)', type: 'text', placeholder: 'Optional — helps Vilora personalize conversations', memory: 'Partner\'s name is {value}' },
+            { id: 'ob-kids', label: 'Do you have children?', type: 'select', options: ['', 'No', 'Yes, 1', 'Yes, 2', 'Yes, 3', 'Yes, 4+', 'Expecting'], memory: 'Children: {value}' },
+        ]
+    },
+    {
+        title: 'Work & daily life',
+        subtitle: 'Context about your daily life helps Vilora understand what you\'re juggling.',
+        fields: [
+            { id: 'ob-occupation', label: 'What do you do for work?', type: 'text', placeholder: 'e.g., Teacher, Software engineer, Stay-at-home parent', memory: 'Occupation: {value}' },
+            { id: 'ob-living', label: 'Living situation', type: 'select', options: ['', 'Live alone', 'With partner/spouse', 'With family', 'With roommates', 'With partner and kids', 'Other'], memory: 'Living situation: {value}' },
+        ]
+    },
+    {
+        title: 'How you handle conflict',
+        subtitle: 'There are no wrong answers — this helps Vilora meet you where you are.',
+        fields: [
+            { id: 'ob-conflict-style', label: 'When conflict comes up, I tend to...', type: 'select', options: ['', 'Avoid it and hope it goes away', 'Address it head-on, sometimes too directly', 'Internalize it and get quietly frustrated', 'Try to find a compromise quickly', 'Need time to process before responding', 'It depends on the situation'], memory: 'Conflict tendency: {value}' },
+            { id: 'ob-challenge', label: 'My biggest challenge in disagreements is...', type: 'text', placeholder: 'e.g., staying calm, expressing my needs, listening without getting defensive', memory: 'Biggest challenge in disagreements: {value}' },
+        ]
+    },
+    {
+        title: 'What matters most to you',
+        subtitle: 'Understanding your values helps Vilora give guidance that resonates with who you are.',
+        fields: [
+            { id: 'ob-values', label: 'What values are most important to you? (pick a few)', type: 'text', placeholder: 'e.g., Fairness, honesty, family, independence, respect, loyalty', memory: 'Core values: {value}' },
+            { id: 'ob-anything', label: 'Anything else you\'d like Vilora to know?', type: 'textarea', placeholder: 'Totally optional — share whatever feels relevant', memory: '{value}' },
+        ]
+    }
+];
+
+function startOnboarding() {
+    currentStep = 0;
+    onboardingAnswers = {};
+    document.getElementById('onboarding-modal').style.display = 'flex';
+    renderStep();
+}
+
+function skipOnboarding() {
+    document.getElementById('onboarding-modal').style.display = 'none';
+}
+
+function renderStep() {
+    const step = ONBOARDING_STEPS[currentStep];
+    const total = ONBOARDING_STEPS.length;
+
+    // Progress bar
+    document.getElementById('onboarding-bar').style.width = `${((currentStep + 1) / total) * 100}%`;
+
+    // Navigation
+    document.getElementById('prev-btn').style.display = currentStep > 0 ? 'inline-block' : 'none';
+    document.getElementById('next-btn').textContent = currentStep === total - 1 ? 'Finish' : 'Next';
+    document.getElementById('skip-btn').textContent = currentStep === total - 1 ? 'Skip & close' : 'Skip for now';
+
+    // Build fields
+    let html = `<h2>${step.title}</h2>`;
+    html += `<p style="color: var(--text-light); margin-bottom: 1.5rem; font-size: 0.9rem;">${step.subtitle}</p>`;
+
+    for (const field of step.fields) {
+        const savedVal = onboardingAnswers[field.id] || '';
+        html += '<div class="form-group">';
+        html += `<label for="${field.id}">${field.label}</label>`;
+
+        if (field.type === 'select') {
+            html += `<select id="${field.id}">`;
+            for (const opt of field.options) {
+                const selected = opt === savedVal ? ' selected' : '';
+                html += `<option value="${escapeHtml(opt)}"${selected}>${opt || '— Select —'}</option>`;
+            }
+            html += '</select>';
+        } else if (field.type === 'textarea') {
+            html += `<textarea id="${field.id}" rows="3" placeholder="${field.placeholder || ''}">${escapeHtml(savedVal)}</textarea>`;
+        } else {
+            html += `<input type="text" id="${field.id}" value="${escapeHtml(savedVal)}" placeholder="${field.placeholder || ''}">`;
+        }
+        html += '</div>';
+    }
+
+    document.getElementById('onboarding-step').innerHTML = html;
+}
+
+function saveCurrentStepAnswers() {
+    const step = ONBOARDING_STEPS[currentStep];
+    for (const field of step.fields) {
+        const el = document.getElementById(field.id);
+        if (el) onboardingAnswers[field.id] = el.value.trim();
+    }
+}
+
+function prevStep() {
+    saveCurrentStepAnswers();
+    if (currentStep > 0) {
+        currentStep--;
+        renderStep();
+    }
+}
+
+async function nextStep() {
+    saveCurrentStepAnswers();
+    if (currentStep < ONBOARDING_STEPS.length - 1) {
+        currentStep++;
+        renderStep();
+    } else {
+        // Final step — save all non-empty answers as memories
+        await saveOnboardingMemories();
+        document.getElementById('onboarding-modal').style.display = 'none';
+        loadMemories();
+    }
+}
+
+async function saveOnboardingMemories() {
+    const memories = [];
+    for (const step of ONBOARDING_STEPS) {
+        for (const field of step.fields) {
+            const val = onboardingAnswers[field.id];
+            if (val) {
+                const content = field.memory.replace('{value}', val);
+                memories.push({ category: 'profile', content });
+            }
+        }
+    }
+
+    // Save all at once
+    for (const m of memories) {
+        await fetch('/api/user/memories', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(m)
+        });
+    }
+}
+
+// --- Memory CRUD ---
 async function loadMemories() {
     const res = await fetch('/api/user/memories');
     const data = await res.json();
     const container = document.getElementById('memories-container');
     const emptyState = document.getElementById('empty-state');
+    const banner = document.getElementById('onboarding-banner');
 
     if (!data.memories || data.memories.length === 0) {
         container.innerHTML = '';
         emptyState.style.display = 'block';
+        banner.style.display = 'flex';
         return;
     }
 
     emptyState.style.display = 'none';
+
+    // Show onboarding banner if no profile memories
+    const hasProfile = data.memories.some(m => m.category === 'profile');
+    banner.style.display = hasProfile ? 'none' : 'flex';
 
     // Group by category
     const grouped = {};
@@ -108,7 +293,6 @@ async function loadMemories() {
         grouped[m.category].push(m);
     }
 
-    // Render in consistent order
     const order = ['profile', 'communication', 'history', 'pattern', 'preference'];
     let html = '';
     for (const cat of order) {

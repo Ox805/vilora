@@ -365,6 +365,15 @@ body {
     line-height: 1.5;
 }
 
+.chooser-option-personal {
+    border-color: var(--primary-light);
+    background: var(--pale);
+}
+
+.chooser-option-personal:hover {
+    border-color: var(--primary);
+}
+
 .frame-tips {
     background: var(--pale);
     border: 1px solid var(--primary-light);
@@ -674,6 +683,62 @@ body.summary-open .container {
     font-size: 0.9rem;
     line-height: 1.6;
     margin: 0;
+}
+
+/* === Onboarding === */
+.onboarding-banner {
+    background: var(--pale);
+    border: 1px solid var(--primary-light);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+    margin-bottom: 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+}
+
+.onboarding-banner-content strong {
+    display: block;
+    margin-bottom: 0.25rem;
+    color: var(--accent);
+}
+
+.onboarding-banner-content p {
+    color: var(--text-light);
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+.onboarding-content {
+    max-width: 500px;
+}
+
+.onboarding-progress {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+}
+
+.onboarding-progress-bar {
+    height: 100%;
+    background: var(--primary);
+    border-radius: 2px;
+    transition: width 0.3s ease;
+}
+
+.onboarding-actions {
+    margin-top: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.onboarding-actions > div {
+    display: flex;
+    gap: 0.5rem;
 }
 
 /* === About Me / Memories === */

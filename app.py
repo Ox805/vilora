@@ -349,6 +349,7 @@ def create_session():
     data = request.get_json()
     topic = data.get('topic', '').strip()
     session_type = data.get('type', 'general')
+    session_mode = data.get('mode', 'mediation')
     perspective = data.get('perspective', '').strip()
 
     if not topic:
@@ -361,7 +362,8 @@ def create_session():
         creator_id=current_user.id,
         topic=topic,
         session_type=session_type,
-        invite_code=invite_code
+        invite_code=invite_code,
+        session_mode=session_mode
     )
 
     # Save creator's initial perspective
@@ -462,7 +464,8 @@ def session_room(session_id):
 
     return render_template('session.html', session=med_session,
                            participants=participants, is_creator=is_creator,
-                           invite_link=invite_link, creator_name=creator_name)
+                           invite_link=invite_link, creator_name=creator_name,
+                           is_personal=(med_session.session_mode == 'personal'))
 
 
 @app.route('/api/sessions/<int:session_id>/messages', methods=['GET'])
@@ -508,7 +511,7 @@ def send_message(session_id):
 
     ai_msg = None
     try:
-        if mediation_engine.should_respond(med_session.topic, messages, participants):
+        if mediation_engine.should_respond(med_session.topic, messages, participants, session_mode=med_session.session_mode):
             # Load memories for all participants
             participant_memories = {}
             for p in participants:
@@ -521,7 +524,8 @@ def send_message(session_id):
                 session_type=med_session.session_type,
                 messages=messages,
                 participants=participants,
-                participant_memories=participant_memories or None
+                participant_memories=participant_memories or None,
+                session_mode=med_session.session_mode
             )
             ai_msg = Message.create(db, session_id, None, ai_response, msg_type='mediator')
     except Exception as e:

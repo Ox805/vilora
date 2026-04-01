@@ -11,16 +11,20 @@
     <!-- Step 1: Choose path -->
     <div id="new-session-chooser" class="modal" style="display:none">
         <div class="modal-content chooser-content">
-            <h2>Start a New Mediation</h2>
-            <p class="chooser-subtitle">How would you like to get started?</p>
+            <h2>What would you like to do?</h2>
+            <p class="chooser-subtitle">Choose how you'd like to work with Vilora.</p>
             <div class="chooser-options">
                 <button onclick="showFramingAssist()" class="chooser-option">
-                    <div class="chooser-option-title">Help me frame this</div>
-                    <p>Describe your situation in your own words and Vilora will help you organize your thoughts into a clear mediation request.</p>
+                    <div class="chooser-option-title">Start a mediation — help me frame it</div>
+                    <p>Describe your situation and Vilora will help you organize your thoughts before inviting the other party.</p>
                 </button>
                 <button onclick="showDirectForm()" class="chooser-option">
-                    <div class="chooser-option-title">I know what I want to say</div>
+                    <div class="chooser-option-title">Start a mediation — I know what I want to say</div>
                     <p>Go straight to the session form and fill in the details yourself.</p>
+                </button>
+                <button onclick="showPersonalSession()" class="chooser-option chooser-option-personal">
+                    <div class="chooser-option-title">Talk to Vilora one-on-one</div>
+                    <p>Get personal advice, talk through a challenge, or just think out loud with Vilora as your sounding board. No other parties involved.</p>
                 </button>
             </div>
             <div class="form-actions">
@@ -47,6 +51,29 @@
                 <button type="button" onclick="submitFraming()" class="btn btn-primary" id="frame-btn">
                     Help me frame this
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 2c: Personal session -->
+    <div id="personal-modal" class="modal" style="display:none">
+        <div class="modal-content">
+            <h2>Talk to Vilora</h2>
+            <p style="color: var(--text-light); margin-bottom: 1rem; font-size: 0.9rem;">
+                What's on your mind? Vilora is here to listen, help you think things through, and offer perspective.
+            </p>
+            <div class="form-group">
+                <label for="personal-topic">What would you like to talk about?</label>
+                <input type="text" id="personal-topic" placeholder="e.g., Feeling overwhelmed at work, Struggling with a decision, Relationship advice">
+            </div>
+            <div class="form-group">
+                <label for="personal-context">Share some context (optional)</label>
+                <textarea id="personal-context" rows="5"
+                    placeholder="Tell Vilora what's going on. The more context you share, the more helpful the conversation will be."></textarea>
+            </div>
+            <div class="form-actions">
+                <button type="button" onclick="backToChooser()" class="btn">Back</button>
+                <button type="button" onclick="createPersonalSession()" class="btn btn-primary">Start conversation</button>
             </div>
         </div>
     </div>
@@ -121,6 +148,7 @@ function hideAllModals() {
     document.getElementById('new-session-chooser').style.display = 'none';
     document.getElementById('framing-modal').style.display = 'none';
     document.getElementById('new-session-modal').style.display = 'none';
+    document.getElementById('personal-modal').style.display = 'none';
     resetForm();
 }
 
@@ -129,6 +157,8 @@ function resetForm() {
     document.getElementById('perspective').value = '';
     document.getElementById('session-type').value = 'general';
     document.getElementById('raw-input').value = '';
+    document.getElementById('personal-topic').value = '';
+    document.getElementById('personal-context').value = '';
     document.getElementById('frame-tips').style.display = 'none';
     document.getElementById('other-type-group').style.display = 'none';
     document.getElementById('form-title').textContent = 'Start a New Mediation';
@@ -136,7 +166,41 @@ function resetForm() {
 
 function backToChooser() {
     document.getElementById('framing-modal').style.display = 'none';
+    document.getElementById('personal-modal').style.display = 'none';
     document.getElementById('new-session-chooser').style.display = 'flex';
+}
+
+function showPersonalSession() {
+    document.getElementById('new-session-chooser').style.display = 'none';
+    document.getElementById('personal-modal').style.display = 'flex';
+    document.getElementById('personal-topic').focus();
+}
+
+async function createPersonalSession() {
+    const topic = document.getElementById('personal-topic').value.trim();
+    const context = document.getElementById('personal-context').value.trim();
+
+    if (!topic) {
+        alert('Please enter what you\'d like to talk about.');
+        return;
+    }
+
+    let res, data;
+    try {
+        res = await fetch('/api/sessions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ topic, type: 'personal', mode: 'personal', perspective: context })
+        });
+        data = await res.json();
+    } catch (err) {
+        alert('Error creating session: ' + err.message);
+        return;
+    }
+    if (data.success) {
+        hideAllModals();
+        window.location.href = '/session/' + data.session.id;
+    }
 }
 
 function showFramingAssist() {
@@ -273,7 +337,7 @@ async function loadSessions() {
         <div class="session-card-wrapper">
             <a href="/session/${s.id}" class="session-card">
                 <div class="session-card-header">
-                    <span class="session-type-badge">${s.session_type}</span>
+                    <span class="session-type-badge">${s.session_mode === 'personal' ? 'one-on-one' : s.session_type}</span>
                     <span class="session-status ${s.status}">${s.status}</span>
                 </div>
                 <h3>${escapeHtml(s.topic)}</h3>

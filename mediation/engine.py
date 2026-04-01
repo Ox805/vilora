@@ -2,6 +2,46 @@ import os
 import sys
 from anthropic import Anthropic
 
+COUNSELOR_PROMPT = """You are Vilora, a warm and insightful AI counselor and advisor. In this mode, you're \
+having a one-on-one conversation with someone who wants to think through a challenge, get advice, or \
+just talk something out.
+
+## Core Principles
+
+1. **Genuine Care**: You care about this person's wellbeing. Your responses should feel warm, \
+thoughtful, and human — not clinical or formulaic.
+
+2. **Active Listening**: Reflect back what you hear. Ask clarifying questions. Make sure the person \
+feels truly understood before offering perspective.
+
+3. **Honest Guidance**: Share your perspective honestly but gently. Don't just validate — if you see \
+a blind spot or a different way to look at things, say so with care.
+
+4. **Practical Wisdom**: Help people think through situations concretely. What are the options? \
+What are the tradeoffs? What would they advise a friend in the same situation?
+
+5. **Empowerment**: Help people find their own answers. Ask questions that help them think more \
+clearly rather than just telling them what to do.
+
+6. **Boundaries**: You're a supportive advisor, not a licensed therapist. If someone describes \
+a crisis, abuse, or serious mental health concerns, acknowledge their pain and encourage them \
+to reach out to a professional or crisis resource.
+
+## Communication Style
+
+- Warm, direct, and genuine — like a thoughtful friend who happens to give great advice
+- Ask open-ended questions to deepen understanding
+- Share observations using "I notice..." or "It sounds like..."
+- Offer perspective when you have it, frame it as "one way to think about it..."
+- Celebrate their self-awareness and willingness to reflect
+- Be honest about the limits of what you can help with
+
+## Session Awareness
+
+Stay focused on what the person wants to discuss. Follow their lead but gently guide toward \
+clarity and actionable next steps when the conversation is ready for it.
+"""
+
 SYSTEM_PROMPT = """You are Vilora, an expert AI mediator. Your role is to facilitate productive dialogue \
 between participants who have a disagreement, conflict, or unresolved issue.
 
@@ -153,9 +193,13 @@ class MediationEngine:
 
         return response.content[0].text
 
-    def should_respond(self, topic, messages, participants):
+    def should_respond(self, topic, messages, participants, session_mode='mediation'):
         """Decide whether Vilora should chime in based on conversation state."""
         if not self.client:
+            return True
+
+        # In personal/counseling mode, always respond
+        if session_mode == 'personal':
             return True
 
         participant_names = {p.id: p.display_name for p in participants}
@@ -215,15 +259,15 @@ class MediationEngine:
             # Default to responding if we can't decide
             return msgs_since_mediator >= 3
 
-    def mediate(self, topic, session_type, messages, participants, participant_memories=None):
+    def mediate(self, topic, session_type, messages, participants, participant_memories=None, session_mode='mediation'):
         if not self.client:
             return self._fallback_response(messages)
 
         participant_names = {p.id: p.display_name for p in participants}
-        conversation = self._build_conversation(topic, session_type, messages, participant_names)
+        conversation = self._build_conversation(topic, session_type, messages, participant_names, session_mode=session_mode)
 
         # Build personalized system prompt with memories
-        system = SYSTEM_PROMPT
+        system = COUNSELOR_PROMPT if session_mode == 'personal' else SYSTEM_PROMPT
         if participant_memories:
             memory_sections = []
             for user_id, memories in participant_memories.items():
@@ -281,25 +325,41 @@ class MediationEngine:
 
         return response.content[0].text
 
-    def _build_conversation(self, topic, session_type, messages, participant_names):
+    def _build_conversation(self, topic, session_type, messages, participant_names, session_mode='mediation'):
         conversation = []
 
         # Build context from intake messages
-        intake_context = f"Mediation Topic: {topic}\nType: {session_type}\n\n"
-        intake_messages = [m for m in messages if m.msg_type == 'intake']
-        if intake_messages:
-            intake_context += "Initial perspectives from each participant:\n\n"
-            for msg in intake_messages:
-                name = participant_names.get(msg.user_id, 'Unknown')
-                intake_context += f"**{name}**: {msg.content}\n\n"
+        if session_mode == 'personal':
+            intake_context = f"Topic: {topic}\n\n"
+            intake_messages = [m for m in messages if m.msg_type == 'intake']
+            if intake_messages:
+                name = participant_names.get(intake_messages[0].user_id, 'Someone')
+                intake_context += f"{name} wants to talk about this:\n\n"
+                for msg in intake_messages:
+                    intake_context += f"{msg.content}\n\n"
 
-        conversation.append({"role": "user", "content": intake_context})
-        conversation.append({
-            "role": "assistant",
-            "content": f"Thank you both for sharing your perspectives on this. "
-                       f"I'm here to help you work through this together. "
-                       f"Let me make sure I understand each of your viewpoints before we proceed."
-        })
+            conversation.append({"role": "user", "content": intake_context})
+            conversation.append({
+                "role": "assistant",
+                "content": "Thank you for sharing this with me. I'm here to listen and help you think through this. "
+                           "Let me make sure I understand what's on your mind."
+            })
+        else:
+            intake_context = f"Mediation Topic: {topic}\nType: {session_type}\n\n"
+            intake_messages = [m for m in messages if m.msg_type == 'intake']
+            if intake_messages:
+                intake_context += "Initial perspectives from each participant:\n\n"
+                for msg in intake_messages:
+                    name = participant_names.get(msg.user_id, 'Unknown')
+                    intake_context += f"**{name}**: {msg.content}\n\n"
+
+            conversation.append({"role": "user", "content": intake_context})
+            conversation.append({
+                "role": "assistant",
+                "content": "Thank you both for sharing your perspectives on this. "
+                           "I'm here to help you work through this together. "
+                           "Let me make sure I understand each of your viewpoints before we proceed."
+            })
 
         # Add conversation messages
         for msg in messages:
