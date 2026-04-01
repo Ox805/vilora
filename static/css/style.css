@@ -756,6 +756,23 @@ body.summary-open .container {
     font-size: 0.9rem;
 }
 
+.about-me-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.about-me-update-link {
+    color: var(--text-light);
+    font-size: 0.85rem;
+    text-decoration: none;
+}
+
+.about-me-update-link:hover {
+    color: var(--accent);
+    text-decoration: underline;
+}
+
 .memory-category {
     margin-bottom: 2rem;
 }

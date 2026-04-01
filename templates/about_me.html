@@ -89,7 +89,7 @@
     <div id="empty-state" class="empty-state" style="display:none">
         <p>Vilora doesn't know anything about you yet.</p>
         <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.5rem;">
-            Click "Get to know me" to answer a few questions, or memories will be learned from your sessions.
+            Click "Get started" above to answer a few questions, or memories will be learned naturally from your sessions.
         </p>
     </div>
 </div>
@@ -276,7 +276,7 @@ async function loadMemories() {
         container.innerHTML = '';
         emptyState.style.display = 'block';
         banner.style.display = 'flex';
-        headerActions.innerHTML = '<button onclick="startOnboarding()" class="btn btn-primary">Get to know me</button>';
+        headerActions.innerHTML = '';
         return;
     }
 
@@ -288,11 +288,10 @@ async function loadMemories() {
 
     if (hasProfile) {
         headerActions.innerHTML =
-            '<button onclick="startOnboarding()" class="btn btn-sm">Update my profile</button> ' +
+            '<a href="#" onclick="startOnboarding(); return false;" class="about-me-update-link">Update my profile</a>' +
             '<button onclick="showAddMemory()" class="btn btn-primary">Add something</button>';
     } else {
-        headerActions.innerHTML =
-            '<button onclick="startOnboarding()" class="btn btn-primary">Get to know me</button>';
+        headerActions.innerHTML = '';
     }
 
     // Group by category
