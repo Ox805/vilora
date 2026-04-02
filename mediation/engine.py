@@ -36,6 +36,13 @@ to reach out to a professional or crisis resource.
 - Celebrate their self-awareness and willingness to reflect
 - Be honest about the limits of what you can help with
 
+## Knowledge & Reference
+
+When the user asks factual questions or needs information on any topic, provide accurate, helpful \
+answers directly. You're a knowledgeable resource across all domains. If they're researching options, \
+exploring ideas, or need context to make a decision, give them substantive information. Always note \
+when information may be outdated or when professional advice should be sought for final decisions.
+
 ## Session Awareness
 
 Stay focused on what the person wants to discuss. Follow their lead but gently guide toward \
@@ -81,9 +88,18 @@ is not appropriate and provide relevant crisis resources.
 - Celebrate progress, no matter how small
 - Be honest when the conversation is stuck and suggest new approaches
 
+## Knowledge & Reference
+
+When participants ask factual questions, request data, or need expert context, provide accurate, \
+helpful information directly in the conversation. You serve as a knowledgeable reference on any topic. \
+For example, if a brainstorming session about international expansion needs information about tax \
+regulations, cultural norms, or market conditions in a specific country, provide that information \
+clearly and concisely. Always note when information may be outdated or when professional advice \
+(legal, medical, financial) should be sought for final decisions.
+
 ## Session Awareness
 
-You are mediating a specific topic. Stay focused on that topic while being flexible enough to \
+You are facilitating a specific topic. Stay focused on that topic while being flexible enough to \
 address related issues that emerge. Keep track of what has been agreed upon and what remains unresolved.
 
 When participants reach agreements, clearly state them and confirm both parties accept.
@@ -93,8 +109,9 @@ SHOULD_RESPOND_PROMPT = """You are analyzing a mediation conversation to decide 
 should chime in right now, or let the participants continue talking.
 
 Vilora should chime in when:
+- A participant asks a question, requests information, or asks for facts/data/research
+- A participant directly addresses Vilora or asks for help
 - There have been several exchanges (3+) between participants without mediator input
-- A participant directly asks Vilora a question or asks for help
 - The conversation is escalating or getting heated
 - There's a misunderstanding that needs reframing
 - Someone has made a concession or shown willingness to compromise (acknowledge it)
@@ -104,7 +121,7 @@ Vilora should chime in when:
 
 Vilora should stay silent when:
 - Participants are having a productive back-and-forth on their own
-- Only 1-2 messages have been exchanged since the last mediator input
+- Only 1-2 messages have been exchanged since the last mediator input AND no one is asking a question
 - The participants are actively building on each other's ideas without conflict
 
 Respond with ONLY "YES" or "NO" — nothing else."""
@@ -254,11 +271,24 @@ class MediationEngine:
 
         # Count user messages since last mediator response
         msgs_since_mediator = 0
+        last_user_msg = None
         for m in reversed(messages):
             if m.msg_type == 'mediator':
                 break
             if m.msg_type == 'user':
                 msgs_since_mediator += 1
+                if last_user_msg is None:
+                    last_user_msg = m.content
+
+        # Check if the latest message looks like a question or info request
+        is_question = last_user_msg and ('?' in last_user_msg or
+            any(last_user_msg.lower().lstrip().startswith(w) for w in
+                ['what ', 'how ', 'why ', 'when ', 'where ', 'who ', 'can you ',
+                 'could you ', 'tell me ', 'explain ', 'vilora', 'do you know']))
+
+        # If someone is asking a question, always respond
+        if is_question:
+            return True
 
         # If many messages have passed, always respond
         if msgs_since_mediator >= 5:
