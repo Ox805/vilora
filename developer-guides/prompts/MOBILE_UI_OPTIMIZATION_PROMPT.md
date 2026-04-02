@@ -309,8 +309,59 @@ All mobile CSS should be added to the existing `@media (max-width: 768px)` block
 
 ---
 
+## Code Audit Findings (April 2, 2026)
+
+### CRITICAL Issues (Breaks Functionality on Mobile)
+
+| Issue | Location | Detail |
+|-------|----------|--------|
+| Summary panel overflow | style.css line ~946 | `.summary-panel` is 480px fixed width. On 375px screen = 105px horizontal overflow. The 768px media query sets `width: 100%` but does not cover screens below 768px properly |
+| Keyboard hides input | session.html | `.mediation-room` uses `height: calc(100vh - 140px)`. When mobile keyboard opens (50-60% of screen), input bar scrolls out of view. User types blind |
+| Council panel same issue | session.html | Same 480px fixed width as summary panel |
+
+### HIGH Issues (Accessibility/Usability)
+
+| Issue | Location | Detail |
+|-------|----------|--------|
+| Touch targets too small | All `.input-icon-btn` | Send/mic buttons are ~29px (padding 0.35rem + 18px icon). Minimum should be 44px |
+| Form inputs too short | style.css `.form-group input` | `padding: 0.6rem 0.75rem` = ~27px height. Below 44px touch target |
+| `.btn-sm` too small | style.css | `padding: 0.25rem 0.75rem` = ~24px height |
+| Settings/tone chips | style.css | `padding: 0.5rem 1rem` / `0.35rem 0.75rem` = ~28px height. Below 44px |
+| Password toggle tiny | style.css `.password-toggle` | `padding: 0.25rem` + 20px SVG = ~28px. Hard to tap |
+| Modal too wide | style.css `.modal-content` | `max-width: 500px` with no mobile padding. On 375px screen, content is edge-to-edge with no breathing room |
+| Only one breakpoint | style.css | Single `@media (max-width: 768px)` breakpoint. Missing 480px for phones, 360px for small phones |
+| Tone chips don't reflow | dashboard.html | Chips are 140-200px wide. On 375px minus padding = 343px. Chips wrap unpredictably |
+| No word-break on messages | style.css `.message` | Long words in messages can cause horizontal overflow. Missing `word-break: break-word` |
+
+### MEDIUM Issues (Polish)
+
+| Issue | Location | Detail |
+|-------|----------|--------|
+| Hero text too large | style.css | h1 reduces to 1.8rem at 768px but stays 1.8rem down to 320px. Should be 1.4rem on phones |
+| Onboarding buttons cramped | about_me.html | "Skip for now" + "Back" + "Next" use `justify-content: space-between`. On 360px screens buttons nearly touch |
+| Delete button hard to tap | dashboard.html | Session card delete button is ~32px with `position: absolute`. Below 44px target |
+| Invite banner doesn't stack | session.html | Link input + Copy + Send Invite row stays horizontal on mobile. Should stack vertically |
+| Settings saved toast | style.css `.settings-saved` | `position: fixed; right: 2rem` might overlap content on small screens |
+| Navbar padding excessive | style.css | `padding: 1rem 2rem`. 32px each side on 375px screen = 64px lost to padding |
+| No mobile font scaling | style.css | All text sizes stay same from 320px to 767px. No progressive reduction |
+
+### Specific Component Measurements at 375px
+
+```
+Available width: 375px
+- Container padding (1rem each): 375 - 32 = 343px usable
+- Modal (max-width 500px): constrained to 343px, edge-to-edge
+- Summary panel (480px): OVERFLOWS by 105px
+- Tone chip (~150px): 2 per row max
+- Session type badge + Council btn + Summary btn: ~300px needed, barely fits
+- Invite link input + Copy + Send: ~400px needed, OVERFLOWS
+```
+
+---
+
 ## Changelog
 
 | Date | Change |
 |------|--------|
-| 2026-04-02 | Initial creation. Comprehensive mobile audit scope and implementation plan. |
+| 2026-04-02 | Initial creation. Comprehensive mobile audit scope and implementation plan |
+| 2026-04-02 | Added code audit findings with specific measurements and severity ratings |
