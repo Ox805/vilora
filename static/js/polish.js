@@ -14,7 +14,8 @@ function attachPolish(textareaId, options = {}) {
     const textarea = document.getElementById(textareaId);
     if (!textarea) return;
 
-    const wrapper = textarea.parentElement;
+    // Find the wrapper (message-input-wrap or parent)
+    const wrapper = textarea.closest('.message-input-wrap') || textarea.parentElement;
 
     // Create the polish button
     const polishBtn = document.createElement('button');
@@ -22,6 +23,7 @@ function attachPolish(textareaId, options = {}) {
     polishBtn.className = 'btn btn-sm btn-polish';
     polishBtn.textContent = 'Polish';
     polishBtn.title = 'Vilora will clean up spelling, punctuation, and clarity while keeping your voice and meaning exactly the same.';
+    polishBtn.addEventListener('mousedown', (e) => e.preventDefault());
     polishBtn.onclick = () => doPolish(textareaId);
 
     // Create the polish bar (button container)
@@ -35,9 +37,9 @@ function attachPolish(textareaId, options = {}) {
     preview.className = 'polish-preview';
     preview.style.display = 'none';
 
-    // Insert after textarea
-    textarea.after(polishBar);
-    polishBar.after(preview);
+    // Insert inside the wrapper
+    wrapper.appendChild(polishBar);
+    wrapper.appendChild(preview);
 
     // Store reference
     polishBtn.id = textareaId + '-polish-btn';

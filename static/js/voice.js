@@ -107,11 +107,17 @@
         if (textarea.dataset.micAttached) return;
         textarea.dataset.micAttached = 'true';
 
-        // Wrap textarea in a container for positioning
-        const wrapper = document.createElement('div');
-        wrapper.className = 'textarea-mic-wrapper';
-        textarea.parentNode.insertBefore(wrapper, textarea);
-        wrapper.appendChild(textarea);
+        // Use existing wrapper if available, otherwise create one
+        let wrapper = textarea.closest('.message-input-wrap');
+        if (!wrapper) {
+            wrapper = textarea.closest('.form-group');
+        }
+        if (!wrapper) {
+            wrapper = document.createElement('div');
+            wrapper.className = 'textarea-mic-wrapper';
+            textarea.parentNode.insertBefore(wrapper, textarea);
+            wrapper.appendChild(textarea);
+        }
 
         const btn = document.createElement('button');
         btn.type = 'button';
