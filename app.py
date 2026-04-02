@@ -387,7 +387,12 @@ def join_session(code):
 
     if not current_user.is_authenticated:
         session['pending_join'] = code
-        return redirect(url_for('login_page'))
+        creator = User.get_by_id(db, med_session.creator_id)
+        creator_name = creator.display_name if creator else 'Someone'
+        return render_template('invite_landing.html',
+                               creator_name=creator_name,
+                               topic=med_session.topic,
+                               invite_code=code)
 
     med_session.add_participant(db, current_user.id)
     return redirect(url_for('session_room', session_id=med_session.id))

@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>You're Invited — Vilora</title>
+    <meta name="description" content="{{ creator_name }} invited you to a conversation on Vilora.">
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/favicon.svg') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <a href="/" class="nav-brand">
+            <svg class="nav-logo-mark" width="36" height="36" viewBox="0 0 58 58" xmlns="http://www.w3.org/2000/svg">
+                <path d="M 8 9 C 6 26,23 43,29 47 M 18 9 C 17 28,25 44,29 47 M 8 9 L 18 9" fill="none" stroke="#1D9E75" stroke-width="1.8" stroke-linecap="round"/>
+                <path d="M 50 9 C 52 26,35 43,29 47 M 40 9 C 41 28,33 44,29 47 M 40 9 L 50 9" fill="none" stroke="#1D9E75" stroke-width="1.8" stroke-linecap="round"/>
+                <circle cx="29" cy="47" r="3" fill="#085041"/>
+            </svg>
+            <span class="nav-wordmark">VILORA</span>
+        </a>
+        <div class="nav-links">
+            <a href="/" class="btn btn-sm">Learn more</a>
+        </div>
+    </nav>
+
+    <main class="container">
+        <div class="invite-landing">
+            <div class="invite-landing-card">
+                <!-- Invitation context -->
+                <div class="invite-landing-header">
+                    <svg width="50" height="50" viewBox="0 0 58 58" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M 8 9 C 6 26,23 43,29 47 M 18 9 C 17 28,25 44,29 47 M 8 9 L 18 9" fill="none" stroke="#1D9E75" stroke-width="1.8" stroke-linecap="round"/>
+                        <path d="M 50 9 C 52 26,35 43,29 47 M 40 9 C 41 28,33 44,29 47 M 40 9 L 50 9" fill="none" stroke="#1D9E75" stroke-width="1.8" stroke-linecap="round"/>
+                        <circle cx="29" cy="47" r="3" fill="#085041"/>
+                    </svg>
+                    <h1>You've been invited to a conversation</h1>
+                    <p class="invite-landing-context">
+                        <strong>{{ creator_name }}</strong> would like to work through something with you, with Vilora as a neutral facilitator.
+                    </p>
+                </div>
+
+                <div class="invite-landing-topic">
+                    <span class="invite-landing-topic-label">Topic</span>
+                    {{ topic }}
+                </div>
+
+                <!-- What to expect -->
+                <div class="invite-landing-expect">
+                    <h3>What to expect</h3>
+                    <ul>
+                        <li>Vilora is an impartial AI facilitator that helps people have productive, constructive conversations</li>
+                        <li>You'll share your perspective, and Vilora will help guide the dialogue toward understanding</li>
+                        <li>Your conversation is shared only with the other participants. Vilora does not share your information with anyone else</li>
+                        <li>There's no pressure and no judgment. You can be as open or as brief as you'd like</li>
+                    </ul>
+                </div>
+
+                <!-- Login/Register form -->
+                <div class="invite-landing-auth">
+                    <h3 id="auth-title">Create an account to join</h3>
+                    <div id="auth-error" class="error-msg" style="display:none"></div>
+
+                    <form id="auth-form" onsubmit="handleAuth(event)">
+                        <div class="form-group" id="name-group">
+                            <label for="display_name">What should we call you?</label>
+                            <input type="text" id="display_name" placeholder="Your first name or nickname">
+                        </div>
+                        <div class="form-group">
+                            <label for="email">Email</label>
+                            <input type="email" id="email" required placeholder="you@example.com">
+                        </div>
+                        <div class="form-group">
+                            <label for="password">Password</label>
+                            <div class="password-field">
+                                <input type="password" id="password" required placeholder="Create a password" minlength="6">
+                                <button type="button" class="password-toggle" onclick="togglePassword()" title="Show password">
+                                    <svg class="eye-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                    <svg class="eye-off-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                                </button>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-full btn-lg" id="auth-btn">Create account & join</button>
+                    </form>
+
+                    <p class="auth-toggle">
+                        Already have an account?
+                        <a href="#" onclick="toggleMode(event)">
+                            <span id="toggle-link">Log in instead</span>
+                        </a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <p>Vilora | Strength through dialogue</p>
+    </footer>
+
+    <script>
+    let isRegister = true;
+
+    function toggleMode(e) {
+        e.preventDefault();
+        isRegister = !isRegister;
+        document.getElementById('auth-title').textContent = isRegister ? 'Create an account to join' : 'Log in to join';
+        document.getElementById('name-group').style.display = isRegister ? 'block' : 'none';
+        document.getElementById('toggle-link').textContent = isRegister ? 'Log in instead' : 'Create an account';
+        document.getElementById('auth-btn').textContent = isRegister ? 'Create account & join' : 'Log in & join';
+        document.getElementById('auth-error').style.display = 'none';
+    }
+
+    function togglePassword() {
+        const input = document.getElementById('password');
+        const eyeOn = input.closest('.password-field').querySelector('.eye-icon');
+        const eyeOff = input.closest('.password-field').querySelector('.eye-off-icon');
+        if (input.type === 'password') {
+            input.type = 'text';
+            eyeOn.style.display = 'none';
+            eyeOff.style.display = 'block';
+        } else {
+            input.type = 'password';
+            eyeOn.style.display = 'block';
+            eyeOff.style.display = 'none';
+        }
+    }
+
+    async function handleAuth(e) {
+        e.preventDefault();
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        const display_name = document.getElementById('display_name').value;
+
+        const endpoint = isRegister ? '/api/register' : '/api/login';
+        const body = isRegister ? { email, password, display_name } : { email, password };
+
+        try {
+            const res = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+            const data = await res.json();
+            if (data.success) {
+                window.location.href = data.redirect || '/join/{{ invite_code }}';
+            } else {
+                const errEl = document.getElementById('auth-error');
+                errEl.textContent = data.error || 'Something went wrong';
+                errEl.style.display = 'block';
+            }
+        } catch (err) {
+            const errEl = document.getElementById('auth-error');
+            errEl.textContent = 'Connection error. Please try again.';
+            errEl.style.display = 'block';
+        }
+    }
+    </script>
+</body>
+</html>
