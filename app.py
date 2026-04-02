@@ -284,11 +284,30 @@ def delete_memory(memory_id):
     return jsonify({'success': True})
 
 
-# --- Council ---
+# --- Council (async) ---
+
+import threading
+
+_council_jobs = {}  # job_id -> {'status': 'running'|'done'|'error', 'result': ..., 'error': ...}
+
+def _run_council_background(job_id, question, context, user_memories):
+    try:
+        sys.stderr.write(f"[Vilora] Council job {job_id} starting\n")
+        result = mediation_engine.run_council(
+            question=question,
+            context=context,
+            user_memories=user_memories
+        )
+        _council_jobs[job_id] = {'status': 'done', 'result': result}
+        sys.stderr.write(f"[Vilora] Council job {job_id} completed\n")
+    except Exception as e:
+        sys.stderr.write(f"[Vilora] Council job {job_id} error: {e}\n")
+        _council_jobs[job_id] = {'status': 'error', 'error': str(e)}
+
 
 @app.route('/api/council', methods=['POST'])
 @login_required
-def run_council():
+def start_council():
     data = request.get_json()
     question = data.get('question', '').strip()
     context = data.get('context', '').strip()
@@ -299,23 +318,36 @@ def run_council():
     db = get_db()
     memories = get_user_memories(db, current_user.id)
 
-    try:
-        sys.stderr.write(f"[Vilora] Council starting for: {question[:50]}\n")
-        sys.stderr.flush()
-        result = mediation_engine.run_council(
-            question=question,
-            context=context or None,
-            user_memories=memories or None
-        )
-        sys.stderr.write(f"[Vilora] Council completed successfully\n")
-        sys.stderr.flush()
-        if result:
-            return jsonify({'success': True, 'council': result})
-        return jsonify({'success': False, 'error': 'Council requires API key'}), 500
-    except Exception as e:
-        sys.stderr.write(f"[Vilora] Council error: {type(e).__name__}: {e}\n")
-        sys.stderr.flush()
-        return jsonify({'success': False, 'error': 'Council encountered an error. Please try again.'}), 500
+    job_id = secrets.token_urlsafe(16)
+    _council_jobs[job_id] = {'status': 'running'}
+
+    thread = threading.Thread(
+        target=_run_council_background,
+        args=(job_id, question, context or None, memories or None),
+        daemon=True
+    )
+    thread.start()
+
+    return jsonify({'success': True, 'job_id': job_id})
+
+
+@app.route('/api/council/<job_id>', methods=['GET'])
+@login_required
+def poll_council(job_id):
+    job = _council_jobs.get(job_id)
+    if not job:
+        return jsonify({'success': False, 'error': 'Job not found'}), 404
+
+    if job['status'] == 'running':
+        return jsonify({'success': True, 'status': 'running'})
+    elif job['status'] == 'done':
+        result = job['result']
+        del _council_jobs[job_id]  # clean up
+        return jsonify({'success': True, 'status': 'done', 'council': result})
+    else:
+        error = job.get('error', 'Unknown error')
+        del _council_jobs[job_id]
+        return jsonify({'success': False, 'status': 'error', 'error': error})
 
 
 # --- Polish Helper ---

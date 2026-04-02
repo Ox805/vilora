@@ -273,30 +273,63 @@ async function runDashCouncil() {
     btn.textContent = 'Council is deliberating...';
 
     try {
-        console.log('[Council] Sending request...');
         const res = await fetch('/api/council', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ question, context })
         });
-        console.log('[Council] Response status:', res.status);
         const data = await res.json();
-        console.log('[Council] Response data:', data.success ? 'success' : data.error);
 
-        if (data.success && data.council) {
+        if (data.success && data.job_id) {
             hideDashCouncil();
-            showDashCouncilResults(data.council, question);
+            pollDashCouncilResults(data.job_id, question, btn);
         } else {
-            console.error('[Council] Error:', data.error);
             alert(data.error || 'Council encountered an error.');
+            btn.disabled = false;
+            btn.textContent = "Get the Council's take";
         }
     } catch (err) {
-        console.error('[Council] Fetch error:', err);
-        alert('Failed to run Council. Please try again.');
-    } finally {
+        alert('Failed to start Council. Please try again.');
         btn.disabled = false;
         btn.textContent = "Get the Council's take";
     }
+}
+
+async function pollDashCouncilResults(jobId, question, btn) {
+    const container = document.getElementById('dashboard-council-results');
+    const content = document.getElementById('dash-council-content');
+    content.innerHTML = `
+        <div class="council-progress">
+            <p class="loading">The Council is deliberating...</p>
+            <p style="color: var(--text-muted); font-size: 0.85rem; text-align: center;">
+                Five AI advisors are analyzing your question from different angles.<br>
+                This usually takes 30-60 seconds.
+            </p>
+        </div>`;
+    container.style.display = 'block';
+
+    const maxAttempts = 60;
+    for (let i = 0; i < maxAttempts; i++) {
+        await new Promise(r => setTimeout(r, 3000));
+
+        try {
+            const res = await fetch(`/api/council/${jobId}`);
+            const data = await res.json();
+
+            if (data.status === 'done' && data.council) {
+                if (btn) { btn.disabled = false; btn.textContent = "Get the Council's take"; }
+                showDashCouncilResults(data.council, question);
+                return;
+            } else if (data.status === 'error') {
+                if (btn) { btn.disabled = false; btn.textContent = "Get the Council's take"; }
+                content.innerHTML = `<p class="error-msg">${escapeHtml(data.error || 'Council encountered an error.')}</p>`;
+                return;
+            }
+        } catch (err) {}
+    }
+
+    if (btn) { btn.disabled = false; btn.textContent = "Get the Council's take"; }
+    content.innerHTML = '<p class="error-msg">Council is taking longer than expected. Please try again.</p>';
 }
 
 function showDashCouncilResults(council, question) {
