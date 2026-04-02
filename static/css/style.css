@@ -194,7 +194,15 @@ body {
 }
 
 .hero-logo {
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.hero-descriptor {
+    font-size: 0.85rem;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin-bottom: 1.25rem;
+    text-transform: uppercase;
 }
 
 .hero h1 {
@@ -528,6 +536,12 @@ body {
 }
 
 /* === Modal === */
+body.modal-open {
+    overflow: hidden;
+    position: fixed;
+    width: 100%;
+}
+
 .modal {
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
@@ -536,6 +550,8 @@ body {
     align-items: center;
     justify-content: center;
     z-index: 100;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 .invite-success-banner {
@@ -834,15 +850,10 @@ body {
     color: white;
 }
 
-/* Polish button inside the input bar */
-.message-input-bar .polish-bar {
-    flex-shrink: 0;
-    padding-bottom: 0.15rem;
-}
-
-.btn-polish {
+/* Buttons inside the input bar icons area */
+.message-input-icons .btn-polish {
     font-size: 0.75rem;
-    padding: 0.2rem 0.6rem;
+    padding: 0.3rem 0.6rem;
     border-radius: 1rem;
     opacity: 0.5;
     border: 1px solid var(--border);
@@ -852,21 +863,20 @@ body {
     transition: all 0.15s;
 }
 
-.btn-polish:hover {
+.message-input-icons .btn-polish:hover {
     opacity: 1;
     border-color: var(--primary);
     color: var(--primary);
 }
 
-/* Mic button inside the input bar */
-.message-input-bar .btn-mic {
+.message-input-icons .btn-mic {
     position: static;
     padding: 0.35rem;
     border: none;
     border-radius: 50%;
 }
 
-.message-input-bar .btn-mic:hover {
+.message-input-icons .btn-mic:hover {
     background: var(--pale);
 }
 
@@ -1540,6 +1550,8 @@ body.summary-open .container {
         opacity: 1; /* always visible on touch */
         min-height: 44px;
         min-width: 44px;
+        border: none;
+        background: none;
     }
 
     /* --- About Me --- */
