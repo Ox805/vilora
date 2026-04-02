@@ -300,16 +300,21 @@ def run_council():
     memories = get_user_memories(db, current_user.id)
 
     try:
+        sys.stderr.write(f"[Vilora] Council starting for: {question[:50]}\n")
+        sys.stderr.flush()
         result = mediation_engine.run_council(
             question=question,
             context=context or None,
             user_memories=memories or None
         )
+        sys.stderr.write(f"[Vilora] Council completed successfully\n")
+        sys.stderr.flush()
         if result:
             return jsonify({'success': True, 'council': result})
         return jsonify({'success': False, 'error': 'Council requires API key'}), 500
     except Exception as e:
-        sys.stderr.write(f"[Vilora] Council error: {e}\n")
+        sys.stderr.write(f"[Vilora] Council error: {type(e).__name__}: {e}\n")
+        sys.stderr.flush()
         return jsonify({'success': False, 'error': 'Council encountered an error. Please try again.'}), 500
 
 
