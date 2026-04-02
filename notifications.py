@@ -66,7 +66,7 @@ def send_invite_email(to_email, creator_name, topic, join_link, personal_message
                 <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#FFFFFF;border-radius:8px;overflow:hidden;">
                     <!-- Header -->
                     <tr><td style="padding:32px 32px 24px;text-align:center;">
-                        <img src="https://www.vilora.ai/static/img/email-logo.png" alt="Vilora" width="160" style="display:block;margin:0 auto;">
+                        <img src="https://www.vilora.ai/static/img/email-logo.png" alt="Vilora" width="320" style="display:block;margin:0 auto;">
                     </td></tr>
 
                     <!-- Body -->
@@ -138,7 +138,7 @@ def send_nudge_email(to_email, nudger_name, recipient_name, topic, session_link)
             <tr><td align="center">
                 <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#FFFFFF;border-radius:8px;overflow:hidden;">
                     <tr><td style="padding:32px 32px 24px;text-align:center;">
-                        <img src="https://www.vilora.ai/static/img/email-logo.png" alt="Vilora" width="160" style="display:block;margin:0 auto;">
+                        <img src="https://www.vilora.ai/static/img/email-logo.png" alt="Vilora" width="320" style="display:block;margin:0 auto;">
                     </td></tr>
                     <tr><td style="padding:0 32px 32px;">
                         <h2 style="font-size:18px;font-weight:500;color:#2C2C2A;margin:0 0 16px;">Hey {recipient_name}, your conversation is waiting</h2>
@@ -190,7 +190,7 @@ def send_password_reset_email(to_email, display_name, reset_link):
             <tr><td align="center">
                 <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#FFFFFF;border-radius:8px;overflow:hidden;">
                     <tr><td style="padding:32px 32px 24px;text-align:center;">
-                        <img src="https://www.vilora.ai/static/img/email-logo.png" alt="Vilora" width="160" style="display:block;margin:0 auto;">
+                        <img src="https://www.vilora.ai/static/img/email-logo.png" alt="Vilora" width="320" style="display:block;margin:0 auto;">
                     </td></tr>
                     <tr><td style="padding:0 32px 32px;">
                         <h2 style="font-size:18px;font-weight:500;color:#2C2C2A;margin:0 0 16px;">Password Reset</h2>

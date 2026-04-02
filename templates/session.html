@@ -682,11 +682,11 @@ async function checkParticipants() {
 
     if (count >= 2) {
         statusEl.textContent = `${count} participants`;
-        statusEl.className = 'participant-status joined';
+        statusEl.className = 'btn btn-sm';
         if (banner) banner.style.display = 'none';
     } else {
         statusEl.textContent = 'Waiting for other party...';
-        statusEl.className = 'participant-status waiting';
+        statusEl.className = 'btn btn-sm';
     }
 }
 
