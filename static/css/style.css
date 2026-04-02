@@ -747,31 +747,32 @@ body {
     border-color: var(--primary);
 }
 
-.form-group .btn-mic {
+.textarea-mic-wrapper {
+    position: relative;
+}
+
+.textarea-mic-wrapper textarea {
+    width: 100%;
+    padding-right: 2.5rem;
+}
+
+.textarea-mic-wrapper .btn-mic {
     position: absolute;
     right: 8px;
     bottom: 8px;
 }
 
-.form-group:has(.btn-mic) {
-    position: relative;
-}
-
-.form-group:has(.btn-mic) textarea {
-    padding-right: 2.5rem;
-}
-
 .btn-mic {
     background: none;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 0.4rem;
+    border: none;
+    padding: 0.3rem;
     cursor: pointer;
-    color: var(--text-light);
+    color: var(--text-muted);
     transition: all 0.2s ease;
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    border-radius: 4px;
 }
 
 .btn-mic:hover {

@@ -107,9 +107,15 @@
         if (textarea.dataset.micAttached) return;
         textarea.dataset.micAttached = 'true';
 
+        // Wrap textarea in a container for positioning
+        const wrapper = document.createElement('div');
+        wrapper.className = 'textarea-mic-wrapper';
+        textarea.parentNode.insertBefore(wrapper, textarea);
+        wrapper.appendChild(textarea);
+
         const btn = document.createElement('button');
         btn.type = 'button';
-        btn.className = 'btn btn-mic';
+        btn.className = 'btn-mic';
         btn.title = 'Voice input';
         btn.innerHTML = MIC_SVG;
         // Prevent mic button from stealing focus/selection from textarea
@@ -119,8 +125,7 @@
             toggleMic(btn, textarea);
         });
 
-        // Insert mic button right after the textarea
-        textarea.insertAdjacentElement('afterend', btn);
+        wrapper.appendChild(btn);
     }
 
     // Attach to all textareas on page load
