@@ -73,7 +73,7 @@ def send_invite_email(to_email, creator_name, topic, join_link, personal_message
                     <tr><td style="padding:0 32px 32px;">
                         <h2 style="font-size:18px;font-weight:500;color:#2C2C2A;margin:0 0 8px;">You've been invited to a conversation</h2>
                         <p style="color:#555550;font-size:15px;line-height:1.6;margin:0 0 16px;">
-                            <strong>{creator_name}</strong> would like to work through something with you on Vilora, a platform for constructive dialogue.
+                            <strong>{creator_name}</strong> would like to have a conversation with you on Vilora, an AI-powered platform for productive dialogue.
                         </p>
 
                         <div style="background:#E1F5EE;border-radius:8px;padding:16px;margin:16px 0;">
@@ -89,9 +89,9 @@ def send_invite_email(to_email, creator_name, topic, join_link, personal_message
 
                         <div style="border-top:1px solid #E2E0D8;padding-top:20px;margin-top:20px;">
                             <p style="color:#888780;font-size:13px;line-height:1.6;margin:0;">
-                                <strong>What to expect:</strong> Vilora is an impartial AI facilitator that helps people have productive conversations.
-                                You'll each share your perspective, and Vilora will guide the dialogue toward understanding and resolution.
-                                Your conversation is shared only with the other participants in the session. Vilora does not share your information with anyone else.
+                                <strong>What to expect:</strong> Vilora is an AI facilitator that helps people have productive conversations,
+                                whether you're working through a challenge, brainstorming, or making a decision together.
+                                Your conversation is shared only with the other participants. Vilora does not share your information with anyone else.
                             </p>
                         </div>
                     </td></tr>
@@ -115,8 +115,8 @@ def send_invite_email(to_email, creator_name, topic, join_link, personal_message
         f"Topic: {topic}\n\n"
         f"{f'Message: {personal_message}\n\n' if personal_message else ''}"
         f"Join here: {join_link}\n\n"
-        f"Vilora is an AI-powered platform for constructive dialogue. "
-        f"Everything you share is confidential.\n\n"
+        f"Vilora is an AI-powered platform for productive dialogue. "
+        f"Your conversation is shared only with participants.\n\n"
         f"Vilora | Strength through dialogue"
     )
 
