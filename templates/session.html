@@ -267,11 +267,10 @@ async function sendInviteEmail() {
         });
         const data = await res.json();
         if (data.success) {
-            statusEl.innerHTML = '<p style="color: var(--primary); background: var(--pale); padding: 0.5rem; border-radius: var(--radius); font-size: 0.9rem;">Invite sent!</p>';
+            statusEl.innerHTML = '<p style="color: var(--primary); background: var(--pale); padding: 0.5rem; border-radius: var(--radius); font-size: 0.9rem;">Invite sent! You can send another or close this window.</p>';
             statusEl.style.display = 'block';
             document.getElementById('invite-email').value = '';
             document.getElementById('invite-message').value = '';
-            setTimeout(hideInviteModal, 2000);
         } else {
             statusEl.innerHTML = `<p class="error-msg">${escapeHtml(data.error || 'Failed to send invite.')}</p>`;
             statusEl.style.display = 'block';
