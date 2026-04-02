@@ -97,9 +97,9 @@ def send_invite_email(to_email, creator_name, topic, join_link, personal_message
                     </td></tr>
 
                     <!-- Footer -->
-                    <tr><td style="padding:20px 32px;background:#F7F8F7;border-top:1px solid #E2E0D8;text-align:center;">
-                        <p style="margin:0;color:#888780;font-size:12px;">Vilora — Strength through dialogue</p>
-                        <p style="margin:8px 0 0;color:#888780;font-size:11px;">
+                    <tr><td style="padding:20px 32px;background:#F7F8F7;border-top:1px solid #E2E0D8;">
+                        <p style="margin:0;color:#888780;font-size:12px;text-align:center;">Vilora — Strength through dialogue</p>
+                        <p style="margin:8px 0 0;color:#888780;font-size:11px;text-align:left;">
                             You received this because {creator_name} invited you. If this wasn't meant for you, you can safely ignore it.
                         </p>
                     </td></tr>
