@@ -8,6 +8,7 @@
         <div class="room-actions">
             <span class="session-type-badge">{% if is_personal %}Personal{% else %}{{ session.session_type }}{% endif %}</span>
             {% if not is_personal %}<span id="participant-status" class="participant-status"></span>{% endif %}
+            <button onclick="showCouncilModal()" class="btn btn-sm" title="Get 5 different expert perspectives on a specific question. The Council analyzes your question from multiple angles, peer-reviews each other's blind spots, and delivers a synthesized recommendation.">Council</button>
             <button onclick="getSummary()" class="btn btn-sm" title="Vilora generates a structured summary of the conversation so far, including key points, areas of agreement, unresolved issues, and suggested next steps.">Get Summary</button>
         </div>
     </div>
@@ -94,13 +95,46 @@
     </div>
 </div>
 
-<!-- Summary panel — outside mediation room so it overlays properly -->
+<!-- Summary panel -->
 <div id="summary-panel" class="summary-panel" style="display:none">
     <div class="summary-header">
         <h3>Session Summary</h3>
         <button onclick="closeSummary()" class="btn btn-sm">Close</button>
     </div>
     <div id="summary-content" class="summary-content"></div>
+</div>
+
+<!-- Council question modal -->
+<div id="council-modal" class="modal" style="display:none">
+    <div class="modal-content" style="max-width: 500px;">
+        <h2>Ask the Council</h2>
+        <p style="color: var(--text-light); margin-bottom: 1rem; font-size: 0.9rem;">
+            Five advisors will analyze your question from different angles, review each other's blind spots, and deliver a synthesized recommendation.
+        </p>
+        <div class="form-group">
+            <label for="council-question">What do you want the Council's take on?</label>
+            <textarea id="council-question" rows="4"
+                placeholder="e.g., Should I accept this job offer? Is our product pricing strategy right? How should I handle this situation with my manager?"></textarea>
+        </div>
+        <div class="form-group">
+            <label for="council-context">Additional context (optional)</label>
+            <textarea id="council-context" rows="3"
+                placeholder="Any background information that would help the advisors give better analysis."></textarea>
+        </div>
+        <div class="form-actions">
+            <button type="button" onclick="hideCouncilModal()" class="btn">Cancel</button>
+            <button type="button" onclick="runCouncil()" class="btn btn-primary" id="council-btn">Get the Council's take</button>
+        </div>
+    </div>
+</div>
+
+<!-- Council results panel -->
+<div id="council-panel" class="summary-panel" style="display:none">
+    <div class="summary-header">
+        <h3>Council</h3>
+        <button onclick="closeCouncil()" class="btn btn-sm">Close</button>
+    </div>
+    <div id="council-content" class="summary-content"></div>
 </div>
 
 <script>
@@ -197,6 +231,99 @@ async function sendMessage(e) {
         sendBtn.disabled = false;
         sendBtn.textContent = 'Send';
     }
+}
+
+// --- Council ---
+function showCouncilModal() {
+    document.getElementById('council-modal').style.display = 'flex';
+    document.getElementById('council-question').focus();
+}
+
+function hideCouncilModal() {
+    document.getElementById('council-modal').style.display = 'none';
+    document.getElementById('council-question').value = '';
+    document.getElementById('council-context').value = '';
+}
+
+async function runCouncil() {
+    const question = document.getElementById('council-question').value.trim();
+    const context = document.getElementById('council-context').value.trim();
+
+    if (!question) {
+        alert('Please enter a question for the Council.');
+        return;
+    }
+
+    const btn = document.getElementById('council-btn');
+    btn.disabled = true;
+    btn.textContent = 'Council is deliberating...';
+
+    try {
+        const res = await fetch('/api/council', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ question, context })
+        });
+        const data = await res.json();
+
+        if (data.success && data.council) {
+            hideCouncilModal();
+            showCouncilResults(data.council, question);
+        } else {
+            alert(data.error || 'Council encountered an error.');
+        }
+    } catch (err) {
+        alert('Failed to run Council. Please try again.');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = "Get the Council's take";
+    }
+}
+
+function showCouncilResults(council, question) {
+    const panel = document.getElementById('council-panel');
+    const content = document.getElementById('council-content');
+    document.body.classList.add('summary-open');
+
+    let html = `<div class="council-question-header"><strong>Question:</strong> ${escapeHtml(question)}</div>`;
+
+    // Synthesis first
+    html += `<div class="council-section council-synthesis">
+        <h4>Synthesis & Recommendation</h4>
+        <div class="council-section-body">${formatCouncilText(council.synthesis)}</div>
+    </div>`;
+
+    // Peer review
+    html += `<div class="council-section">
+        <h4>Peer Review</h4>
+        <div class="council-section-body">${formatCouncilText(council.review)}</div>
+    </div>`;
+
+    // Individual advisors (collapsible)
+    html += '<div class="council-section"><h4>Individual Advisor Perspectives</h4>';
+    for (const advisor of council.advisors) {
+        html += `
+            <details class="council-advisor">
+                <summary class="council-advisor-name">${escapeHtml(advisor.name)}</summary>
+                <div class="council-advisor-body">${formatCouncilText(advisor.response)}</div>
+            </details>`;
+    }
+    html += '</div>';
+
+    content.innerHTML = html;
+    panel.style.display = 'block';
+}
+
+function closeCouncil() {
+    document.getElementById('council-panel').style.display = 'none';
+    document.body.classList.remove('summary-open');
+}
+
+function formatCouncilText(text) {
+    if (!text) return '';
+    return escapeHtml(text)
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\n/g, '<br>');
 }
 
 async function getSummary() {

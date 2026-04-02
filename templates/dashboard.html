@@ -26,6 +26,10 @@
                     <div class="chooser-option-title">Talk to Vilora one-on-one</div>
                     <p>Get advice, think through a decision, brainstorm ideas, or just talk things out with Vilora as your sounding board.</p>
                 </button>
+                <button onclick="showCouncilFromDashboard()" class="chooser-option chooser-option-council" title="Five expert advisors analyze your question from different angles, peer-review each other's blind spots, and deliver a synthesized recommendation with a concrete next step.">
+                    <div class="chooser-option-title">Get the Council's take</div>
+                    <p>Five advisors with different thinking styles analyze your question, challenge each other, and deliver a synthesized recommendation.</p>
+                </button>
             </div>
             <div class="form-actions">
                 <button type="button" onclick="hideAllModals()" class="btn">Cancel</button>
@@ -181,6 +185,39 @@
         <button onclick="goToSession()" class="btn btn-primary">Enter Session</button>
     </div>
 
+    <!-- Council from dashboard -->
+    <div id="dashboard-council-modal" class="modal" style="display:none">
+        <div class="modal-content" style="max-width: 500px;">
+            <h2>Get the Council's take</h2>
+            <p style="color: var(--text-light); margin-bottom: 1rem; font-size: 0.9rem;">
+                Five advisors will analyze your question from different angles, review each other's blind spots, and deliver a synthesized recommendation.
+            </p>
+            <div class="form-group">
+                <label for="dash-council-question">What do you want the Council's take on?</label>
+                <textarea id="dash-council-question" rows="4"
+                    placeholder="e.g., Should I accept this job offer? Is our product pricing strategy right? How should I handle this situation with my manager?"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="dash-council-context">Additional context (optional)</label>
+                <textarea id="dash-council-context" rows="3"
+                    placeholder="Any background information that would help the advisors give better analysis."></textarea>
+            </div>
+            <div class="form-actions">
+                <button type="button" onclick="hideDashCouncil()" class="btn">Cancel</button>
+                <button type="button" onclick="runDashCouncil()" class="btn btn-primary" id="dash-council-btn">Get the Council's take</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Council results -->
+    <div id="dashboard-council-results" class="council-results-card" style="display:none">
+        <div class="council-results-header">
+            <h3>Council Results</h3>
+            <button onclick="closeDashCouncilResults()" class="btn btn-sm">Close</button>
+        </div>
+        <div id="dash-council-content"></div>
+    </div>
+
     <!-- Session List -->
     <div id="session-list" class="session-list">
         <p class="loading">Loading your sessions...</p>
@@ -205,7 +242,97 @@ function hideAllModals() {
     document.getElementById('framing-modal').style.display = 'none';
     document.getElementById('new-session-modal').style.display = 'none';
     document.getElementById('personal-modal').style.display = 'none';
+    document.getElementById('dashboard-council-modal').style.display = 'none';
     resetForm();
+}
+
+// --- Council from Dashboard ---
+function showCouncilFromDashboard() {
+    document.getElementById('new-session-chooser').style.display = 'none';
+    document.getElementById('dashboard-council-modal').style.display = 'flex';
+    document.getElementById('dash-council-question').focus();
+}
+
+function hideDashCouncil() {
+    document.getElementById('dashboard-council-modal').style.display = 'none';
+    document.getElementById('dash-council-question').value = '';
+    document.getElementById('dash-council-context').value = '';
+}
+
+async function runDashCouncil() {
+    const question = document.getElementById('dash-council-question').value.trim();
+    const context = document.getElementById('dash-council-context').value.trim();
+
+    if (!question) {
+        alert('Please enter a question for the Council.');
+        return;
+    }
+
+    const btn = document.getElementById('dash-council-btn');
+    btn.disabled = true;
+    btn.textContent = 'Council is deliberating...';
+
+    try {
+        const res = await fetch('/api/council', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ question, context })
+        });
+        const data = await res.json();
+
+        if (data.success && data.council) {
+            hideDashCouncil();
+            showDashCouncilResults(data.council, question);
+        } else {
+            alert(data.error || 'Council encountered an error.');
+        }
+    } catch (err) {
+        alert('Failed to run Council. Please try again.');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = "Get the Council's take";
+    }
+}
+
+function showDashCouncilResults(council, question) {
+    const container = document.getElementById('dashboard-council-results');
+    const content = document.getElementById('dash-council-content');
+
+    let html = `<div class="council-question-header"><strong>Question:</strong> ${escapeHtml(question)}</div>`;
+
+    html += `<div class="council-section council-synthesis">
+        <h4>Synthesis & Recommendation</h4>
+        <div class="council-section-body">${formatCouncilText(council.synthesis)}</div>
+    </div>`;
+
+    html += `<div class="council-section">
+        <h4>Peer Review</h4>
+        <div class="council-section-body">${formatCouncilText(council.review)}</div>
+    </div>`;
+
+    html += '<div class="council-section"><h4>Individual Advisor Perspectives</h4>';
+    for (const advisor of council.advisors) {
+        html += `
+            <details class="council-advisor">
+                <summary class="council-advisor-name">${escapeHtml(advisor.name)}</summary>
+                <div class="council-advisor-body">${formatCouncilText(advisor.response)}</div>
+            </details>`;
+    }
+    html += '</div>';
+
+    content.innerHTML = html;
+    container.style.display = 'block';
+}
+
+function closeDashCouncilResults() {
+    document.getElementById('dashboard-council-results').style.display = 'none';
+}
+
+function formatCouncilText(text) {
+    if (!text) return '';
+    return escapeHtml(text)
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\n/g, '<br>');
 }
 
 function resetForm() {

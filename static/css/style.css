@@ -374,6 +374,37 @@ body {
     border-color: var(--primary);
 }
 
+.chooser-option-council {
+    border-color: var(--accent);
+    background: #F0F5F3;
+}
+
+.chooser-option-council:hover {
+    border-color: var(--primary-dark);
+    background: var(--pale);
+}
+
+.council-results-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.council-results-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.council-results-header h3 {
+    margin: 0;
+}
+
 .frame-tips {
     background: var(--pale);
     border: 1px solid var(--primary-light);
@@ -1121,6 +1152,81 @@ body.summary-open .container {
 
 .tone-hint a {
     color: var(--primary);
+}
+
+/* === Council === */
+.council-question-header {
+    background: var(--bg);
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius);
+    margin-bottom: 1.25rem;
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.council-section {
+    margin-bottom: 1.5rem;
+}
+
+.council-section h4 {
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--accent);
+    margin-bottom: 0.5rem;
+}
+
+.council-section-body {
+    font-size: 0.9rem;
+    line-height: 1.7;
+    color: var(--text);
+}
+
+.council-synthesis {
+    background: var(--pale);
+    padding: 1rem 1.25rem;
+    border-radius: var(--radius);
+}
+
+.council-synthesis h4 {
+    color: var(--primary-dark);
+}
+
+.council-advisor {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 0.5rem;
+}
+
+.council-advisor-name {
+    padding: 0.6rem 1rem;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text);
+    list-style: none;
+}
+
+.council-advisor-name::-webkit-details-marker {
+    display: none;
+}
+
+.council-advisor-name::before {
+    content: '+';
+    display: inline-block;
+    width: 1.2em;
+    color: var(--text-muted);
+    font-weight: 400;
+}
+
+.council-advisor[open] .council-advisor-name::before {
+    content: '-';
+}
+
+.council-advisor-body {
+    padding: 0 1rem 0.75rem;
+    font-size: 0.85rem;
+    line-height: 1.6;
+    color: var(--text-light);
 }
 
 /* === Polish Component === */

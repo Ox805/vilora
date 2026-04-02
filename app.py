@@ -284,6 +284,35 @@ def delete_memory(memory_id):
     return jsonify({'success': True})
 
 
+# --- Council ---
+
+@app.route('/api/council', methods=['POST'])
+@login_required
+def run_council():
+    data = request.get_json()
+    question = data.get('question', '').strip()
+    context = data.get('context', '').strip()
+
+    if not question:
+        return jsonify({'success': False, 'error': 'Please provide a question'}), 400
+
+    db = get_db()
+    memories = get_user_memories(db, current_user.id)
+
+    try:
+        result = mediation_engine.run_council(
+            question=question,
+            context=context or None,
+            user_memories=memories or None
+        )
+        if result:
+            return jsonify({'success': True, 'council': result})
+        return jsonify({'success': False, 'error': 'Council requires API key'}), 500
+    except Exception as e:
+        sys.stderr.write(f"[Vilora] Council error: {e}\n")
+        return jsonify({'success': False, 'error': 'Council encountered an error. Please try again.'}), 500
+
+
 # --- Polish Helper ---
 
 @app.route('/api/polish', methods=['POST'])

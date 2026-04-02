@@ -1,5 +1,7 @@
 import os
 import sys
+import random
+from concurrent.futures import ThreadPoolExecutor
 from anthropic import Anthropic
 
 COUNSELOR_PROMPT = """You are Vilora, a warm and insightful AI counselor and advisor. In this mode, you're \
@@ -560,6 +562,162 @@ class MediationEngine:
             lines.append(f"**{label}:** " + "; ".join(items))
 
         return "\n".join(lines)
+
+    # --- Council ---
+
+    COUNCIL_ADVISORS = [
+        ('The Contrarian', (
+            "You are a skeptical advisor who looks for what will fail. Your job is to find the "
+            "weakest points in this plan, idea, or decision. If everything looks solid on the "
+            "surface, dig deeper. You're not being negative for the sake of it. You're protecting "
+            "the person from the blind spots that come with enthusiasm. What risks are being "
+            "underestimated? What could go wrong that nobody is talking about? "
+            "Keep your analysis to 300-500 words. Be specific and direct."
+        )),
+        ('The First Principles Thinker', (
+            "You strip away assumptions and rebuild the problem from the ground up. Don't accept "
+            "the question at face value. Ask: what is the real goal here? Is this the right question "
+            "to be asking? Are there hidden assumptions baked into the framing? Sometimes the best "
+            "answer is that the question itself needs to change. "
+            "Keep your analysis to 300-500 words. Be specific and direct."
+        )),
+        ('The Expansionist', (
+            "You look for what could be bigger, better, or more ambitious. What adjacent opportunity "
+            "is sitting right next to this question that the person hasn't noticed? What would this "
+            "look like if there were no constraints? Where is the hidden leverage? Your job is to "
+            "stretch the thinking beyond the obvious. "
+            "Keep your analysis to 300-500 words. Be specific and direct."
+        )),
+        ('The Outsider', (
+            "You respond purely to what's in front of you with no insider knowledge. You don't know "
+            "the jargon, the industry norms, or the 'way things are usually done.' This is your "
+            "strength. Ask the obvious questions that experts forget to ask. Point out things that "
+            "seem strange to a fresh pair of eyes. What would a smart person with no background in "
+            "this area notice? "
+            "Keep your analysis to 300-500 words. Be specific and direct."
+        )),
+        ('The Executor', (
+            "You focus exclusively on actionability. If an idea sounds brilliant but has no clear "
+            "first step, say so. What is the smallest concrete action that would move this forward? "
+            "What needs to happen first, second, third? Cut through analysis paralysis. A mediocre "
+            "plan executed today beats a perfect plan discussed forever. "
+            "Keep your analysis to 300-500 words. Be specific and direct."
+        )),
+    ]
+
+    def run_council(self, question, context=None, user_memories=None):
+        """Run the Vilora Council: 5 advisors + peer review + synthesis."""
+        if not self.client:
+            return None
+
+        full_question = f"Question: {question}"
+        if context:
+            full_question += f"\n\nContext: {context}"
+        if user_memories:
+            memory_ctx = self._build_memory_context(user_memories)
+            if memory_ctx:
+                full_question += f"\n\nAbout the person asking:\n{memory_ctx}"
+
+        # Step 1: Run 5 advisors in parallel
+        def get_advisor_response(name, system_prompt):
+            try:
+                response = self.client.messages.create(
+                    model="claude-sonnet-4-20250514",
+                    max_tokens=1024,
+                    system=system_prompt,
+                    messages=[{"role": "user", "content": full_question}]
+                )
+                return (name, response.content[0].text)
+            except Exception as e:
+                sys.stderr.write(f"[Vilora Council] Advisor {name} error: {e}\n")
+                return (name, f"[This advisor was unable to respond: {e}]")
+
+        with ThreadPoolExecutor(max_workers=5) as executor:
+            futures = [
+                executor.submit(get_advisor_response, name, prompt)
+                for name, prompt in self.COUNCIL_ADVISORS
+            ]
+            advisor_results = [f.result() for f in futures]
+
+        # Step 2: Anonymous peer review
+        review = self._council_peer_review(advisor_results)
+
+        # Step 3: Chairman synthesis
+        synthesis = self._council_synthesize(question, advisor_results, review)
+
+        return {
+            'advisors': [{'name': name, 'response': resp} for name, resp in advisor_results],
+            'review': review,
+            'synthesis': synthesis
+        }
+
+    def _council_peer_review(self, advisor_results):
+        """Anonymize advisor responses and run peer review."""
+        # Shuffle and anonymize
+        labels = ['A', 'B', 'C', 'D', 'E']
+        shuffled = list(advisor_results)
+        random.shuffle(shuffled)
+
+        review_text = "Five advisors have analyzed the same question. Their responses are below, anonymized.\n\n"
+        for i, (_, response) in enumerate(shuffled):
+            review_text += f"**Response {labels[i]}:**\n{response}\n\n"
+
+        review_text += (
+            "As an impartial reviewer, answer these three questions:\n"
+            "1. Which response is the strongest and why?\n"
+            "2. Which response has the biggest blind spot and what is it?\n"
+            "3. What did ALL FIVE responses miss? What important consideration did none of them raise?\n\n"
+            "Be specific and concise."
+        )
+
+        try:
+            response = self.client.messages.create(
+                model="claude-sonnet-4-20250514",
+                max_tokens=1024,
+                system="You are an impartial reviewer analyzing multiple advisory perspectives on the same question.",
+                messages=[{"role": "user", "content": review_text}]
+            )
+            return response.content[0].text
+        except Exception as e:
+            sys.stderr.write(f"[Vilora Council] Peer review error: {e}\n")
+            return "Peer review was unable to be completed."
+
+    def _council_synthesize(self, question, advisor_results, review):
+        """Chairman synthesis of all advisor responses and peer review."""
+        synthesis_text = f"Original question: {question}\n\n"
+        synthesis_text += "Five advisors analyzed this question. Here are their perspectives:\n\n"
+
+        for name, response in advisor_results:
+            synthesis_text += f"**{name}:**\n{response}\n\n"
+
+        synthesis_text += f"**Peer Review:**\n{review}\n\n"
+
+        synthesis_text += (
+            "As the chairman, synthesize everything above into a clear, actionable report:\n"
+            "1. **Key insight from each advisor** (1-2 sentences each)\n"
+            "2. **Where the advisors agree** (common themes)\n"
+            "3. **Where they disagree** (tensions and tradeoffs)\n"
+            "4. **The blind spot** (what the peer review identified as missed)\n"
+            "5. **Recommendation** with a confidence level (high/medium/low)\n"
+            "6. **One concrete next step** (what to do first)\n\n"
+            "Be clear, direct, and actionable."
+        )
+
+        try:
+            response = self.client.messages.create(
+                model="claude-sonnet-4-20250514",
+                max_tokens=2048,
+                system=(
+                    "You are the chairman of an advisory council. Your job is to synthesize "
+                    "multiple perspectives into a clear recommendation. Be decisive but fair. "
+                    "Acknowledge disagreements honestly. Always end with one concrete action."
+                ),
+                messages=[{"role": "user", "content": synthesis_text}]
+            )
+            return response.content[0].text
+        except Exception as e:
+            sys.stderr.write(f"[Vilora Council] Synthesis error: {e}\n")
+            return "Synthesis was unable to be completed."
 
     def _fallback_response(self, messages):
         return (
