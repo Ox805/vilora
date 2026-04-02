@@ -87,10 +87,16 @@
 
     <div class="message-input-area">
         <form id="message-form" onsubmit="sendMessage(event)">
-            <textarea id="message-input" rows="3"
-                placeholder="Share your thoughts..."
-                onkeydown="if(event.key==='Enter' && event.ctrlKey){event.preventDefault();sendMessage(event)}"></textarea>
-            <button type="submit" class="btn btn-primary" id="send-btn">Send</button>
+            <div class="message-input-row">
+                <div class="message-input-wrap">
+                    <textarea id="message-input" rows="2"
+                        placeholder="Share your thoughts..."
+                        onkeydown="if(event.key==='Enter' && event.ctrlKey){event.preventDefault();sendMessage(event)}"></textarea>
+                </div>
+                <div class="message-input-buttons">
+                    <button type="submit" class="btn btn-primary" id="send-btn">Send</button>
+                </div>
+            </div>
         </form>
     </div>
 </div>
