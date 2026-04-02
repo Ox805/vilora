@@ -29,6 +29,10 @@
     <!-- Email Invite Modal -->
     <div id="invite-modal" class="modal" style="display:none">
         <div class="modal-content" style="max-width: 460px;">
+            <div id="invite-success-banner" class="invite-success-banner" style="display:none">
+                <span>Invite sent! You can send another invite below or close this window now.</span>
+                <button type="button" onclick="hideInviteModal()" class="btn btn-sm">Close</button>
+            </div>
             <h2>Send an Invite</h2>
             <p style="color: var(--text-light); margin-bottom: 1rem; font-size: 0.9rem;">
                 They'll receive a branded email from Vilora with a link to join this session.
@@ -241,6 +245,7 @@ function hideInviteModal() {
     document.getElementById('invite-email').value = '';
     document.getElementById('invite-message').value = '';
     document.getElementById('invite-status').style.display = 'none';
+    document.getElementById('invite-success-banner').style.display = 'none';
 }
 
 async function sendInviteEmail() {
@@ -267,8 +272,7 @@ async function sendInviteEmail() {
         });
         const data = await res.json();
         if (data.success) {
-            statusEl.innerHTML = '<p style="color: var(--primary); background: var(--pale); padding: 0.5rem; border-radius: var(--radius); font-size: 0.9rem;">Invite sent! You can send another or close this window.</p>';
-            statusEl.style.display = 'block';
+            document.getElementById('invite-success-banner').style.display = 'flex';
             document.getElementById('invite-email').value = '';
             document.getElementById('invite-message').value = '';
         } else {

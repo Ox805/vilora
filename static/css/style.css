@@ -409,6 +409,19 @@ body {
     z-index: 100;
 }
 
+.invite-success-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    background: var(--pale);
+    color: var(--accent);
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius);
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+}
+
 .modal-content {
     background: var(--bg-card);
     padding: 2rem;
