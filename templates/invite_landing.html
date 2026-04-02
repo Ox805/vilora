@@ -31,11 +31,6 @@
             <div class="invite-landing-card">
                 <!-- Invitation context -->
                 <div class="invite-landing-header">
-                    <svg width="50" height="50" viewBox="0 0 58 58" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M 8 9 C 6 26,23 43,29 47 M 18 9 C 17 28,25 44,29 47 M 8 9 L 18 9" fill="none" stroke="#1D9E75" stroke-width="1.8" stroke-linecap="round"/>
-                        <path d="M 50 9 C 52 26,35 43,29 47 M 40 9 C 41 28,33 44,29 47 M 40 9 L 50 9" fill="none" stroke="#1D9E75" stroke-width="1.8" stroke-linecap="round"/>
-                        <circle cx="29" cy="47" r="3" fill="#085041"/>
-                    </svg>
                     <h1>You've been invited to a conversation</h1>
                     <p class="invite-landing-context">
                         <strong>{{ creator_name }}</strong> would like to work through something with you, with Vilora as a neutral facilitator.
@@ -47,20 +42,9 @@
                     {{ topic }}
                 </div>
 
-                <!-- What to expect -->
-                <div class="invite-landing-expect">
-                    <h3>What to expect</h3>
-                    <ul>
-                        <li>Vilora is an impartial AI facilitator that helps people have productive, constructive conversations</li>
-                        <li>You'll share your perspective, and Vilora will help guide the dialogue toward understanding</li>
-                        <li>Your conversation is shared only with the other participants. Vilora does not share your information with anyone else</li>
-                        <li>There's no pressure and no judgment. You can be as open or as brief as you'd like</li>
-                    </ul>
-                </div>
-
                 <!-- Login/Register form -->
                 <div class="invite-landing-auth">
-                    <h3 id="auth-title">Create an account to join</h3>
+                    <h3 id="auth-title">Join the conversation</h3>
                     <div id="auth-error" class="error-msg" style="display:none"></div>
 
                     <form id="auth-form" onsubmit="handleAuth(event)">
@@ -92,6 +76,17 @@
                         </a>
                     </p>
                 </div>
+
+                <!-- What to expect -->
+                <div class="invite-landing-expect">
+                    <h3>What to expect</h3>
+                    <ul>
+                        <li>Vilora is a neutral AI facilitator — not on anyone's side</li>
+                        <li>You'll each share your perspective privately</li>
+                        <li>Your conversation stays between participants</li>
+                        <li>No pressure, no judgment — go at your own pace</li>
+                    </ul>
+                </div>
             </div>
         </div>
     </main>
@@ -106,7 +101,7 @@
     function toggleMode(e) {
         e.preventDefault();
         isRegister = !isRegister;
-        document.getElementById('auth-title').textContent = isRegister ? 'Create an account to join' : 'Log in to join';
+        document.getElementById('auth-title').textContent = isRegister ? 'Join the conversation' : 'Log in to join';
         document.getElementById('name-group').style.display = isRegister ? 'block' : 'none';
         document.getElementById('toggle-link').textContent = isRegister ? 'Log in instead' : 'Create an account';
         document.getElementById('auth-btn').textContent = isRegister ? 'Create account & join' : 'Log in & join';
