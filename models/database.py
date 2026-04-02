@@ -103,6 +103,14 @@ def db_init():
                 summary TEXT NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )""",
+            """CREATE TABLE IF NOT EXISTS session_invites (
+                id SERIAL PRIMARY KEY,
+                session_id INTEGER NOT NULL REFERENCES mediation_sessions(id),
+                email TEXT NOT NULL,
+                status TEXT DEFAULT 'pending',
+                invited_by INTEGER NOT NULL REFERENCES users(id),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )""",
             """CREATE TABLE IF NOT EXISTS user_memories (
                 id SERIAL PRIMARY KEY,
                 user_id INTEGER NOT NULL REFERENCES users(id),
@@ -121,10 +129,15 @@ def db_init():
             cur.execute(stmt)
 
         # Migrations for existing tables
-        try:
-            cur.execute("ALTER TABLE mediation_sessions ADD COLUMN session_mode TEXT DEFAULT 'mediation'")
-        except Exception:
-            db.rollback()
+        migrations = [
+            "ALTER TABLE mediation_sessions ADD COLUMN session_mode TEXT DEFAULT 'mediation'",
+        ]
+        for migration in migrations:
+            try:
+                cur.execute(migration)
+                db.commit()
+            except Exception:
+                db.rollback()
 
         db.commit()
     else:
@@ -195,6 +208,17 @@ def db_init():
                 summary TEXT NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (session_id) REFERENCES mediation_sessions(id)
+            );
+
+            CREATE TABLE IF NOT EXISTS session_invites (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id INTEGER NOT NULL,
+                email TEXT NOT NULL,
+                status TEXT DEFAULT 'pending',
+                invited_by INTEGER NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (session_id) REFERENCES mediation_sessions(id),
+                FOREIGN KEY (invited_by) REFERENCES users(id)
             );
 
             CREATE TABLE IF NOT EXISTS user_memories (

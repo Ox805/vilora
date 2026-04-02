@@ -311,6 +311,7 @@ def start_council():
     data = request.get_json()
     question = data.get('question', '').strip()
     context = data.get('context', '').strip()
+    session_id = data.get('session_id')
 
     if not question:
         return jsonify({'success': False, 'error': 'Please provide a question'}), 400
@@ -318,12 +319,52 @@ def start_council():
     db = get_db()
     memories = get_user_memories(db, current_user.id)
 
+    # If called from within a session, include conversation as context
+    session_context = ''
+    if session_id:
+        med_session = MediationSession.get_by_id(db, session_id)
+        if med_session and med_session.is_participant(db, current_user.id):
+            messages = Message.get_by_session(db, session_id)
+            participants = med_session.get_participants(db)
+            participant_names = {p.id: p.display_name for p in participants}
+
+            # Build conversation transcript (limit to last 50 messages to stay reasonable)
+            lines = []
+            for m in messages[-50:]:
+                if m.msg_type == 'mediator':
+                    lines.append(f"[Vilora]: {m.content}")
+                elif m.msg_type == 'intake':
+                    name = participant_names.get(m.user_id, 'Participant')
+                    # Strip session tone metadata
+                    content = m.content
+                    import re
+                    content = re.sub(r'\[Session tone:[^\]]*\]\s*', '', content)
+                    lines.append(f"[{name}'s initial perspective]: {content}")
+                elif m.msg_type == 'user':
+                    name = participant_names.get(m.user_id, 'Participant')
+                    lines.append(f"[{name}]: {m.content}")
+
+            if lines:
+                session_context = (
+                    f"Session topic: {med_session.topic}\n\n"
+                    f"Conversation so far:\n" + "\n".join(lines)
+                )
+
+    # Combine user-provided context with session context
+    full_context = ''
+    if session_context and context:
+        full_context = f"{session_context}\n\nAdditional context from user: {context}"
+    elif session_context:
+        full_context = session_context
+    elif context:
+        full_context = context
+
     job_id = secrets.token_urlsafe(16)
     _council_jobs[job_id] = {'status': 'running'}
 
     thread = threading.Thread(
         target=_run_council_background,
-        args=(job_id, question, context or None, memories or None),
+        args=(job_id, question, full_context or None, memories or None),
         daemon=True
     )
     thread.start()
@@ -480,6 +521,14 @@ def join_session(code):
                                invite_code=code)
 
     med_session.add_participant(db, current_user.id)
+
+    # Mark any pending invites for this user's email as joined
+    _exec(db,
+        "UPDATE session_invites SET status = 'joined' WHERE session_id = ? AND email = ? AND status = 'pending'",
+        (med_session.id, current_user.email)
+    )
+    db.commit()
+
     return redirect(url_for('session_room', session_id=med_session.id))
 
 
@@ -511,6 +560,12 @@ def invite_to_session(session_id):
     )
 
     if success:
+        # Track the invite
+        _exec(db,
+            "INSERT INTO session_invites (session_id, email, status, invited_by) VALUES (?, ?, ?, ?)",
+            (session_id, email, 'pending', current_user.id)
+        )
+        db.commit()
         return jsonify({'success': True})
     else:
         return jsonify({'success': False, 'error': 'Failed to send invite. Please try again or copy the link instead.'}), 500
@@ -527,6 +582,7 @@ def delete_session(session_id):
         return jsonify({'success': False, 'error': 'Only the session creator can delete it'}), 403
 
     _exec(db, "DELETE FROM session_summaries WHERE session_id = ?", (session_id,))
+    _exec(db, "DELETE FROM session_invites WHERE session_id = ?", (session_id,))
     _exec(db, "DELETE FROM user_memories WHERE source_session_id = ?", (session_id,))
     _exec(db, "DELETE FROM messages WHERE session_id = ?", (session_id,))
     _exec(db, "DELETE FROM agreements WHERE session_id = ?", (session_id,))
@@ -659,29 +715,47 @@ def nudge_participant(session_id):
 
     data = request.get_json() or {}
     target_user_id = data.get('user_id')
+    target_email = data.get('email', '').strip().lower()
 
-    participants = med_session.get_participants(db)
     session_link = url_for('session_room', session_id=session_id, _external=True)
+    join_link = url_for('join_session', code=med_session.invite_code, _external=True)
 
     nudged = 0
-    for p in participants:
-        if p.id == current_user.id:
-            continue
-        if target_user_id and p.id != target_user_id:
-            continue
-        success = send_nudge_email(
-            to_email=p.email,
-            nudger_name=current_user.display_name,
-            recipient_name=p.display_name,
+
+    # Nudge a pending invite by email
+    if target_email:
+        from notifications import send_invite_email
+        success = send_invite_email(
+            to_email=target_email,
+            creator_name=current_user.display_name,
             topic=med_session.topic,
-            session_link=session_link
+            join_link=join_link,
+            personal_message="Just a friendly reminder that the conversation is waiting for you."
         )
         if success:
             nudged += 1
 
+    # Nudge joined participants
+    else:
+        participants = med_session.get_participants(db)
+        for p in participants:
+            if p.id == current_user.id:
+                continue
+            if target_user_id and p.id != target_user_id:
+                continue
+            success = send_nudge_email(
+                to_email=p.email,
+                nudger_name=current_user.display_name,
+                recipient_name=p.display_name,
+                topic=med_session.topic,
+                session_link=session_link
+            )
+            if success:
+                nudged += 1
+
     if nudged > 0:
         return jsonify({'success': True, 'nudged': nudged})
-    elif len(participants) <= 1:
+    elif not target_email and not target_user_id:
         return jsonify({'success': False, 'error': 'No other participants to nudge. Send an invite first.'}), 400
     else:
         return jsonify({'success': False, 'error': 'Could not send nudge. Please try again.'}), 500
@@ -758,9 +832,18 @@ def get_participants(session_id):
         return jsonify({'success': False, 'error': 'Access denied'}), 403
 
     participants = med_session.get_participants(db)
+
+    # Get pending invites
+    cur = _exec(db,
+        "SELECT email, created_at FROM session_invites WHERE session_id = ? AND status = 'pending'",
+        (session_id,)
+    )
+    pending_invites = [{'email': r['email'], 'created_at': str(r['created_at'])} for r in cur.fetchall()]
+
     return jsonify({
         'success': True,
-        'participants': [{'id': p.id, 'display_name': p.display_name} for p in participants]
+        'participants': [{'id': p.id, 'display_name': p.display_name} for p in participants],
+        'pending_invites': pending_invites
     })
 
 

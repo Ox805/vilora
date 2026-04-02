@@ -310,11 +310,14 @@ body {
     display: inline-block;
     background: var(--mediator-bg);
     color: var(--primary);
-    padding: 0.15rem 0.5rem;
+    padding: 0.1rem 0.45rem;
     border-radius: 4px;
-    font-size: 0.75rem;
+    font-size: 0.65rem;
     font-weight: 600;
     text-transform: uppercase;
+    vertical-align: middle;
+    position: relative;
+    top: -2px;
 }
 
 .session-status {
@@ -666,22 +669,7 @@ body.modal-open {
     margin-bottom: 0;
 }
 
-.participant-status {
-    font-size: 0.8rem;
-    font-weight: 500;
-    padding: 0.2rem 0.6rem;
-    border-radius: 4px;
-}
-
-.participant-status.waiting {
-    color: #B7791F;
-    background: #FEFCBF;
-}
-
-.participant-status.joined {
-    color: #276749;
-    background: #C6F6D5;
-}
+/* participant-status inherits .btn.btn-sm styling */
 
 /* === Mediation Room === */
 .mediation-room {
@@ -888,10 +876,21 @@ body.modal-open {
     position: absolute;
     right: 8px;
     bottom: 8px;
+    z-index: 2;
 }
 
-.form-group:has(.btn-mic) textarea {
-    padding-right: 2.5rem;
+.form-group .polish-bar {
+    position: absolute;
+    right: 36px;
+    bottom: 6px;
+    margin: 0;
+    z-index: 2;
+}
+
+.form-group:has(.btn-mic) textarea,
+.form-group:has(.polish-bar) textarea {
+    padding-right: 5.5rem;
+    padding-bottom: 0.75rem;
 }
 
 .textarea-mic-wrapper {
@@ -1399,12 +1398,29 @@ body.summary-open .container {
     background: var(--pale);
 }
 
-.participant-status {
-    cursor: pointer;
+.participants-section-label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.4rem;
 }
 
-.participant-status:hover {
-    text-decoration: underline;
+.participant-pending .participant-name {
+    color: var(--text-light);
+}
+
+.participant-email {
+    font-size: 0.85rem;
+    font-weight: 400;
+}
+
+.participant-pending-label {
+    display: block;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    margin-top: 0.1rem;
 }
 
 @media (max-width: 480px) {

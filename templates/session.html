@@ -4,12 +4,11 @@
 {% block content %}
 <div class="mediation-room">
     <div class="room-header">
-        <h2>{{ session.topic }}</h2>
+        <h2>{{ session.topic }} <span class="session-type-badge">{% if is_personal %}Personal{% else %}{{ session.session_type }}{% endif %}</span></h2>
         <div class="room-actions">
-            <span class="session-type-badge">{% if is_personal %}Personal{% else %}{{ session.session_type }}{% endif %}</span>
-            {% if not is_personal %}<button id="participant-status" class="participant-status" onclick="showParticipantsPanel()" title="View participants and send nudge reminders"></button>{% endif %}
+            {% if not is_personal %}<button id="participant-status" class="btn btn-sm" onclick="showParticipantsPanel()" title="View participants and send nudge reminders"></button>{% endif %}
             <button onclick="showCouncilModal()" class="btn btn-sm" title="Five AI advisors analyze your question from different angles, peer-review each other's blind spots, and deliver a synthesized recommendation with a concrete next step.">Council</button>
-            <button onclick="getSummary()" class="btn btn-sm" title="Vilora generates a structured summary of the conversation so far, including key points, areas of agreement, unresolved issues, and suggested next steps.">Get Summary</button>
+            <button onclick="getSummary()" class="btn btn-sm" title="Vilora generates a structured summary of the conversation so far, including key points, areas of agreement, unresolved issues, and suggested next steps.">Summary</button>
         </div>
     </div>
 
@@ -134,6 +133,15 @@
             <label for="council-context">Additional context (optional)</label>
             <textarea id="council-context" rows="3"
                 placeholder="Any background information that would help the advisors give better analysis."></textarea>
+        </div>
+        <div class="form-group" style="margin-bottom: 0.5rem;">
+            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.9rem;">
+                <input type="checkbox" id="council-include-session" checked>
+                Include this session's conversation as context
+            </label>
+            <p style="color: var(--text-muted); font-size: 0.8rem; margin-top: 0.25rem; margin-left: 1.5rem;">
+                The Council will see the conversation so far (up to 50 recent messages) to give more informed advice.
+            </p>
         </div>
         <div class="form-actions">
             <button type="button" onclick="hideCouncilModal()" class="btn">Cancel</button>
@@ -270,21 +278,44 @@ async function showParticipantsPanel() {
     const res = await fetch(`/api/sessions/${SESSION_ID}/participants`);
     const data = await res.json();
     const participants = data.participants || [];
+    const pendingInvites = data.pending_invites || [];
 
-    if (participants.length === 0) {
-        list.innerHTML = '<p style="color: var(--text-muted);">No participants yet.</p>';
-        return;
+    let html = '';
+
+    // Joined participants
+    if (participants.length > 0) {
+        html += '<div class="participants-section-label">Joined</div>';
+        html += participants.map(p => `
+            <div class="participant-row">
+                <div class="participant-info">
+                    <span class="participant-name">${escapeHtml(p.display_name)}</span>
+                </div>
+                <button class="btn btn-sm btn-nudge" id="nudge-${p.id}" onclick="nudgeOne(${p.id}, '${escapeHtml(p.display_name)}')"
+                    title="Send ${escapeHtml(p.display_name)} a friendly reminder email">Nudge</button>
+            </div>
+        `).join('');
     }
 
-    list.innerHTML = participants.map(p => `
-        <div class="participant-row">
-            <div class="participant-info">
-                <span class="participant-name">${escapeHtml(p.display_name)}</span>
+    // Pending invites
+    if (pendingInvites.length > 0) {
+        html += '<div class="participants-section-label" style="margin-top: 1rem;">Invited (pending)</div>';
+        html += pendingInvites.map(inv => `
+            <div class="participant-row participant-pending">
+                <div class="participant-info">
+                    <span class="participant-name participant-email">${escapeHtml(inv.email)}</span>
+                    <span class="participant-pending-label">Not yet joined</span>
+                </div>
+                <button class="btn btn-sm btn-nudge" onclick="nudgeByEmail('${escapeHtml(inv.email)}', this)"
+                    title="Send another reminder to ${escapeHtml(inv.email)}">Nudge</button>
             </div>
-            <button class="btn btn-sm btn-nudge" id="nudge-${p.id}" onclick="nudgeOne(${p.id}, '${escapeHtml(p.display_name)}')"
-                title="Send ${escapeHtml(p.display_name)} a friendly reminder email">Nudge</button>
-        </div>
-    `).join('');
+        `).join('');
+    }
+
+    if (!html) {
+        html = '<p style="color: var(--text-muted);">No participants or invites yet.</p>';
+    }
+
+    list.innerHTML = html;
 }
 
 function closeParticipantsPanel() {
@@ -301,6 +332,32 @@ async function nudgeOne(userId, name) {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ user_id: userId })
+        });
+        const data = await res.json();
+        if (data.success) {
+            btn.textContent = 'Sent!';
+            setTimeout(() => { btn.textContent = 'Nudge'; btn.disabled = false; }, 3000);
+        } else {
+            alert(data.error || 'Could not send nudge.');
+            btn.textContent = 'Nudge';
+            btn.disabled = false;
+        }
+    } catch (err) {
+        alert('Failed to send nudge.');
+        btn.textContent = 'Nudge';
+        btn.disabled = false;
+    }
+}
+
+async function nudgeByEmail(email, btn) {
+    btn.disabled = true;
+    btn.textContent = 'Sending...';
+
+    try {
+        const res = await fetch(`/api/sessions/${SESSION_ID}/nudge`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email })
         });
         const data = await res.json();
         if (data.success) {
@@ -375,6 +432,7 @@ function hideCouncilModal() {
 async function runCouncil() {
     const question = document.getElementById('council-question').value.trim();
     const context = document.getElementById('council-context').value.trim();
+    const includeSession = document.getElementById('council-include-session').checked;
 
     if (!question) {
         alert('Please enter a question for the Council.');
@@ -385,11 +443,14 @@ async function runCouncil() {
     btn.disabled = true;
     btn.textContent = 'Council is deliberating...';
 
+    const payload = { question, context };
+    if (includeSession) payload.session_id = SESSION_ID;
+
     try {
         const res = await fetch('/api/council', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ question, context })
+            body: JSON.stringify(payload)
         });
         const data = await res.json();
 
