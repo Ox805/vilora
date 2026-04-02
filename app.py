@@ -8,7 +8,7 @@ from flask import Flask, render_template, request, jsonify, redirect, url_for, s
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from models.database import db_init, get_db, _exec, User, MediationSession, Message
 from mediation.engine import MediationEngine
-from notifications import send_invite_email, send_password_reset_email
+from notifications import send_invite_email, send_password_reset_email, send_nudge_email
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(32))
@@ -647,6 +647,39 @@ def send_message(session_id):
     if ai_msg:
         result['mediator_message'] = ai_msg.to_dict()
     return jsonify(result)
+
+
+@app.route('/api/sessions/<int:session_id>/nudge', methods=['POST'])
+@login_required
+def nudge_participant(session_id):
+    db = get_db()
+    med_session = MediationSession.get_by_id(db, session_id)
+    if not med_session or not med_session.is_participant(db, current_user.id):
+        return jsonify({'success': False, 'error': 'Access denied'}), 403
+
+    participants = med_session.get_participants(db)
+    session_link = url_for('session_room', session_id=session_id, _external=True)
+
+    nudged = 0
+    for p in participants:
+        if p.id == current_user.id:
+            continue
+        success = send_nudge_email(
+            to_email=p.email,
+            nudger_name=current_user.display_name,
+            recipient_name=p.display_name,
+            topic=med_session.topic,
+            session_link=session_link
+        )
+        if success:
+            nudged += 1
+
+    if nudged > 0:
+        return jsonify({'success': True, 'nudged': nudged})
+    elif len(participants) <= 1:
+        return jsonify({'success': False, 'error': 'No other participants to nudge. Send an invite first.'}), 400
+    else:
+        return jsonify({'success': False, 'error': 'Could not send nudge emails. Please try again.'}), 500
 
 
 @app.route('/api/sessions/<int:session_id>/messages/<int:message_id>', methods=['DELETE'])

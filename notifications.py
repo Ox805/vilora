@@ -125,6 +125,58 @@ def send_invite_email(to_email, creator_name, topic, join_link, personal_message
     return send_email(to_email, subject, html_body, text_body)
 
 
+def send_nudge_email(to_email, nudger_name, recipient_name, topic, session_link):
+    """Send a friendly nudge email to remind a participant to respond."""
+    subject = f"{nudger_name} is waiting for you on Vilora"
+
+    html_body = f"""
+    <!DOCTYPE html>
+    <html>
+    <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+    <body style="margin:0;padding:0;background:#F7F8F7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background:#F7F8F7;padding:40px 20px;">
+            <tr><td align="center">
+                <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#FFFFFF;border-radius:8px;overflow:hidden;">
+                    <tr><td style="padding:32px 32px 24px;text-align:center;">
+                        <img src="https://www.vilora.ai/static/img/email-logo.png" alt="Vilora" width="160" style="display:block;margin:0 auto;">
+                    </td></tr>
+                    <tr><td style="padding:0 32px 32px;">
+                        <h2 style="font-size:18px;font-weight:500;color:#2C2C2A;margin:0 0 16px;">Hey {recipient_name}, your conversation is waiting</h2>
+                        <p style="color:#555550;font-size:15px;line-height:1.6;">
+                            <strong>{nudger_name}</strong> wanted to check in. Your conversation about
+                            <strong>{topic}</strong> has new activity and they'd love to hear your thoughts.
+                        </p>
+                        <p style="color:#555550;font-size:15px;line-height:1.6;">
+                            No pressure. Just a friendly reminder that the conversation is there whenever you're ready.
+                        </p>
+                        <div style="text-align:center;margin:28px 0;">
+                            <a href="{session_link}" style="display:inline-block;padding:14px 32px;background:#1D9E75;color:#ffffff;text-decoration:none;border-radius:8px;font-size:16px;font-weight:500;">Continue the conversation</a>
+                        </div>
+                    </td></tr>
+                    <tr><td style="padding:20px 32px;background:#F7F8F7;border-top:1px solid #E2E0D8;">
+                        <p style="margin:0;color:#888780;font-size:12px;text-align:center;">Vilora | Strength through dialogue</p>
+                        <p style="margin:4px 0 0;color:#888780;font-size:10px;text-align:center;">AI-powered mediation, collaboration, brainstorming, and decision-making</p>
+                    </td></tr>
+                </table>
+            </td></tr>
+        </table>
+    </body>
+    </html>
+    """
+
+    text_body = (
+        f"Hey {recipient_name},\n\n"
+        f"{nudger_name} wanted to check in. Your conversation about \"{topic}\" "
+        f"has new activity and they'd love to hear your thoughts.\n\n"
+        f"Continue here: {session_link}\n\n"
+        f"No pressure. Just a friendly reminder.\n\n"
+        f"Vilora | Strength through dialogue\n"
+        f"AI-powered mediation, collaboration, brainstorming, and decision-making"
+    )
+
+    return send_email(to_email, subject, html_body, text_body)
+
+
 def send_password_reset_email(to_email, display_name, reset_link):
     """Send a branded password reset email."""
     subject = "Password Reset - Vilora"

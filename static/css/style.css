@@ -290,7 +290,7 @@ body {
 
 .session-card-wrapper .btn-delete {
     position: absolute;
-    top: 1rem;
+    bottom: 1rem;
     right: 1rem;
     color: var(--error);
     border-color: var(--error);

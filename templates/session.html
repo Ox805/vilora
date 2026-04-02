@@ -8,6 +8,9 @@
         <div class="room-actions">
             <span class="session-type-badge">{% if is_personal %}Personal{% else %}{{ session.session_type }}{% endif %}</span>
             {% if not is_personal %}<span id="participant-status" class="participant-status"></span>{% endif %}
+            {% if not is_personal %}
+            <button onclick="nudgeParticipants()" class="btn btn-sm" id="nudge-btn" title="Send a friendly email reminder to other participants, letting them know the conversation is waiting for their input.">Nudge</button>
+            {% endif %}
             <button onclick="showCouncilModal()" class="btn btn-sm" title="Five AI advisors analyze your question from different angles, peer-review each other's blind spots, and deliver a synthesized recommendation with a concrete next step.">Council</button>
             <button onclick="getSummary()" class="btn btn-sm" title="Vilora generates a structured summary of the conversation so far, including key points, areas of agreement, unresolved issues, and suggested next steps.">Get Summary</button>
         </div>
@@ -248,6 +251,33 @@ async function sendMessage(e) {
     } finally {
         sendBtn.disabled = false;
         sendBtn.textContent = 'Send';
+    }
+}
+
+// --- Nudge ---
+async function nudgeParticipants() {
+    const btn = document.getElementById('nudge-btn');
+    btn.disabled = true;
+    btn.textContent = 'Sending...';
+
+    try {
+        const res = await fetch(`/api/sessions/${SESSION_ID}/nudge`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await res.json();
+        if (data.success) {
+            btn.textContent = 'Nudge sent!';
+            setTimeout(() => { btn.textContent = 'Nudge'; btn.disabled = false; }, 3000);
+        } else {
+            alert(data.error || 'Could not send nudge.');
+            btn.textContent = 'Nudge';
+            btn.disabled = false;
+        }
+    } catch (err) {
+        alert('Failed to send nudge.');
+        btn.textContent = 'Nudge';
+        btn.disabled = false;
     }
 }
 
