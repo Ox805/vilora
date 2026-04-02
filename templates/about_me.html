@@ -8,7 +8,7 @@
             <h1>What Vilora knows about you</h1>
             <p class="about-me-subtitle">
                 Vilora learns from your sessions to provide more personal, attuned guidance.
-                You're always in control — edit or remove anything here.
+                You're always in control. Edit or remove anything here.
             </p>
         </div>
         <div class="about-me-actions" id="header-actions"></div>
@@ -132,7 +132,7 @@ const ONBOARDING_STEPS = [
         subtitle: 'Understanding your relationships helps Vilora provide more relevant guidance.',
         fields: [
             { id: 'ob-relationship', label: 'Relationship status', type: 'select', options: ['', 'Single', 'In a relationship', 'Married', 'Divorced', 'Separated', 'Widowed', 'It\'s complicated', 'Prefer not to say'], memory: 'Relationship status: {value}' },
-            { id: 'ob-partner', label: 'Partner\'s name (if applicable)', type: 'text', placeholder: 'Optional — helps Vilora personalize conversations', memory: 'Partner\'s name is {value}' },
+            { id: 'ob-partner', label: 'Partner\'s name (if applicable)', type: 'text', placeholder: 'Optional, helps Vilora personalize conversations', memory: 'Partner\'s name is {value}' },
             { id: 'ob-kids', label: 'Do you have children?', type: 'select', options: ['', 'No', 'Yes, 1', 'Yes, 2', 'Yes, 3', 'Yes, 4+', 'Expecting'], memory: 'Children: {value}' },
         ]
     },
@@ -146,7 +146,7 @@ const ONBOARDING_STEPS = [
     },
     {
         title: 'How you handle conflict',
-        subtitle: 'There are no wrong answers — this helps Vilora meet you where you are.',
+        subtitle: 'There are no wrong answers. This helps Vilora meet you where you are.',
         fields: [
             { id: 'ob-conflict-style', label: 'When conflict comes up, I tend to...', type: 'select', options: ['', 'Avoid it and hope it goes away', 'Address it head-on, sometimes too directly', 'Internalize it and get quietly frustrated', 'Try to find a compromise quickly', 'Need time to process before responding', 'It depends on the situation'], memory: 'Conflict tendency: {value}' },
             { id: 'ob-challenge', label: 'My biggest challenge in disagreements is...', type: 'text', placeholder: 'e.g., staying calm, expressing my needs, listening without getting defensive', memory: 'Biggest challenge in disagreements: {value}' },
@@ -157,7 +157,7 @@ const ONBOARDING_STEPS = [
         subtitle: 'Understanding your values helps Vilora give guidance that resonates with who you are.',
         fields: [
             { id: 'ob-values', label: 'What values are most important to you? (pick a few)', type: 'text', placeholder: 'e.g., Fairness, honesty, family, independence, respect, loyalty', memory: 'Core values: {value}' },
-            { id: 'ob-anything', label: 'Anything else you\'d like Vilora to know?', type: 'textarea', placeholder: 'Totally optional — share whatever feels relevant', memory: '{value}' },
+            { id: 'ob-anything', label: 'Anything else you\'d like Vilora to know?', type: 'textarea', placeholder: 'Totally optional. Share whatever feels relevant', memory: '{value}' },
         ]
     }
 ];
@@ -218,7 +218,7 @@ function renderStep() {
             html += `<select id="${field.id}">`;
             for (const opt of field.options) {
                 const selected = opt === savedVal ? ' selected' : '';
-                html += `<option value="${escapeHtml(opt)}"${selected}>${opt || '— Select —'}</option>`;
+                html += `<option value="${escapeHtml(opt)}"${selected}>${opt || 'Select...'}</option>`;
             }
             html += '</select>';
         } else if (field.type === 'textarea') {

@@ -15,11 +15,11 @@
             <p class="chooser-subtitle">Choose how you'd like to work with Vilora.</p>
             <div class="chooser-options">
                 <button onclick="showFramingAssist()" class="chooser-option">
-                    <div class="chooser-option-title">Start a group session — help me frame it</div>
+                    <div class="chooser-option-title">Start a group session: help me frame it</div>
                     <p>Describe what you want to discuss and Vilora will help you organize your thoughts before inviting others. Great for mediations, brainstorms, or group decisions.</p>
                 </button>
                 <button onclick="showDirectForm()" class="chooser-option">
-                    <div class="chooser-option-title">Start a group session — I know what I want to say</div>
+                    <div class="chooser-option-title">Start a group session: I know what I want to say</div>
                     <p>Go straight to the session form. You'll be able to invite others after creating it.</p>
                 </button>
                 <button onclick="showPersonalSession()" class="chooser-option chooser-option-personal">
@@ -38,11 +38,11 @@
         <div class="modal-content">
             <h2>Tell Vilora what's going on</h2>
             <p style="color: var(--text-light); margin-bottom: 1rem; font-size: 0.9rem;">
-                Just write freely — describe the situation, how you feel, what happened.
+                Just write freely. Describe the situation, how you feel, what happened.
                 Vilora will help organize this into a clear mediation request.
             </p>
             <div class="form-group">
-                <label for="raw-input">Your perspective (private — shared only with the mediator)</label>
+                <label for="raw-input">Your perspective (private, shared only with the mediator)</label>
                 <textarea id="raw-input" rows="8"
                     placeholder="Write whatever comes to mind about the situation. For example: 'My roommate keeps leaving dishes in the sink and it's driving me crazy. I've asked them to clean up but nothing changes. I don't want to fight about it but I need things to be more fair around here.'"></textarea>
             </div>
@@ -135,7 +135,7 @@
                     <input type="text" id="other-type" placeholder="e.g. Team retrospective, family vacation planning, etc." maxlength="80">
                 </div>
                 <div class="form-group">
-                    <label for="perspective">Your perspective (private — shared only with Vilora)</label>
+                    <label for="perspective">Your perspective (private, shared only with Vilora)</label>
                     <textarea id="perspective" rows="4"
                         placeholder="Share your side of the story. This helps Vilora understand both viewpoints."></textarea>
                 </div>
