@@ -46,7 +46,7 @@
                 Vilora will help organize this into a clear mediation request.
             </p>
             <div class="form-group">
-                <label for="raw-input">Your perspective (private, shared only with the mediator)</label>
+                <label for="raw-input">Your perspective (shared with Vilora, your AI mediator, and session participants)</label>
                 <textarea id="raw-input" rows="8"
                     placeholder="Write whatever comes to mind about the situation. For example: 'My roommate keeps leaving dishes in the sink and it's driving me crazy. I've asked them to clean up but nothing changes. I don't want to fight about it but I need things to be more fair around here.'"></textarea>
             </div>
@@ -146,7 +146,7 @@
                     <input type="text" id="other-type" placeholder="e.g. Team retrospective, family vacation planning, etc." maxlength="80">
                 </div>
                 <div class="form-group">
-                    <label for="perspective">Your perspective (private, shared only with Vilora)</label>
+                    <label for="perspective">Your perspective (shared with Vilora, your AI mediator, and session participants)</label>
                     <textarea id="perspective" rows="4"
                         placeholder="Share your side of the story. This helps Vilora understand both viewpoints."></textarea>
                 </div>
@@ -566,11 +566,9 @@ async function createSession(e) {
         return;
     }
     if (data.success) {
-        currentSessionId = data.session.id;
-        document.getElementById('invite-link').value = data.invite_link;
         hideAllModals();
-        document.getElementById('invite-display').style.display = 'block';
-        loadSessions();
+        window.location.href = '/session/' + data.session.id;
+        return;
     }
     btn.disabled = false;
     btn.textContent = 'Create & Get Invite Link';
@@ -637,5 +635,7 @@ loadSessions();
 attachPolish('perspective');
 attachPolish('raw-input');
 attachPolish('personal-topic');
+attachPolish('dash-council-question');
+attachPolish('dash-council-context');
 </script>
 {% endblock %}
