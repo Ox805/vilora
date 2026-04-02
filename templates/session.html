@@ -188,13 +188,15 @@ function renderMessages(messages) {
     }
 
     container.innerHTML = messages.map(m => {
+        const deleteBtn = `<button class="msg-delete-btn" onclick="deleteMessage(${m.id})" title="Delete this message">&times;</button>`;
+
         if (m.msg_type === 'mediator') {
+            const canDelete = IS_CREATOR;
             return `<div class="message message-mediator">
-                <div class="message-author">Vilora</div>
+                <div class="message-author">Vilora${canDelete ? deleteBtn : ''}</div>
                 <div class="message-content">${escapeHtml(m.content)}</div>
             </div>`;
         } else if (m.msg_type === 'intake') {
-            // Strip session tone metadata from display
             let intakeContent = m.content.replace(/\[Session tone:[^\]]*\]\s*/g, '');
             return `<div class="message message-intake">
                 <div class="message-author">${escapeHtml(m.display_name || 'Participant')}'s Initial Perspective</div>
@@ -202,7 +204,7 @@ function renderMessages(messages) {
             </div>`;
         } else if (m.is_self) {
             return `<div class="message message-self">
-                <div class="message-content">${escapeHtml(m.content)}</div>
+                <div class="message-content">${escapeHtml(m.content)}${deleteBtn}</div>
                 <div class="message-time">${localTime(m.created_at)}</div>
             </div>`;
         } else {
@@ -246,6 +248,23 @@ async function sendMessage(e) {
     } finally {
         sendBtn.disabled = false;
         sendBtn.textContent = 'Send';
+    }
+}
+
+// --- Delete Message ---
+async function deleteMessage(msgId) {
+    if (!confirm('Delete this message?')) return;
+
+    try {
+        const res = await fetch(`/api/sessions/${SESSION_ID}/messages/${msgId}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (data.success) {
+            loadMessages();
+        } else {
+            alert(data.error || 'Could not delete message.');
+        }
+    } catch (err) {
+        alert('Failed to delete message.');
     }
 }
 
@@ -509,6 +528,7 @@ function copyInviteLink() {
 }
 
 const IS_PERSONAL = {{ 'true' if is_personal else 'false' }};
+const IS_CREATOR = {{ 'true' if is_creator else 'false' }};
 
 async function checkParticipants() {
     if (IS_PERSONAL) return;

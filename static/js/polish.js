@@ -38,11 +38,12 @@ function attachPolish(textareaId, options = {}) {
     preview.className = 'polish-preview';
     preview.style.display = 'none';
 
-    // Insert polish bar into icons area if in input bar, otherwise after textarea
+    // Insert polish into icons area if in input bar, otherwise after textarea
     if (inputBar) {
         const iconsContainer = inputBar.querySelector('.message-input-icons');
         if (iconsContainer) {
-            iconsContainer.insertBefore(polishBar, iconsContainer.firstChild);
+            // Insert just the button directly (no wrapper div) for clean flex layout
+            iconsContainer.insertBefore(polishBtn, iconsContainer.firstChild);
         } else {
             wrapper.appendChild(polishBar);
         }

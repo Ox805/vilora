@@ -649,6 +649,34 @@ def send_message(session_id):
     return jsonify(result)
 
 
+@app.route('/api/sessions/<int:session_id>/messages/<int:message_id>', methods=['DELETE'])
+@login_required
+def delete_message(session_id, message_id):
+    db = get_db()
+    med_session = MediationSession.get_by_id(db, session_id)
+    if not med_session or not med_session.is_participant(db, current_user.id):
+        return jsonify({'success': False, 'error': 'Access denied'}), 403
+
+    # Get the message
+    cur = _exec(db, "SELECT * FROM messages WHERE id = ? AND session_id = ?", (message_id, session_id))
+    msg = cur.fetchone()
+    if not msg:
+        return jsonify({'success': False, 'error': 'Message not found'}), 404
+
+    # Users can delete their own messages
+    # Session creator can also delete mediator messages
+    if msg['user_id'] == current_user.id:
+        pass  # allowed
+    elif msg['msg_type'] == 'mediator' and med_session.creator_id == current_user.id:
+        pass  # creator can delete Vilora messages
+    else:
+        return jsonify({'success': False, 'error': 'You can only delete your own messages'}), 403
+
+    _exec(db, "DELETE FROM messages WHERE id = ?", (message_id,))
+    db.commit()
+    return jsonify({'success': True})
+
+
 @app.route('/api/sessions/<int:session_id>/ask-vilora', methods=['POST'])
 @login_required
 def ask_vilora(session_id):
