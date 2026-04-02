@@ -7,10 +7,7 @@
         <h2>{{ session.topic }}</h2>
         <div class="room-actions">
             <span class="session-type-badge">{% if is_personal %}Personal{% else %}{{ session.session_type }}{% endif %}</span>
-            {% if not is_personal %}<span id="participant-status" class="participant-status"></span>{% endif %}
-            {% if not is_personal %}
-            <button onclick="nudgeParticipants()" class="btn btn-sm" id="nudge-btn" title="Send a friendly email reminder to other participants, letting them know the conversation is waiting for their input.">Nudge</button>
-            {% endif %}
+            {% if not is_personal %}<button id="participant-status" class="participant-status" onclick="showParticipantsPanel()" title="View participants and send nudge reminders"></button>{% endif %}
             <button onclick="showCouncilModal()" class="btn btn-sm" title="Five AI advisors analyze your question from different angles, peer-review each other's blind spots, and deliver a synthesized recommendation with a concrete next step.">Council</button>
             <button onclick="getSummary()" class="btn btn-sm" title="Vilora generates a structured summary of the conversation so far, including key points, areas of agreement, unresolved issues, and suggested next steps.">Get Summary</button>
         </div>
@@ -154,6 +151,15 @@
     <div id="council-content" class="summary-content"></div>
 </div>
 
+<!-- Participants panel -->
+<div id="participants-panel" class="participants-panel" style="display:none">
+    <div class="participants-panel-header">
+        <h3>Participants</h3>
+        <button onclick="closeParticipantsPanel()" class="btn btn-sm">Close</button>
+    </div>
+    <div id="participants-list" class="participants-list"></div>
+</div>
+
 <script>
 const SESSION_ID = {{ session.id }};
 let polling = null;
@@ -254,20 +260,51 @@ async function sendMessage(e) {
     }
 }
 
-// --- Nudge ---
-async function nudgeParticipants() {
-    const btn = document.getElementById('nudge-btn');
+// --- Participants Panel ---
+async function showParticipantsPanel() {
+    const panel = document.getElementById('participants-panel');
+    const list = document.getElementById('participants-list');
+    list.innerHTML = '<p class="loading">Loading...</p>';
+    panel.style.display = 'block';
+
+    const res = await fetch(`/api/sessions/${SESSION_ID}/participants`);
+    const data = await res.json();
+    const participants = data.participants || [];
+
+    if (participants.length === 0) {
+        list.innerHTML = '<p style="color: var(--text-muted);">No participants yet.</p>';
+        return;
+    }
+
+    list.innerHTML = participants.map(p => `
+        <div class="participant-row">
+            <div class="participant-info">
+                <span class="participant-name">${escapeHtml(p.display_name)}</span>
+            </div>
+            <button class="btn btn-sm btn-nudge" id="nudge-${p.id}" onclick="nudgeOne(${p.id}, '${escapeHtml(p.display_name)}')"
+                title="Send ${escapeHtml(p.display_name)} a friendly reminder email">Nudge</button>
+        </div>
+    `).join('');
+}
+
+function closeParticipantsPanel() {
+    document.getElementById('participants-panel').style.display = 'none';
+}
+
+async function nudgeOne(userId, name) {
+    const btn = document.getElementById('nudge-' + userId);
     btn.disabled = true;
     btn.textContent = 'Sending...';
 
     try {
         const res = await fetch(`/api/sessions/${SESSION_ID}/nudge`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId })
         });
         const data = await res.json();
         if (data.success) {
-            btn.textContent = 'Nudge sent!';
+            btn.textContent = 'Sent!';
             setTimeout(() => { btn.textContent = 'Nudge'; btn.disabled = false; }, 3000);
         } else {
             alert(data.error || 'Could not send nudge.');

@@ -1345,6 +1345,75 @@ body.summary-open .container {
     color: var(--text-light);
 }
 
+/* === Participants Panel === */
+.participants-panel {
+    position: fixed;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 300px;
+    background: var(--bg-card);
+    border-left: 1px solid var(--border);
+    box-shadow: -4px 0 12px rgba(0,0,0,0.1);
+    z-index: 200;
+    overflow: hidden;
+}
+
+.participants-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.participants-list {
+    padding: 1rem 1.25rem;
+}
+
+.participant-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.participant-row:last-child {
+    border-bottom: none;
+}
+
+.participant-name {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text);
+}
+
+.btn-nudge {
+    color: var(--primary);
+    border-color: var(--primary-light);
+    font-size: 0.75rem;
+}
+
+.btn-nudge:hover {
+    background: var(--pale);
+}
+
+.participant-status {
+    cursor: pointer;
+}
+
+.participant-status:hover {
+    text-decoration: underline;
+}
+
+@media (max-width: 480px) {
+    .participants-panel {
+        width: 100%;
+        left: 0;
+    }
+}
+
 /* === Message Delete === */
 .msg-delete-btn {
     background: none;

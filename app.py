@@ -657,12 +657,17 @@ def nudge_participant(session_id):
     if not med_session or not med_session.is_participant(db, current_user.id):
         return jsonify({'success': False, 'error': 'Access denied'}), 403
 
+    data = request.get_json() or {}
+    target_user_id = data.get('user_id')
+
     participants = med_session.get_participants(db)
     session_link = url_for('session_room', session_id=session_id, _external=True)
 
     nudged = 0
     for p in participants:
         if p.id == current_user.id:
+            continue
+        if target_user_id and p.id != target_user_id:
             continue
         success = send_nudge_email(
             to_email=p.email,
@@ -679,7 +684,7 @@ def nudge_participant(session_id):
     elif len(participants) <= 1:
         return jsonify({'success': False, 'error': 'No other participants to nudge. Send an invite first.'}), 400
     else:
-        return jsonify({'success': False, 'error': 'Could not send nudge emails. Please try again.'}), 500
+        return jsonify({'success': False, 'error': 'Could not send nudge. Please try again.'}), 500
 
 
 @app.route('/api/sessions/<int:session_id>/messages/<int:message_id>', methods=['DELETE'])
