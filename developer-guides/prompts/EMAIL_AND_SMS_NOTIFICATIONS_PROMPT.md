@@ -267,9 +267,24 @@ CREATE TABLE notification_log (
 
 - **Design Reference:** `developer-guides/architecture/design-reference.md` — Brand colors, logo marks for email templates
 - **Deployment Guide:** `developer-guides/architecture/railway-app-deployment-guide.md` — How to add env vars
-- **Current Email Setup:** Password reset currently uses Flask-Mail with Gmail SMTP; Phase 1.4 migrates to SendGrid
+- **Current Email Setup:** SendGrid (migrated from Flask-Mail/Gmail SMTP on April 1, 2026)
 - **SendGrid Docs:** https://docs.sendgrid.com/for-developers/sending-email/api-getting-started
 - **Twilio Docs:** https://www.twilio.com/docs/sms/quickstart/python
+
+---
+
+## SendGrid Setup Notes
+
+- **Account:** Set up via Google Cloud Marketplace (not SendGrid directly). Login, billing handled through GCP.
+- **API Key:** Stored in Railway env var `SENDGRID_API_KEY`. Generated from SendGrid dashboard > Settings > API Keys.
+- **Current sender:** `support@maiatech.ai` — domain `maiatech.ai` authenticated in SendGrid.
+- **Domain authentication DNS records (in GoDaddy for maiatech.ai):**
+  - CNAME: `em1620` → `u54268949.wl200.sendgrid.net`
+  - CNAME: `s1._domainkey` → `s1.domainkey.u54268949.wl200.sendgrid.net`
+  - CNAME: `s2._domainkey` → `s2.domainkey.u54268949.wl200.sendgrid.net`
+  - TXT: `_dmarc` → `v=DMARC1; p=none;`
+- **Future:** When ready to send from `@vilora.ai`, add a new authenticated domain in SendGrid for `vilora.ai` and update `NOTIFICATION_FROM_EMAIL` env var. SendGrid supports multiple authenticated domains.
+- **`edgeview.ai`** is also verified in the same SendGrid account (used by another project).
 
 ---
 
@@ -278,3 +293,5 @@ CREATE TABLE notification_log (
 | Date | Change |
 |------|--------|
 | 2026-03-30 | Initial creation — email invites, activity notifications, SMS (phased) |
+| 2026-04-01 | Phase 1 implemented — SendGrid integration, branded invite emails, password reset migrated from Flask-Mail |
+| 2026-04-02 | SendGrid account set up via GCP Marketplace, maiatech.ai domain authentication in progress |
