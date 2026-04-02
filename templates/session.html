@@ -180,9 +180,11 @@ function renderMessages(messages) {
                 <div class="message-content">${escapeHtml(m.content)}</div>
             </div>`;
         } else if (m.msg_type === 'intake') {
+            // Strip session tone metadata from display
+            let intakeContent = m.content.replace(/\[Session tone:[^\]]*\]\s*/g, '');
             return `<div class="message message-intake">
                 <div class="message-author">${escapeHtml(m.display_name || 'Participant')}'s Initial Perspective</div>
-                <div class="message-content">${escapeHtml(m.content)}</div>
+                <div class="message-content">${escapeHtml(intakeContent)}</div>
             </div>`;
         } else if (m.is_self) {
             return `<div class="message message-self">
