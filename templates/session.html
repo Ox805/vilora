@@ -268,20 +268,25 @@ async function runCouncil() {
     btn.textContent = 'Council is deliberating...';
 
     try {
+        console.log('[Council] Sending request...');
         const res = await fetch('/api/council', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ question, context })
         });
+        console.log('[Council] Response status:', res.status);
         const data = await res.json();
+        console.log('[Council] Response data:', data.success ? 'success' : data.error);
 
         if (data.success && data.council) {
             hideCouncilModal();
             showCouncilResults(data.council, question);
         } else {
+            console.error('[Council] Error:', data.error);
             alert(data.error || 'Council encountered an error.');
         }
     } catch (err) {
+        console.error('[Council] Fetch error:', err);
         alert('Failed to run Council. Please try again.');
     } finally {
         btn.disabled = false;
