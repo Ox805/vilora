@@ -66,12 +66,7 @@ def send_invite_email(to_email, creator_name, topic, join_link, personal_message
                 <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#FFFFFF;border-radius:8px;overflow:hidden;">
                     <!-- Header -->
                     <tr><td style="padding:32px 32px 24px;text-align:center;">
-                        <svg width="40" height="40" viewBox="0 0 58 58" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M 8 9 C 6 26,23 43,29 47 M 18 9 C 17 28,25 44,29 47 M 8 9 L 18 9" fill="none" stroke="#1D9E75" stroke-width="1.8" stroke-linecap="round"/>
-                            <path d="M 50 9 C 52 26,35 43,29 47 M 40 9 C 41 28,33 44,29 47 M 40 9 L 50 9" fill="none" stroke="#1D9E75" stroke-width="1.8" stroke-linecap="round"/>
-                            <circle cx="29" cy="47" r="3" fill="#085041"/>
-                        </svg>
-                        <h1 style="margin:16px 0 0;font-size:20px;font-weight:400;color:#2C2C2A;letter-spacing:0.1em;">VILORA</h1>
+                        <img src="https://www.vilora.ai/static/img/email-logo.png" alt="Vilora" width="160" style="display:block;margin:0 auto;">
                     </td></tr>
 
                     <!-- Body -->
@@ -95,8 +90,8 @@ def send_invite_email(to_email, creator_name, topic, join_link, personal_message
                         <div style="border-top:1px solid #E2E0D8;padding-top:20px;margin-top:20px;">
                             <p style="color:#888780;font-size:13px;line-height:1.6;margin:0;">
                                 <strong>What to expect:</strong> Vilora is an impartial AI facilitator that helps people have productive conversations.
-                                You'll each share your perspective privately, and Vilora will guide the dialogue toward understanding and resolution.
-                                Everything you share is confidential.
+                                You'll each share your perspective, and Vilora will guide the dialogue toward understanding and resolution.
+                                Your conversation is shared only with the other participants in the session — Vilora does not share your information with anyone else.
                             </p>
                         </div>
                     </td></tr>
@@ -141,12 +136,7 @@ def send_password_reset_email(to_email, display_name, reset_link):
             <tr><td align="center">
                 <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#FFFFFF;border-radius:8px;overflow:hidden;">
                     <tr><td style="padding:32px 32px 24px;text-align:center;">
-                        <svg width="40" height="40" viewBox="0 0 58 58" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M 8 9 C 6 26,23 43,29 47 M 18 9 C 17 28,25 44,29 47 M 8 9 L 18 9" fill="none" stroke="#1D9E75" stroke-width="1.8" stroke-linecap="round"/>
-                            <path d="M 50 9 C 52 26,35 43,29 47 M 40 9 C 41 28,33 44,29 47 M 40 9 L 50 9" fill="none" stroke="#1D9E75" stroke-width="1.8" stroke-linecap="round"/>
-                            <circle cx="29" cy="47" r="3" fill="#085041"/>
-                        </svg>
-                        <h1 style="margin:16px 0 0;font-size:20px;font-weight:400;color:#2C2C2A;letter-spacing:0.1em;">VILORA</h1>
+                        <img src="https://www.vilora.ai/static/img/email-logo.png" alt="Vilora" width="160" style="display:block;margin:0 auto;">
                     </td></tr>
                     <tr><td style="padding:0 32px 32px;">
                         <h2 style="font-size:18px;font-weight:500;color:#2C2C2A;margin:0 0 16px;">Password Reset</h2>
