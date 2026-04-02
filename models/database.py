@@ -133,7 +133,11 @@ def db_init():
             "CREATE INDEX IF NOT EXISTS idx_user_memories_user ON user_memories(user_id, active)",
         ]
         for stmt in statements:
-            cur.execute(stmt)
+            try:
+                cur.execute(stmt)
+                db.commit()
+            except Exception:
+                db.rollback()
 
         # Migrations for existing tables
         migrations = [
@@ -145,8 +149,6 @@ def db_init():
                 db.commit()
             except Exception:
                 db.rollback()
-
-        db.commit()
     else:
         db.executescript("""
             CREATE TABLE IF NOT EXISTS users (
