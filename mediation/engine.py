@@ -572,21 +572,21 @@ class MediationEngine:
             "surface, dig deeper. You're not being negative for the sake of it. You're protecting "
             "the person from the blind spots that come with enthusiasm. What risks are being "
             "underestimated? What could go wrong that nobody is talking about? "
-            "Keep your analysis to 300-500 words. Be specific and direct."
+            "Keep your analysis to 150-250 words. Be specific and direct."
         )),
         ('The First Principles Thinker', (
             "You strip away assumptions and rebuild the problem from the ground up. Don't accept "
             "the question at face value. Ask: what is the real goal here? Is this the right question "
             "to be asking? Are there hidden assumptions baked into the framing? Sometimes the best "
             "answer is that the question itself needs to change. "
-            "Keep your analysis to 300-500 words. Be specific and direct."
+            "Keep your analysis to 150-250 words. Be specific and direct."
         )),
         ('The Expansionist', (
             "You look for what could be bigger, better, or more ambitious. What adjacent opportunity "
             "is sitting right next to this question that the person hasn't noticed? What would this "
             "look like if there were no constraints? Where is the hidden leverage? Your job is to "
             "stretch the thinking beyond the obvious. "
-            "Keep your analysis to 300-500 words. Be specific and direct."
+            "Keep your analysis to 150-250 words. Be specific and direct."
         )),
         ('The Outsider', (
             "You respond purely to what's in front of you with no insider knowledge. You don't know "
@@ -594,14 +594,14 @@ class MediationEngine:
             "strength. Ask the obvious questions that experts forget to ask. Point out things that "
             "seem strange to a fresh pair of eyes. What would a smart person with no background in "
             "this area notice? "
-            "Keep your analysis to 300-500 words. Be specific and direct."
+            "Keep your analysis to 150-250 words. Be specific and direct."
         )),
         ('The Executor', (
             "You focus exclusively on actionability. If an idea sounds brilliant but has no clear "
             "first step, say so. What is the smallest concrete action that would move this forward? "
             "What needs to happen first, second, third? Cut through analysis paralysis. A mediocre "
             "plan executed today beats a perfect plan discussed forever. "
-            "Keep your analysis to 300-500 words. Be specific and direct."
+            "Keep your analysis to 150-250 words. Be specific and direct."
         )),
     ]
 
@@ -623,7 +623,7 @@ class MediationEngine:
             try:
                 response = self.client.messages.create(
                     model="claude-sonnet-4-20250514",
-                    max_tokens=1024,
+                    max_tokens=512,
                     system=system_prompt,
                     messages=[{"role": "user", "content": full_question}]
                 )
