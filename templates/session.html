@@ -18,7 +18,7 @@
     {% elif is_creator %}
     <div id="invite-banner" class="invite-banner">
         <div class="invite-banner-content">
-            <strong>Invite the other party.</strong> Send them an email or share the link:
+            <strong>Invite another party.</strong> Send them an email or share the link:
             <div class="invite-link-row">
                 <button onclick="showInviteModal()" class="btn btn-primary btn-sm" title="Send a branded email invitation to the other party with a link to join this session.">Send Invite</button>
                 <input type="text" id="invite-link" value="{{ invite_link }}" readonly>
@@ -99,6 +99,13 @@
                 </div>
             </div>
         </form>
+        {% if not is_personal %}
+        <div class="ask-vilora-bar">
+            <button type="button" onclick="askVilora()" class="btn btn-sm btn-ask-vilora" id="ask-vilora-btn" title="Request Vilora's input on the conversation so far. Vilora will read the discussion and offer perspective, suggestions, or information.">
+                Ask Vilora to weigh in
+            </button>
+        </div>
+        {% endif %}
     </div>
 </div>
 
@@ -239,6 +246,31 @@ async function sendMessage(e) {
     } finally {
         sendBtn.disabled = false;
         sendBtn.textContent = 'Send';
+    }
+}
+
+// --- Ask Vilora ---
+async function askVilora() {
+    const btn = document.getElementById('ask-vilora-btn');
+    btn.disabled = true;
+    btn.textContent = 'Vilora is thinking...';
+
+    try {
+        const res = await fetch(`/api/sessions/${SESSION_ID}/ask-vilora`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await res.json();
+        if (data.success) {
+            loadMessages();
+        } else {
+            alert(data.error || 'Vilora could not respond.');
+        }
+    } catch (err) {
+        alert('Failed to reach Vilora. Please try again.');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Ask Vilora to weigh in';
     }
 }
 

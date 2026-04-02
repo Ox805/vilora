@@ -1345,6 +1345,26 @@ body.summary-open .container {
     color: var(--text-light);
 }
 
+/* === Ask Vilora === */
+.ask-vilora-bar {
+    display: flex;
+    justify-content: center;
+    margin-top: 0.4rem;
+}
+
+.btn-ask-vilora {
+    color: var(--primary);
+    border-color: var(--primary-light);
+    background: var(--pale);
+    font-size: 0.8rem;
+}
+
+.btn-ask-vilora:hover {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
 /* === Polish Component === */
 .polish-bar {
     display: flex;

@@ -617,13 +617,13 @@ def send_message(session_id):
     # Save the user's message
     user_msg = Message.create(db, session_id, current_user.id, content, msg_type='user')
 
-    # Check if Vilora should chime in
+    # In personal mode, Vilora always responds. In group mode, only when explicitly asked.
     messages = Message.get_by_session(db, session_id)
     participants = med_session.get_participants(db)
 
     ai_msg = None
     try:
-        if mediation_engine.should_respond(med_session.topic, messages, participants, session_mode=med_session.session_mode):
+        if med_session.session_mode == 'personal':
             # Load memories for all participants
             participant_memories = {}
             for p in participants:
@@ -647,6 +647,40 @@ def send_message(session_id):
     if ai_msg:
         result['mediator_message'] = ai_msg.to_dict()
     return jsonify(result)
+
+
+@app.route('/api/sessions/<int:session_id>/ask-vilora', methods=['POST'])
+@login_required
+def ask_vilora(session_id):
+    """Explicitly request Vilora's input in a group session."""
+    db = get_db()
+    med_session = MediationSession.get_by_id(db, session_id)
+    if not med_session or not med_session.is_participant(db, current_user.id):
+        return jsonify({'success': False, 'error': 'Access denied'}), 403
+
+    messages = Message.get_by_session(db, session_id)
+    participants = med_session.get_participants(db)
+
+    try:
+        participant_memories = {}
+        for p in participants:
+            memories = get_user_memories(db, p.id)
+            if memories:
+                participant_memories[p.id] = memories
+
+        ai_response = mediation_engine.mediate(
+            topic=med_session.topic,
+            session_type=med_session.session_type,
+            messages=messages,
+            participants=participants,
+            participant_memories=participant_memories or None,
+            session_mode=med_session.session_mode
+        )
+        ai_msg = Message.create(db, session_id, None, ai_response, msg_type='mediator')
+        return jsonify({'success': True, 'mediator_message': ai_msg.to_dict()})
+    except Exception as e:
+        sys.stderr.write(f"[Vilora] Ask Vilora error: {e}\n")
+        return jsonify({'success': False, 'error': 'Vilora could not respond. Please try again.'}), 500
 
 
 @app.route('/api/sessions/<int:session_id>/participants', methods=['GET'])
