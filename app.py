@@ -284,6 +284,27 @@ def delete_memory(memory_id):
     return jsonify({'success': True})
 
 
+# --- Polish Helper ---
+
+@app.route('/api/polish', methods=['POST'])
+@login_required
+def polish_text():
+    data = request.get_json()
+    text = data.get('text', '').strip()
+
+    if not text:
+        return jsonify({'success': False, 'error': 'No text to polish'}), 400
+
+    try:
+        polished = mediation_engine.polish(text)
+        if polished:
+            return jsonify({'success': True, 'polished': polished})
+        return jsonify({'success': False, 'error': 'Could not polish text'}), 500
+    except Exception as e:
+        sys.stderr.write(f"[Vilora] Polish error: {e}\n")
+        return jsonify({'success': False, 'error': 'Could not polish text. Please try again.'}), 500
+
+
 # --- Framing Helper ---
 
 @app.route('/api/frame', methods=['POST'])

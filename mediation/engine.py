@@ -155,6 +155,29 @@ class MediationEngine:
         )
         return response.content[0].text.strip().strip('"\'')
 
+    def polish(self, text):
+        """Polish text for spelling, punctuation, and clarity without changing voice or meaning."""
+        if not self.client:
+            return text
+
+        response = self.client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=2048,
+            system=(
+                "You are a writing assistant. Your ONLY job is to clean up the user's text. "
+                "Fix spelling errors, punctuation, and grammar. Improve clarity where a sentence "
+                "is confusing or awkwardly phrased. Do NOT change the meaning, tone, voice, or "
+                "personality of the writing. Do NOT add new ideas, remove ideas, or restructure "
+                "the content. Do NOT make it sound more formal or 'polished' in tone. Keep it "
+                "sounding exactly like the person who wrote it, just with fewer errors. "
+                "If the text is already clean, return it unchanged. "
+                "Respond with ONLY the polished text, nothing else."
+            ),
+            messages=[{"role": "user", "content": text}]
+        )
+
+        return response.content[0].text
+
     def frame(self, raw_text, user_memories=None):
         if not self.client:
             return None

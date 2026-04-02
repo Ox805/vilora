@@ -318,6 +318,9 @@ async function checkParticipants() {
     }
 }
 
+// Attach polish to the message input
+attachPolish('message-input');
+
 // Initial load and polling
 loadMessages();
 if (!IS_PERSONAL) checkParticipants();
