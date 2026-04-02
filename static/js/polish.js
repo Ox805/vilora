@@ -21,7 +21,7 @@ function attachPolish(textareaId, options = {}) {
     polishBtn.type = 'button';
     polishBtn.className = 'btn btn-sm btn-polish';
     polishBtn.textContent = 'Polish';
-    polishBtn.title = 'Clean up spelling, punctuation, and clarity';
+    polishBtn.title = 'Vilora will clean up spelling, punctuation, and clarity while keeping your voice and meaning exactly the same.';
     polishBtn.onclick = () => doPolish(textareaId);
 
     // Create the polish bar (button container)

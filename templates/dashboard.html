@@ -14,15 +14,15 @@
             <h2>What would you like to do?</h2>
             <p class="chooser-subtitle">Choose how you'd like to work with Vilora.</p>
             <div class="chooser-options">
-                <button onclick="showFramingAssist()" class="chooser-option">
+                <button onclick="showFramingAssist()" class="chooser-option" title="Write freely about your situation. Vilora will organize it into a clear topic, category, and perspective, then let you review and edit before creating the session.">
                     <div class="chooser-option-title">Start a group session: help me frame it</div>
                     <p>Describe what you want to discuss and Vilora will help you organize your thoughts before inviting others. Great for mediations, brainstorms, or group decisions.</p>
                 </button>
-                <button onclick="showDirectForm()" class="chooser-option">
+                <button onclick="showDirectForm()" class="chooser-option" title="Skip the framing step and fill in the topic, type, and your perspective yourself. You can invite others via email or link after creating the session.">
                     <div class="chooser-option-title">Start a group session: I know what I want to say</div>
                     <p>Go straight to the session form. You'll be able to invite others after creating it.</p>
                 </button>
-                <button onclick="showPersonalSession()" class="chooser-option chooser-option-personal">
+                <button onclick="showPersonalSession()" class="chooser-option chooser-option-personal" title="A private conversation with just you and Vilora. No other participants. Vilora responds to every message as a personal advisor, counselor, or sounding board.">
                     <div class="chooser-option-title">Talk to Vilora one-on-one</div>
                     <p>Get advice, think through a decision, brainstorm ideas, or just talk things out with Vilora as your sounding board.</p>
                 </button>
@@ -49,16 +49,16 @@
             <div class="session-tone">
                 <label>How should Vilora approach this?</label>
                 <div class="tone-chips framing-tone-chips">
-                    <button type="button" class="med-tone-chip" data-tone="Focus on finding common ground and shared interests">Find common ground</button>
-                    <button type="button" class="med-tone-chip" data-tone="Help us communicate more clearly and understand each other">Improve communication</button>
-                    <button type="button" class="med-tone-chip" data-tone="Be direct and help us get to a resolution quickly">Get to resolution</button>
-                    <button type="button" class="med-tone-chip" data-tone="Make sure both sides feel fully heard before moving forward">Make sure we're heard</button>
-                    <button type="button" class="med-tone-chip" data-tone="Help us establish fair boundaries and agreements">Set boundaries</button>
-                    <button type="button" class="med-tone-chip" data-tone="Help de-escalate emotions and keep things calm and productive">Keep things calm</button>
-                    <button type="button" class="med-tone-chip" data-tone="Proactively bring in relevant research, data, and expert context to inform the discussion">Bring in research and facts</button>
-                    <button type="button" class="med-tone-chip" data-tone="Encourage creative, outside-the-box thinking and help us build on each other's ideas">Encourage creative thinking</button>
-                    <button type="button" class="med-tone-chip" data-tone="Help us weigh options, evaluate tradeoffs, and prioritize what matters most">Help us prioritize</button>
-                    <button type="button" class="med-tone-chip" data-tone="Constructively challenge our assumptions and ask 'have you considered...' questions">Challenge our assumptions</button>
+                    <button type="button" class="med-tone-chip" data-tone="Focus on finding common ground and shared interests" title="Vilora will actively look for areas of agreement and shared values, using them as a foundation to work through differences.">Find common ground</button>
+                    <button type="button" class="med-tone-chip" data-tone="Help us communicate more clearly and understand each other" title="Vilora will slow the conversation down, clarify what each person means, and make sure everyone understands each other before moving on.">Improve communication</button>
+                    <button type="button" class="med-tone-chip" data-tone="Be direct and help us get to a resolution quickly" title="Vilora will be more direct, cut through tangents, and push toward concrete decisions and agreements faster.">Get to resolution</button>
+                    <button type="button" class="med-tone-chip" data-tone="Make sure both sides feel fully heard before moving forward" title="Vilora will make sure each participant's perspective is fully acknowledged before suggesting next steps.">Make sure we're heard</button>
+                    <button type="button" class="med-tone-chip" data-tone="Help us establish fair boundaries and agreements" title="Vilora will guide the conversation toward clear agreements, ground rules, and boundaries that everyone can commit to.">Set boundaries</button>
+                    <button type="button" class="med-tone-chip" data-tone="Help de-escalate emotions and keep things calm and productive" title="Vilora will prioritize keeping the tone calm, acknowledge emotions without escalating, and redirect heated moments constructively.">Keep things calm</button>
+                    <button type="button" class="med-tone-chip" data-tone="Proactively bring in relevant research, data, and expert context to inform the discussion" title="Vilora will act as an expert resource, proactively sharing relevant facts, data, and context to inform the discussion.">Bring in research and facts</button>
+                    <button type="button" class="med-tone-chip" data-tone="Encourage creative, outside-the-box thinking and help us build on each other's ideas" title="Vilora will push for novel ideas, encourage 'what if' thinking, and help participants build on each other's suggestions.">Encourage creative thinking</button>
+                    <button type="button" class="med-tone-chip" data-tone="Help us weigh options, evaluate tradeoffs, and prioritize what matters most" title="Vilora will help structure the discussion around evaluating options, weighing pros and cons, and deciding what matters most.">Help us prioritize</button>
+                    <button type="button" class="med-tone-chip" data-tone="Constructively challenge our assumptions and ask 'have you considered...' questions" title="Vilora will play constructive skeptic, questioning assumptions and raising considerations the group may have overlooked.">Challenge our assumptions</button>
                 </div>
                 <p class="tone-hint">Select any that apply. You can also adjust how Vilora works for you in <a href="/settings">Settings</a>.</p>
             </div>
@@ -86,15 +86,15 @@
             <div class="session-tone">
                 <label>How should Vilora approach this?</label>
                 <div class="tone-chips">
-                    <button type="button" class="tone-chip" data-tone="Give me quick, direct advice">Quick advice</button>
-                    <button type="button" class="tone-chip" data-tone="Help me explore this deeply and think it through">Help me explore</button>
-                    <button type="button" class="tone-chip" data-tone="Just listen and help me process my feelings">Just listen</button>
-                    <button type="button" class="tone-chip" data-tone="Play devil's advocate and challenge my thinking">Devil's advocate</button>
-                    <button type="button" class="tone-chip" data-tone="Push back on me and help me see other perspectives">Expand my perspective</button>
-                    <button type="button" class="tone-chip" data-tone="Help me figure out what to actually do next">Action plan</button>
-                    <button type="button" class="tone-chip" data-tone="Help me prepare for a real-world conversation by coaching me on what to say and how to approach it">Help me prepare for a conversation</button>
-                    <button type="button" class="tone-chip" data-tone="Provide relevant research, data, and factual context to help me understand this topic better">Give me the facts</button>
-                    <button type="button" class="tone-chip" data-tone="Be encouraging, help me build confidence, and focus on what I'm doing well">Be encouraging</button>
+                    <button type="button" class="tone-chip" data-tone="Give me quick, direct advice" title="Vilora will keep responses short and actionable. Less exploration, more 'here's what I'd do.'">Quick advice</button>
+                    <button type="button" class="tone-chip" data-tone="Help me explore this deeply and think it through" title="Vilora will ask thoughtful questions to help you dig deeper into the issue rather than jumping to answers.">Help me explore</button>
+                    <button type="button" class="tone-chip" data-tone="Just listen and help me process my feelings" title="Vilora will focus on reflecting back what you're saying, validating your feelings, and giving you space to process.">Just listen</button>
+                    <button type="button" class="tone-chip" data-tone="Play devil's advocate and challenge my thinking" title="Vilora will intentionally push back on your reasoning, surface counterarguments, and test the strength of your thinking.">Devil's advocate</button>
+                    <button type="button" class="tone-chip" data-tone="Push back on me and help me see other perspectives" title="Vilora will help you see the situation from other people's perspectives, even ones you might not be considering.">Expand my perspective</button>
+                    <button type="button" class="tone-chip" data-tone="Help me figure out what to actually do next" title="Vilora will focus on turning your thinking into a concrete, step-by-step plan of action.">Action plan</button>
+                    <button type="button" class="tone-chip" data-tone="Help me prepare for a real-world conversation by coaching me on what to say and how to approach it" title="Vilora will coach you on how to approach a specific conversation, what to say, and how to handle different responses.">Help me prepare for a conversation</button>
+                    <button type="button" class="tone-chip" data-tone="Provide relevant research, data, and factual context to help me understand this topic better" title="Vilora will lean into its knowledge base, providing facts, data, research, and expert context on the topic you're exploring.">Give me the facts</button>
+                    <button type="button" class="tone-chip" data-tone="Be encouraging, help me build confidence, and focus on what I'm doing well" title="Vilora will focus on building your confidence, highlighting your strengths, and being a supportive, motivating presence.">Be encouraging</button>
                 </div>
                 <p class="tone-hint">Select any that apply. You can also fine-tune how Vilora works for you in <a href="/settings">Settings</a>.</p>
             </div>
@@ -149,16 +149,16 @@
                 <div class="session-tone">
                     <label>How should Vilora approach this?</label>
                     <div class="tone-chips mediation-tone-chips">
-                        <button type="button" class="med-tone-chip" data-tone="Focus on finding common ground and shared interests">Find common ground</button>
-                        <button type="button" class="med-tone-chip" data-tone="Help us communicate more clearly and understand each other">Improve communication</button>
-                        <button type="button" class="med-tone-chip" data-tone="Be direct and help us get to a resolution quickly">Get to resolution</button>
-                        <button type="button" class="med-tone-chip" data-tone="Make sure both sides feel fully heard before moving forward">Make sure we're heard</button>
-                        <button type="button" class="med-tone-chip" data-tone="Help us establish fair boundaries and agreements">Set boundaries</button>
-                        <button type="button" class="med-tone-chip" data-tone="Help de-escalate emotions and keep things calm and productive">Keep things calm</button>
-                        <button type="button" class="med-tone-chip" data-tone="Proactively bring in relevant research, data, and expert context to inform the discussion">Bring in research and facts</button>
-                        <button type="button" class="med-tone-chip" data-tone="Encourage creative, outside-the-box thinking and help us build on each other's ideas">Encourage creative thinking</button>
-                        <button type="button" class="med-tone-chip" data-tone="Help us weigh options, evaluate tradeoffs, and prioritize what matters most">Help us prioritize</button>
-                        <button type="button" class="med-tone-chip" data-tone="Constructively challenge our assumptions and ask 'have you considered...' questions">Challenge our assumptions</button>
+                        <button type="button" class="med-tone-chip" data-tone="Focus on finding common ground and shared interests" title="Vilora will actively look for areas of agreement and shared values, using them as a foundation to work through differences.">Find common ground</button>
+                        <button type="button" class="med-tone-chip" data-tone="Help us communicate more clearly and understand each other" title="Vilora will slow the conversation down, clarify what each person means, and make sure everyone understands each other before moving on.">Improve communication</button>
+                        <button type="button" class="med-tone-chip" data-tone="Be direct and help us get to a resolution quickly" title="Vilora will be more direct, cut through tangents, and push toward concrete decisions and agreements faster.">Get to resolution</button>
+                        <button type="button" class="med-tone-chip" data-tone="Make sure both sides feel fully heard before moving forward" title="Vilora will make sure each participant's perspective is fully acknowledged before suggesting next steps.">Make sure we're heard</button>
+                        <button type="button" class="med-tone-chip" data-tone="Help us establish fair boundaries and agreements" title="Vilora will guide the conversation toward clear agreements, ground rules, and boundaries that everyone can commit to.">Set boundaries</button>
+                        <button type="button" class="med-tone-chip" data-tone="Help de-escalate emotions and keep things calm and productive" title="Vilora will prioritize keeping the tone calm, acknowledge emotions without escalating, and redirect heated moments constructively.">Keep things calm</button>
+                        <button type="button" class="med-tone-chip" data-tone="Proactively bring in relevant research, data, and expert context to inform the discussion" title="Vilora will act as an expert resource, proactively sharing relevant facts, data, and context to inform the discussion.">Bring in research and facts</button>
+                        <button type="button" class="med-tone-chip" data-tone="Encourage creative, outside-the-box thinking and help us build on each other's ideas" title="Vilora will push for novel ideas, encourage 'what if' thinking, and help participants build on each other's suggestions.">Encourage creative thinking</button>
+                        <button type="button" class="med-tone-chip" data-tone="Help us weigh options, evaluate tradeoffs, and prioritize what matters most" title="Vilora will help structure the discussion around evaluating options, weighing pros and cons, and deciding what matters most.">Help us prioritize</button>
+                        <button type="button" class="med-tone-chip" data-tone="Constructively challenge our assumptions and ask 'have you considered...' questions" title="Vilora will play constructive skeptic, questioning assumptions and raising considerations the group may have overlooked.">Challenge our assumptions</button>
                     </div>
                     <p class="tone-hint">Select any that apply. You can also adjust how Vilora works for you in <a href="/settings">Settings</a>.</p>
                 </div>
