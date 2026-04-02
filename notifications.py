@@ -52,7 +52,7 @@ def send_invite_email(to_email, creator_name, topic, join_link, personal_message
         message_section = f"""
         <div style="background:#F7F8F7;border-radius:8px;padding:16px;margin:20px 0;">
             <p style="margin:0;color:#555550;font-size:14px;font-style:italic;">"{personal_message}"</p>
-            <p style="margin:8px 0 0;color:#888780;font-size:12px;">— {creator_name}</p>
+            <p style="margin:8px 0 0;color:#888780;font-size:12px;">{creator_name}</p>
         </div>
         """
 
@@ -73,7 +73,7 @@ def send_invite_email(to_email, creator_name, topic, join_link, personal_message
                     <tr><td style="padding:0 32px 32px;">
                         <h2 style="font-size:18px;font-weight:500;color:#2C2C2A;margin:0 0 8px;">You've been invited to a conversation</h2>
                         <p style="color:#555550;font-size:15px;line-height:1.6;margin:0 0 16px;">
-                            <strong>{creator_name}</strong> would like to work through something with you on Vilora — an AI-powered platform for constructive dialogue.
+                            <strong>{creator_name}</strong> would like to work through something with you on Vilora, a platform for constructive dialogue.
                         </p>
 
                         <div style="background:#E1F5EE;border-radius:8px;padding:16px;margin:16px 0;">
@@ -91,14 +91,14 @@ def send_invite_email(to_email, creator_name, topic, join_link, personal_message
                             <p style="color:#888780;font-size:13px;line-height:1.6;margin:0;">
                                 <strong>What to expect:</strong> Vilora is an impartial AI facilitator that helps people have productive conversations.
                                 You'll each share your perspective, and Vilora will guide the dialogue toward understanding and resolution.
-                                Your conversation is shared only with the other participants in the session — Vilora does not share your information with anyone else.
+                                Your conversation is shared only with the other participants in the session. Vilora does not share your information with anyone else.
                             </p>
                         </div>
                     </td></tr>
 
                     <!-- Footer -->
                     <tr><td style="padding:20px 32px;background:#F7F8F7;border-top:1px solid #E2E0D8;">
-                        <p style="margin:0;color:#888780;font-size:12px;text-align:center;">Vilora — Strength through dialogue</p>
+                        <p style="margin:0;color:#888780;font-size:12px;text-align:center;">Vilora | Strength through dialogue</p>
                         <p style="margin:8px 0 0;color:#888780;font-size:11px;text-align:left;">
                             You received this because {creator_name} invited you. If this wasn't meant for you, you can safely ignore it.
                         </p>
@@ -117,7 +117,7 @@ def send_invite_email(to_email, creator_name, topic, join_link, personal_message
         f"Join here: {join_link}\n\n"
         f"Vilora is an AI-powered platform for constructive dialogue. "
         f"Everything you share is confidential.\n\n"
-        f"— Vilora, Strength through dialogue"
+        f"Vilora | Strength through dialogue"
     )
 
     return send_email(to_email, subject, html_body, text_body)
@@ -149,7 +149,7 @@ def send_password_reset_email(to_email, display_name, reset_link):
                         <p style="color:#888780;font-size:13px;line-height:1.6;">This link expires in 1 hour. If you didn't request this, you can safely ignore this email.</p>
                     </td></tr>
                     <tr><td style="padding:20px 32px;background:#F7F8F7;border-top:1px solid #E2E0D8;text-align:center;">
-                        <p style="margin:0;color:#888780;font-size:12px;">Vilora — Strength through dialogue</p>
+                        <p style="margin:0;color:#888780;font-size:12px;">Vilora | Strength through dialogue</p>
                     </td></tr>
                 </table>
             </td></tr>
@@ -163,7 +163,7 @@ def send_password_reset_email(to_email, display_name, reset_link):
         f"You requested a password reset for your Vilora account.\n\n"
         f"Reset your password: {reset_link}\n\n"
         f"This link expires in 1 hour. If you didn't request this, ignore this email.\n\n"
-        f"— Vilora"
+        f"Vilora"
     )
 
     return send_email(to_email, subject, html_body, text_body)
