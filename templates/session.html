@@ -6,7 +6,7 @@
     <div class="room-header">
         <h2>{{ session.topic }} <span class="session-type-badge">{% if is_personal %}Personal{% else %}{{ session.session_type }}{% endif %}</span></h2>
         <div class="room-actions">
-            {% if not is_personal %}<button id="participant-status" class="btn btn-sm" onclick="showParticipantsPanel()" title="View participants and send nudge reminders"></button>{% endif %}
+            {% if not is_personal %}<button id="participant-status" class="btn btn-sm" onclick="showParticipantsPanel()" title="View participants and send nudge reminders">Participants</button>{% endif %}
             <button onclick="showCouncilModal()" class="btn btn-sm" title="Five AI advisors analyze your question from different angles, peer-review each other's blind spots, and deliver a synthesized recommendation with a concrete next step.">Council</button>
             <button onclick="getSummary()" class="btn btn-sm" title="Vilora generates a structured summary of the conversation so far, including key points, areas of agreement, unresolved issues, and suggested next steps.">Summary</button>
         </div>
@@ -679,18 +679,21 @@ async function checkParticipants() {
     const statusEl = document.getElementById('participant-status');
     if (!statusEl) return;
 
-    const res = await fetch(`/api/sessions/${SESSION_ID}/participants`);
-    const data = await res.json();
-    const banner = document.getElementById('invite-banner');
-    const count = (data.participants || []).length;
+    try {
+        const res = await fetch(`/api/sessions/${SESSION_ID}/participants`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const banner = document.getElementById('invite-banner');
+        const count = (data.participants || []).length;
 
-    if (count >= 2) {
-        statusEl.textContent = `${count} participants`;
-        statusEl.className = 'btn btn-sm';
-        if (banner) banner.style.display = 'none';
-    } else {
-        statusEl.textContent = 'Waiting for other party...';
-        statusEl.className = 'btn btn-sm';
+        if (count >= 2) {
+            statusEl.textContent = `${count} participants`;
+            if (banner) banner.style.display = 'none';
+        } else {
+            statusEl.textContent = 'Waiting for other party...';
+        }
+    } catch (err) {
+        // Silently ignore participant check errors
     }
 }
 
