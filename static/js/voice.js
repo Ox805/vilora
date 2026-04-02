@@ -107,40 +107,43 @@
         if (textarea.dataset.micAttached) return;
         textarea.dataset.micAttached = 'true';
 
-        // Find the right container to place the mic button
-        const iconsContainer = textarea.closest('.message-input-bar')?.querySelector('.message-input-icons');
-        let wrapper;
-        if (iconsContainer) {
-            wrapper = iconsContainer;
-        } else {
-            wrapper = textarea.closest('.form-group');
-            if (!wrapper) {
-                wrapper = document.createElement('div');
-                wrapper.className = 'textarea-mic-wrapper';
-                textarea.parentNode.insertBefore(wrapper, textarea);
-                wrapper.appendChild(textarea);
-            }
-        }
-
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'btn-mic';
         btn.title = 'Voice input';
         btn.innerHTML = MIC_SVG;
-        // Prevent mic button from stealing focus/selection from textarea
         btn.addEventListener('mousedown', (e) => e.preventDefault());
         btn.addEventListener('click', (e) => {
             e.preventDefault();
             toggleMic(btn, textarea);
         });
 
-        // If inside icons container, insert before send button; otherwise append
-        const sendBtn = wrapper.querySelector('.send-icon-btn');
-        if (sendBtn) {
-            wrapper.insertBefore(btn, sendBtn);
-        } else {
-            wrapper.appendChild(btn);
+        // For session message input bar, use the icons container
+        const iconsContainer = textarea.closest('.message-input-bar')?.querySelector('.message-input-icons');
+        if (iconsContainer) {
+            const sendBtn = iconsContainer.querySelector('.send-icon-btn');
+            if (sendBtn) {
+                iconsContainer.insertBefore(btn, sendBtn);
+            } else {
+                iconsContainer.appendChild(btn);
+            }
+            return;
         }
+
+        // For all other textareas: wrap in a textarea-mic-wrapper
+        // This wrapper ONLY contains the textarea and mic button
+        // Polish bar stays outside as a sibling of the wrapper
+        const existing = textarea.closest('.textarea-mic-wrapper');
+        if (existing) {
+            existing.appendChild(btn);
+            return;
+        }
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'textarea-mic-wrapper';
+        textarea.parentNode.insertBefore(wrapper, textarea);
+        wrapper.appendChild(textarea);
+        wrapper.appendChild(btn);
     }
 
     // Attach to all textareas on page load

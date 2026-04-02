@@ -38,7 +38,7 @@ function attachPolish(textareaId, options = {}) {
     preview.className = 'polish-preview';
     preview.style.display = 'none';
 
-    // Insert polish into icons area if in input bar, otherwise after the form-group
+    // Insert polish into icons area if in input bar, otherwise after textarea/mic-wrapper
     if (inputBar) {
         const iconsContainer = inputBar.querySelector('.message-input-icons');
         if (iconsContainer) {
@@ -48,15 +48,12 @@ function attachPolish(textareaId, options = {}) {
         }
         inputBar.after(preview);
     } else {
-        // Find the form-group container and insert after it
-        const formGroup = textarea.closest('.form-group');
-        if (formGroup) {
-            formGroup.appendChild(polishBar);
-            formGroup.appendChild(preview);
-        } else {
-            textarea.parentElement.appendChild(polishBar);
-            textarea.parentElement.appendChild(preview);
-        }
+        // Place polish bar AFTER the textarea (or its mic wrapper if it exists)
+        // This keeps it independent of the mic button
+        const micWrapper = textarea.closest('.textarea-mic-wrapper');
+        const insertAfter = micWrapper || textarea;
+        insertAfter.after(preview);
+        insertAfter.after(polishBar);
     }
 
     // Store reference
