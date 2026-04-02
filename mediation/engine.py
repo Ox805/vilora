@@ -652,18 +652,14 @@ class MediationEngine:
         }
 
     def _council_peer_review(self, advisor_results):
-        """Anonymize advisor responses and run peer review."""
-        # Shuffle and anonymize
-        labels = ['A', 'B', 'C', 'D', 'E']
-        shuffled = list(advisor_results)
-        random.shuffle(shuffled)
-
-        review_text = "Five advisors have analyzed the same question. Their responses are below, anonymized.\n\n"
-        for i, (_, response) in enumerate(shuffled):
-            review_text += f"**Response {labels[i]}:**\n{response}\n\n"
+        """Review all advisor responses and identify strengths, blind spots, and gaps."""
+        review_text = "Five AI advisors have analyzed the same question. Their responses are below.\n\n"
+        for name, response in advisor_results:
+            review_text += f"**{name}:**\n{response}\n\n"
 
         review_text += (
-            "As an impartial reviewer, answer these three questions:\n"
+            "As an impartial reviewer, answer these three questions. "
+            "Refer to each advisor by their name (The Contrarian, The First Principles Thinker, etc.).\n"
             "1. Which response is the strongest and why?\n"
             "2. Which response has the biggest blind spot and what is it?\n"
             "3. What did ALL FIVE responses miss? What important consideration did none of them raise?\n\n"
