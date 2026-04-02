@@ -881,17 +881,15 @@ body.modal-open {
 }
 
 .form-group .polish-bar {
-    position: absolute;
-    right: 36px;
-    bottom: 6px;
-    margin: 0;
+    position: static;
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 0.25rem;
     z-index: 2;
 }
 
-.form-group:has(.btn-mic) textarea,
-.form-group:has(.polish-bar) textarea {
-    padding-right: 5.5rem;
-    padding-bottom: 0.75rem;
+.form-group:has(.btn-mic) textarea {
+    padding-right: 2.5rem;
 }
 
 .textarea-mic-wrapper {
@@ -1280,11 +1278,6 @@ body.summary-open .container {
     margin-bottom: 1.25rem;
     font-size: 0.9rem;
     line-height: 1.5;
-}
-
-.council-modal-content .polish-bar {
-    margin-top: 0.25rem;
-    margin-bottom: 0;
 }
 
 .council-session-toggle {

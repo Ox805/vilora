@@ -38,20 +38,25 @@ function attachPolish(textareaId, options = {}) {
     preview.className = 'polish-preview';
     preview.style.display = 'none';
 
-    // Insert polish into icons area if in input bar, otherwise after textarea
+    // Insert polish into icons area if in input bar, otherwise after the form-group
     if (inputBar) {
         const iconsContainer = inputBar.querySelector('.message-input-icons');
         if (iconsContainer) {
-            // Insert just the button directly (no wrapper div) for clean flex layout
             iconsContainer.insertBefore(polishBtn, iconsContainer.firstChild);
         } else {
             wrapper.appendChild(polishBar);
         }
-        // Preview goes after the input bar
         inputBar.after(preview);
     } else {
-        textarea.after(polishBar);
-        polishBar.after(preview);
+        // Find the form-group container and insert after it
+        const formGroup = textarea.closest('.form-group');
+        if (formGroup) {
+            formGroup.appendChild(polishBar);
+            formGroup.appendChild(preview);
+        } else {
+            textarea.parentElement.appendChild(polishBar);
+            textarea.parentElement.appendChild(preview);
+        }
     }
 
     // Store reference
