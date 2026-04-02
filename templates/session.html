@@ -46,6 +46,9 @@
                 <textarea id="invite-message" rows="2"
                     placeholder="e.g., Hey, I thought it might help to talk this through with some guidance."></textarea>
             </div>
+            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.85rem; color: var(--text-light); margin-bottom: 0.75rem;">
+                <input type="checkbox" id="invite-cc-me"> Send me a copy
+            </label>
             <div id="invite-status" style="display:none"></div>
             <div class="form-actions">
                 <button type="button" onclick="hideInviteModal()" class="btn">Cancel</button>
@@ -622,6 +625,7 @@ function hideInviteModal() {
 async function sendInviteEmail() {
     const email = document.getElementById('invite-email').value.trim();
     const message = document.getElementById('invite-message').value.trim();
+    const ccMe = document.getElementById('invite-cc-me').checked;
     const statusEl = document.getElementById('invite-status');
     const btn = document.getElementById('send-invite-btn');
 
@@ -639,7 +643,7 @@ async function sendInviteEmail() {
         const res = await fetch(`/api/sessions/${SESSION_ID}/invite`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, message })
+            body: JSON.stringify({ email, message, cc_me: ccMe })
         });
         const data = await res.json();
         if (data.success) {

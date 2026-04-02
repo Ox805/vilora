@@ -538,6 +538,7 @@ def invite_to_session(session_id):
     data = request.get_json()
     email = data.get('email', '').strip().lower()
     personal_message = data.get('message', '').strip()
+    cc_me = data.get('cc_me', False)
 
     if not email or '@' not in email:
         return jsonify({'success': False, 'error': 'Please enter a valid email address'}), 400
@@ -558,6 +559,16 @@ def invite_to_session(session_id):
         join_link=join_link,
         personal_message=personal_message or None
     )
+
+    # Send a copy to the inviter if requested
+    if success and cc_me:
+        send_invite_email(
+            to_email=current_user.email,
+            creator_name=current_user.display_name,
+            topic=med_session.topic,
+            join_link=join_link,
+            personal_message=personal_message or None
+        )
 
     if success:
         # Track the invite
