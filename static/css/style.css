@@ -1388,6 +1388,18 @@ body.summary-open .container {
     color: var(--text);
 }
 
+.nudge-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.nudge-count {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    cursor: help;
+}
+
 .btn-nudge {
     color: var(--primary);
     border-color: var(--primary-light);
@@ -1396,6 +1408,12 @@ body.summary-open .container {
 
 .btn-nudge:hover {
     background: var(--pale);
+}
+
+.btn-nudge:disabled {
+    color: var(--text-muted);
+    border-color: var(--border);
+    cursor: not-allowed;
 }
 
 .participants-section-label {

@@ -285,30 +285,42 @@ async function showParticipantsPanel() {
     // Joined participants
     if (participants.length > 0) {
         html += '<div class="participants-section-label">Joined</div>';
-        html += participants.map(p => `
+        html += participants.map(p => {
+            const maxed = p.nudge_count >= 4;
+            return `
             <div class="participant-row">
                 <div class="participant-info">
                     <span class="participant-name">${escapeHtml(p.display_name)}</span>
                 </div>
-                <button class="btn btn-sm btn-nudge" id="nudge-${p.id}" onclick="nudgeOne(${p.id}, '${escapeHtml(p.display_name)}')"
-                    title="Send ${escapeHtml(p.display_name)} a friendly reminder email">Nudge</button>
-            </div>
-        `).join('');
+                <div class="nudge-controls">
+                    <span class="nudge-count" title="Nudges sent: ${p.nudge_count} of 4. You can nudge once every 24 hours, up to 4 times total.">${p.nudge_count}/4</span>
+                    <button class="btn btn-sm btn-nudge" id="nudge-${p.id}" onclick="nudgeOne(${p.id}, '${escapeHtml(p.display_name)}')"
+                        ${maxed ? 'disabled' : ''}
+                        title="${maxed ? 'Maximum nudges reached (4 of 4)' : 'Send ' + escapeHtml(p.display_name) + ' a friendly reminder. ' + p.nudge_count + ' of 4 used. Once per 24 hours.'}">${maxed ? 'Maxed' : 'Nudge'}</button>
+                </div>
+            </div>`;
+        }).join('');
     }
 
     // Pending invites
     if (pendingInvites.length > 0) {
         html += '<div class="participants-section-label" style="margin-top: 1rem;">Invited (pending)</div>';
-        html += pendingInvites.map(inv => `
+        html += pendingInvites.map(inv => {
+            const maxed = inv.nudge_count >= 4;
+            return `
             <div class="participant-row participant-pending">
                 <div class="participant-info">
                     <span class="participant-name participant-email">${escapeHtml(inv.email)}</span>
                     <span class="participant-pending-label">Not yet joined</span>
                 </div>
-                <button class="btn btn-sm btn-nudge" onclick="nudgeByEmail('${escapeHtml(inv.email)}', this)"
-                    title="Send another reminder to ${escapeHtml(inv.email)}">Nudge</button>
-            </div>
-        `).join('');
+                <div class="nudge-controls">
+                    <span class="nudge-count" title="Nudges sent: ${inv.nudge_count} of 4. You can nudge once every 24 hours, up to 4 times total.">${inv.nudge_count}/4</span>
+                    <button class="btn btn-sm btn-nudge" onclick="nudgeByEmail('${escapeHtml(inv.email)}', this)"
+                        ${maxed ? 'disabled' : ''}
+                        title="${maxed ? 'Maximum nudges reached (4 of 4)' : 'Send another reminder. ' + inv.nudge_count + ' of 4 used. Once per 24 hours.'}">${maxed ? 'Maxed' : 'Nudge'}</button>
+                </div>
+            </div>`;
+        }).join('');
     }
 
     if (!html) {
@@ -336,7 +348,7 @@ async function nudgeOne(userId, name) {
         const data = await res.json();
         if (data.success) {
             btn.textContent = 'Sent!';
-            setTimeout(() => { btn.textContent = 'Nudge'; btn.disabled = false; }, 3000);
+            setTimeout(() => showParticipantsPanel(), 2000);
         } else {
             alert(data.error || 'Could not send nudge.');
             btn.textContent = 'Nudge';
@@ -362,7 +374,7 @@ async function nudgeByEmail(email, btn) {
         const data = await res.json();
         if (data.success) {
             btn.textContent = 'Sent!';
-            setTimeout(() => { btn.textContent = 'Nudge'; btn.disabled = false; }, 3000);
+            setTimeout(() => showParticipantsPanel(), 2000);
         } else {
             alert(data.error || 'Could not send nudge.');
             btn.textContent = 'Nudge';

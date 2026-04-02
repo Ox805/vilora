@@ -717,10 +717,41 @@ def nudge_participant(session_id):
     target_user_id = data.get('user_id')
     target_email = data.get('email', '').strip().lower()
 
+    # Determine the nudge target identifier for logging
+    if target_email:
+        nudge_target = target_email
+    elif target_user_id:
+        target_user = User.get_by_id(db, target_user_id)
+        nudge_target = target_user.email if target_user else str(target_user_id)
+    else:
+        return jsonify({'success': False, 'error': 'No target specified.'}), 400
+
+    # Check nudge limits: max 4 total, max 1 per 24 hours
+    cur = _exec(db,
+        "SELECT COUNT(*) as total FROM nudge_log WHERE session_id = ? AND nudger_id = ? AND target = ?",
+        (session_id, current_user.id, nudge_target)
+    )
+    total_nudges = cur.fetchone()['total']
+    if total_nudges >= 4:
+        return jsonify({'success': False, 'error': 'You\'ve reached the maximum of 4 nudges for this person.'}), 400
+
+    from models.database import _is_postgres
+    if _is_postgres():
+        time_query = "created_at > CURRENT_TIMESTAMP - INTERVAL '24 hours'"
+    else:
+        time_query = "created_at > datetime('now', '-24 hours')"
+    cur = _exec(db,
+        f"SELECT COUNT(*) as recent FROM nudge_log WHERE session_id = ? AND nudger_id = ? AND target = ? AND {time_query}",
+        (session_id, current_user.id, nudge_target)
+    )
+    recent_nudges = cur.fetchone()['recent']
+    if recent_nudges > 0:
+        return jsonify({'success': False, 'error': 'You can only nudge this person once every 24 hours.'}), 400
+
     session_link = url_for('session_room', session_id=session_id, _external=True)
     join_link = url_for('join_session', code=med_session.invite_code, _external=True)
 
-    nudged = 0
+    success = False
 
     # Nudge a pending invite by email
     if target_email:
@@ -732,31 +763,27 @@ def nudge_participant(session_id):
             join_link=join_link,
             personal_message="Just a friendly reminder that the conversation is waiting for you."
         )
-        if success:
-            nudged += 1
 
-    # Nudge joined participants
-    else:
-        participants = med_session.get_participants(db)
-        for p in participants:
-            if p.id == current_user.id:
-                continue
-            if target_user_id and p.id != target_user_id:
-                continue
+    # Nudge a joined participant
+    elif target_user_id:
+        target_user = User.get_by_id(db, target_user_id)
+        if target_user:
             success = send_nudge_email(
-                to_email=p.email,
+                to_email=target_user.email,
                 nudger_name=current_user.display_name,
-                recipient_name=p.display_name,
+                recipient_name=target_user.display_name,
                 topic=med_session.topic,
                 session_link=session_link
             )
-            if success:
-                nudged += 1
 
-    if nudged > 0:
-        return jsonify({'success': True, 'nudged': nudged})
-    elif not target_email and not target_user_id:
-        return jsonify({'success': False, 'error': 'No other participants to nudge. Send an invite first.'}), 400
+    if success:
+        # Log the nudge
+        _exec(db,
+            "INSERT INTO nudge_log (session_id, nudger_id, target) VALUES (?, ?, ?)",
+            (session_id, current_user.id, nudge_target)
+        )
+        db.commit()
+        return jsonify({'success': True, 'total_nudges': total_nudges + 1})
     else:
         return jsonify({'success': False, 'error': 'Could not send nudge. Please try again.'}), 500
 
@@ -833,16 +860,40 @@ def get_participants(session_id):
 
     participants = med_session.get_participants(db)
 
+    # Get nudge counts for this user
+    nudge_counts = {}
+    cur = _exec(db,
+        "SELECT target, COUNT(*) as count FROM nudge_log WHERE session_id = ? AND nudger_id = ? GROUP BY target",
+        (session_id, current_user.id)
+    )
+    for r in cur.fetchall():
+        nudge_counts[r['target']] = r['count']
+
+    # Build participant list with nudge info
+    participant_list = []
+    for p in participants:
+        participant_list.append({
+            'id': p.id,
+            'display_name': p.display_name,
+            'nudge_count': nudge_counts.get(p.email, 0)
+        })
+
     # Get pending invites
     cur = _exec(db,
         "SELECT email, created_at FROM session_invites WHERE session_id = ? AND status = 'pending'",
         (session_id,)
     )
-    pending_invites = [{'email': r['email'], 'created_at': str(r['created_at'])} for r in cur.fetchall()]
+    pending_invites = []
+    for r in cur.fetchall():
+        pending_invites.append({
+            'email': r['email'],
+            'created_at': str(r['created_at']),
+            'nudge_count': nudge_counts.get(r['email'], 0)
+        })
 
     return jsonify({
         'success': True,
-        'participants': [{'id': p.id, 'display_name': p.display_name} for p in participants],
+        'participants': participant_list,
         'pending_invites': pending_invites
     })
 
