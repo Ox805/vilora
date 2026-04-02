@@ -769,60 +769,103 @@ body {
     flex-shrink: 0;
 }
 
-.message-input-row {
+.message-input-bar {
     display: flex;
-    gap: 0.5rem;
     align-items: flex-end;
-}
-
-.message-input-wrap {
-    flex: 1;
-    position: relative;
-}
-
-.message-input-area textarea {
-    width: 100%;
-    padding: 0.75rem;
-    padding-right: 2.5rem;
     border: 1px solid var(--border);
-    border-radius: var(--radius);
-    font-family: inherit;
-    font-size: 0.95rem;
-    resize: none;
-    box-sizing: border-box;
+    border-radius: 1.5rem;
+    padding: 0.4rem 0.5rem 0.4rem 1rem;
+    background: var(--bg-card);
+    transition: border-color 0.2s;
 }
 
-.message-input-area textarea:focus {
-    outline: none;
+.message-input-bar:focus-within {
     border-color: var(--primary);
 }
 
-.message-input-buttons {
+.message-input-bar textarea {
+    flex: 1;
+    border: none;
+    outline: none;
+    padding: 0.35rem 0;
+    font-family: inherit;
+    font-size: 0.95rem;
+    resize: none;
+    background: transparent;
+    line-height: 1.4;
+    max-height: 120px;
+    overflow-y: auto;
+}
+
+.message-input-icons {
     display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
+    align-items: center;
+    gap: 0.25rem;
+    flex-shrink: 0;
+    padding-bottom: 0.15rem;
 }
 
-.message-input-wrap .btn-mic {
-    position: absolute;
-    right: 8px;
-    bottom: 8px;
+.input-icon-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.35rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    transition: all 0.15s;
 }
 
-.message-input-wrap .polish-bar {
-    position: absolute;
-    left: 8px;
-    bottom: 6px;
+.input-icon-btn:hover {
+    color: var(--primary);
+    background: var(--pale);
+}
+
+.send-icon-btn {
+    color: var(--primary);
+}
+
+.send-icon-btn:hover {
+    background: var(--primary);
+    color: white;
+}
+
+/* Polish button inside the input bar */
+.message-input-bar .polish-bar {
+    flex-shrink: 0;
+    padding-bottom: 0.15rem;
 }
 
 .btn-polish {
     font-size: 0.75rem;
-    padding: 0.2rem 0.5rem;
-    opacity: 0.6;
+    padding: 0.2rem 0.6rem;
+    border-radius: 1rem;
+    opacity: 0.5;
+    border: 1px solid var(--border);
+    background: none;
+    cursor: pointer;
+    color: var(--text-light);
+    transition: all 0.15s;
 }
 
 .btn-polish:hover {
     opacity: 1;
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+/* Mic button inside the input bar */
+.message-input-bar .btn-mic {
+    position: static;
+    padding: 0.35rem;
+    border: none;
+    border-radius: 50%;
+}
+
+.message-input-bar .btn-mic:hover {
+    background: var(--pale);
 }
 
 .form-group {

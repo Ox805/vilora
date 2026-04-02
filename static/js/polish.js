@@ -14,8 +14,9 @@ function attachPolish(textareaId, options = {}) {
     const textarea = document.getElementById(textareaId);
     if (!textarea) return;
 
-    // Find the wrapper (message-input-wrap or parent)
-    const wrapper = textarea.closest('.message-input-wrap') || textarea.parentElement;
+    // Find the right container
+    const inputBar = textarea.closest('.message-input-bar');
+    const wrapper = inputBar || textarea.parentElement;
 
     // Create the polish button
     const polishBtn = document.createElement('button');
@@ -37,9 +38,20 @@ function attachPolish(textareaId, options = {}) {
     preview.className = 'polish-preview';
     preview.style.display = 'none';
 
-    // Insert inside the wrapper
-    wrapper.appendChild(polishBar);
-    wrapper.appendChild(preview);
+    // Insert polish bar into icons area if in input bar, otherwise after textarea
+    if (inputBar) {
+        const iconsContainer = inputBar.querySelector('.message-input-icons');
+        if (iconsContainer) {
+            iconsContainer.insertBefore(polishBar, iconsContainer.firstChild);
+        } else {
+            wrapper.appendChild(polishBar);
+        }
+        // Preview goes after the input bar
+        inputBar.after(preview);
+    } else {
+        textarea.after(polishBar);
+        polishBar.after(preview);
+    }
 
     // Store reference
     polishBtn.id = textareaId + '-polish-btn';

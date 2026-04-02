@@ -107,16 +107,19 @@
         if (textarea.dataset.micAttached) return;
         textarea.dataset.micAttached = 'true';
 
-        // Use existing wrapper if available, otherwise create one
-        let wrapper = textarea.closest('.message-input-wrap');
-        if (!wrapper) {
+        // Find the right container to place the mic button
+        const iconsContainer = textarea.closest('.message-input-bar')?.querySelector('.message-input-icons');
+        let wrapper;
+        if (iconsContainer) {
+            wrapper = iconsContainer;
+        } else {
             wrapper = textarea.closest('.form-group');
-        }
-        if (!wrapper) {
-            wrapper = document.createElement('div');
-            wrapper.className = 'textarea-mic-wrapper';
-            textarea.parentNode.insertBefore(wrapper, textarea);
-            wrapper.appendChild(textarea);
+            if (!wrapper) {
+                wrapper = document.createElement('div');
+                wrapper.className = 'textarea-mic-wrapper';
+                textarea.parentNode.insertBefore(wrapper, textarea);
+                wrapper.appendChild(textarea);
+            }
         }
 
         const btn = document.createElement('button');
@@ -131,7 +134,13 @@
             toggleMic(btn, textarea);
         });
 
-        wrapper.appendChild(btn);
+        // If inside icons container, insert before send button; otherwise append
+        const sendBtn = wrapper.querySelector('.send-icon-btn');
+        if (sendBtn) {
+            wrapper.insertBefore(btn, sendBtn);
+        } else {
+            wrapper.appendChild(btn);
+        }
     }
 
     // Attach to all textareas on page load
