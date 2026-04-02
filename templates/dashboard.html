@@ -452,11 +452,14 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-// Attach polish to textareas
+loadSessions();
+</script>
+{% endblock %}
+
+{% block scripts %}
+<script>
 attachPolish('perspective');
 attachPolish('raw-input');
 attachPolish('personal-topic');
-
-loadSessions();
 </script>
 {% endblock %}

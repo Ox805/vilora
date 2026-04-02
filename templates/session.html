@@ -318,9 +318,6 @@ async function checkParticipants() {
     }
 }
 
-// Attach polish to the message input
-attachPolish('message-input');
-
 // Initial load and polling
 loadMessages();
 if (!IS_PERSONAL) checkParticipants();
@@ -328,5 +325,11 @@ polling = setInterval(() => {
     loadMessages();
     if (!IS_PERSONAL) checkParticipants();
 }, 5000);
+</script>
+{% endblock %}
+
+{% block scripts %}
+<script>
+attachPolish('message-input');
 </script>
 {% endblock %}
