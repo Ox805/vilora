@@ -331,7 +331,7 @@ async function showParticipantsPanel() {
 
     // Pending invites
     if (pendingInvites.length > 0) {
-        html += '<div class="participants-section-header" style="margin-top: 1rem;"><span class="participants-section-label">Invited (pending)</span><span class="participants-section-label nudge-header-label">Nudge</span></div>';
+        html += '<div class="participants-section-label" style="margin-top: 1rem;">Invited (pending)</div>';
         html += pendingInvites.map(inv => {
             const maxed = inv.nudge_count >= 4;
             return `
