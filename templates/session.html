@@ -58,8 +58,8 @@
         </div>
     </div>
     {% else %}
-    <!-- Welcome modal for invited participants -->
-    <div id="welcome-modal" class="modal">
+    <!-- Welcome modal for invited participants (shown only once) -->
+    <div id="welcome-modal" class="modal" style="display:none">
         <div class="modal-content welcome-modal-content">
             <h2>Welcome to Vilora</h2>
             <p>Hi <strong>{{ current_user.display_name }}</strong>, you've been invited by
@@ -795,8 +795,17 @@ function escapeHtml(text) {
 
 function dismissWelcome() {
     document.getElementById('welcome-modal').style.display = 'none';
+    localStorage.setItem('vilora-welcome-seen-' + SESSION_ID, 'true');
     document.getElementById('message-input').focus();
 }
+
+// Show welcome modal only if not previously dismissed
+(function() {
+    const welcomeModal = document.getElementById('welcome-modal');
+    if (welcomeModal && !localStorage.getItem('vilora-welcome-seen-' + SESSION_ID)) {
+        welcomeModal.style.display = 'flex';
+    }
+})();
 
 function showInviteModal() {
     document.getElementById('invite-modal').style.display = 'flex';
