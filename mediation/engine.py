@@ -468,9 +468,13 @@ class MediationEngine:
                     "content": f"[{name}]: {msg.content}"
                 })
             elif msg.msg_type == 'mediator':
+                # Strip summary prefix if present
+                content = msg.content
+                if '<!--SUMMARY-->' in content:
+                    content = content.split('<!--SUMMARY-->')[1].strip()
                 conversation.append({
                     "role": "assistant",
-                    "content": msg.content
+                    "content": content
                 })
 
         return conversation
@@ -714,6 +718,27 @@ class MediationEngine:
         except Exception as e:
             sys.stderr.write(f"[Vilora Council] Synthesis error: {e}\n")
             return "Synthesis was unable to be completed."
+
+    def summarize_response(self, response_text):
+        """Generate a 1-2 sentence summary of a Vilora response."""
+        if not self.client or len(response_text) < 200:
+            return None  # Short responses don't need summaries
+
+        try:
+            result = self.client.messages.create(
+                model="claude-sonnet-4-20250514",
+                max_tokens=100,
+                system=(
+                    "Summarize the following response in 1-2 short sentences. "
+                    "Capture the key point or recommendation. Be concise and direct. "
+                    "Respond with ONLY the summary, nothing else."
+                ),
+                messages=[{"role": "user", "content": response_text}]
+            )
+            return result.content[0].text.strip()
+        except Exception as e:
+            sys.stderr.write(f"[Vilora] Summary generation error: {e}\n")
+            return None
 
     def _fallback_response(self, messages):
         return (

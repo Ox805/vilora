@@ -792,6 +792,15 @@ body.modal-open {
 
 .message-content { white-space: pre-wrap; line-height: 1.5; word-break: break-word; overflow-wrap: break-word; }
 
+.message-summary {
+    font-weight: 500;
+    color: var(--accent);
+}
+
+.message-mediator .message-time {
+    color: var(--text-muted);
+}
+
 .btn-expand-msg {
     background: none;
     border: none;

@@ -247,11 +247,15 @@ function localTime(ts) {
     return d.toLocaleTimeString();
 }
 
-function getPreview(text) {
-    // Extract first 2-3 sentences as a preview
-    const sentences = text.match(/[^.!?]+[.!?]+/g);
-    if (!sentences || sentences.length <= 3) return text;
-    return sentences.slice(0, 3).join('').trim();
+const SUMMARY_DELIMITER = '<!--SUMMARY-->';
+
+function parseMediatorContent(content) {
+    // Split summary from full response if delimiter exists
+    if (content.includes(SUMMARY_DELIMITER)) {
+        const parts = content.split(SUMMARY_DELIMITER);
+        return { summary: parts[0].trim(), full: parts[1].trim() };
+    }
+    return { summary: null, full: content };
 }
 
 function toggleFullResponse(msgId) {
@@ -286,19 +290,23 @@ function renderMessages(messages) {
 
         if (m.msg_type === 'mediator') {
             const canDelete = IS_CREATOR;
-            const full = escapeHtml(m.content);
-            const preview = getPreview(m.content);
-            const needsExpand = preview.length < m.content.length;
+            const parsed = parseMediatorContent(m.content);
+            const fullHtml = escapeHtml(parsed.full);
+
+            let contentHtml;
+            if (parsed.summary) {
+                contentHtml = `
+                <div class="message-content message-summary" id="preview-${m.id}">${escapeHtml(parsed.summary)}</div>
+                <div class="message-content message-full" id="full-${m.id}" style="display:none">${fullHtml}</div>
+                <button class="btn-expand-msg" id="expand-btn-${m.id}" onclick="toggleFullResponse(${m.id})">View full response</button>`;
+            } else {
+                contentHtml = `<div class="message-content">${fullHtml}</div>`;
+            }
 
             return `<div class="message message-mediator" data-message-id="${m.id}">
                 <div class="message-author">Vilora${canDelete ? deleteBtn : ''}</div>
-                ${needsExpand ? `
-                <div class="message-content message-preview" id="preview-${m.id}">${escapeHtml(preview)}</div>
-                <div class="message-content message-full" id="full-${m.id}" style="display:none">${full}</div>
-                <button class="btn-expand-msg" id="expand-btn-${m.id}" onclick="toggleFullResponse(${m.id})">View full response</button>
-                ` : `
-                <div class="message-content">${full}</div>
-                `}
+                ${contentHtml}
+                <div class="message-time">${localTime(m.created_at)}</div>
                 ${reactionBar}
             </div>`;
         } else if (m.msg_type === 'council') {

@@ -303,6 +303,18 @@ def save_extracted_memories(db, user_id, session_id, memories):
     db.commit()
 
 
+SUMMARY_DELIMITER = '<!--SUMMARY-->'
+
+def create_mediator_message(db, session_id, ai_response):
+    """Create a mediator message with an AI-generated summary prefix."""
+    summary = mediation_engine.summarize_response(ai_response)
+    if summary:
+        content = f"{summary}{SUMMARY_DELIMITER}{ai_response}"
+    else:
+        content = ai_response
+    return Message.create(db, session_id, None, content, msg_type='mediator')
+
+
 # --- About Me Page ---
 
 @app.route('/about-me')
@@ -676,7 +688,7 @@ def create_session():
                 creator_name=current_user.display_name,
                 session_mode=session_mode
             )
-            Message.create(db, med_session.id, None, ai_response, msg_type='mediator')
+            create_mediator_message(db, med_session.id, ai_response)
         except Exception as e:
             print(f"Warning: Could not generate welcome message: {e}")
 
@@ -903,7 +915,7 @@ def send_message(session_id):
                 participant_memories=participant_memories or None,
                 session_mode=med_session.session_mode
             )
-            ai_msg = Message.create(db, session_id, None, ai_response, msg_type='mediator')
+            ai_msg = create_mediator_message(db, session_id, ai_response)
     except Exception as e:
         sys.stderr.write(f"[Vilora] Mediation error: {e}\n")
 
@@ -1085,7 +1097,7 @@ def ask_vilora(session_id):
             participant_memories=participant_memories or None,
             session_mode=med_session.session_mode
         )
-        ai_msg = Message.create(db, session_id, None, ai_response, msg_type='mediator')
+        ai_msg = create_mediator_message(db, session_id, ai_response)
         return jsonify({'success': True, 'mediator_message': ai_msg.to_dict()})
     except Exception as e:
         sys.stderr.write(f"[Vilora] Ask Vilora error: {e}\n")
