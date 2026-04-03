@@ -55,9 +55,73 @@
     <footer class="footer">
         <p>Vilora | Strength through dialogue</p>
         <p style="color: var(--text-muted); font-size: 0.75rem; margin-top: 0.25rem;">AI-powered mediation, collaboration, brainstorming, and decision-making</p>
-        <p style="margin-top: 0.5rem;"><a href="mailto:support@maiatech.ai?subject=Vilora Feedback" class="feedback-link">Send us feedback</a></p>
+        <p style="margin-top: 0.5rem;"><a href="#" onclick="showFeedbackModal(event)" class="feedback-link">Send us feedback</a></p>
+
+        <!-- Feedback modal -->
+        <div id="feedback-modal" class="modal" style="display:none">
+            <div class="modal-content" style="max-width: 440px;">
+                <h2>Send us feedback</h2>
+                <p style="color: var(--text-light); margin-bottom: 1rem; font-size: 0.9rem;">
+                    We'd love to hear your thoughts, suggestions, or anything you'd like to see improved.
+                </p>
+                <div class="form-group">
+                    <label for="feedback-text">Your feedback</label>
+                    <textarea id="feedback-text" rows="4" placeholder="What's on your mind?"></textarea>
+                </div>
+                <div id="feedback-status" style="display:none"></div>
+                <div class="form-actions">
+                    <button type="button" onclick="hideFeedbackModal()" class="btn">Cancel</button>
+                    <button type="button" onclick="sendFeedback()" class="btn btn-primary" id="feedback-btn">Send</button>
+                </div>
+            </div>
+        </div>
     </footer>
 
+    <script>
+    function showFeedbackModal(e) {
+        e.preventDefault();
+        document.getElementById('feedback-modal').style.display = 'flex';
+        document.getElementById('feedback-text').focus();
+    }
+    function hideFeedbackModal() {
+        document.getElementById('feedback-modal').style.display = 'none';
+        document.getElementById('feedback-text').value = '';
+        document.getElementById('feedback-status').style.display = 'none';
+    }
+    async function sendFeedback() {
+        const text = document.getElementById('feedback-text').value.trim();
+        const statusEl = document.getElementById('feedback-status');
+        const btn = document.getElementById('feedback-btn');
+        if (!text) return;
+
+        btn.disabled = true;
+        btn.textContent = 'Sending...';
+
+        try {
+            const res = await fetch('/api/feedback', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text })
+            });
+            const data = await res.json();
+            if (data.success) {
+                statusEl.innerHTML = '<p style="color: var(--primary); background: var(--pale); padding: 0.5rem; border-radius: var(--radius); font-size: 0.9rem;">Thank you! Your feedback has been sent.</p>';
+                statusEl.style.display = 'block';
+                document.getElementById('feedback-text').value = '';
+                setTimeout(hideFeedbackModal, 2500);
+            } else {
+                statusEl.innerHTML = '<p class="error-msg">Could not send feedback. Please try again.</p>';
+                statusEl.style.display = 'block';
+            }
+        } catch (err) {
+            statusEl.innerHTML = '<p class="error-msg">Could not send feedback. Please try again.</p>';
+            statusEl.style.display = 'block';
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Send';
+        }
+    }
+    </script>
     <script src="{{ url_for('static', filename='js/api.js') }}"></script>
     <script src="{{ url_for('static', filename='js/polish.js') }}"></script>
     <script src="{{ url_for('static', filename='js/voice.js') }}"></script>

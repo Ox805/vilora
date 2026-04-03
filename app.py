@@ -449,6 +449,39 @@ def get_council_result(result_id):
     })
 
 
+# --- Feedback ---
+
+@app.route('/api/feedback', methods=['POST'])
+def submit_feedback():
+    data = request.get_json()
+    text = data.get('text', '').strip()
+
+    if not text:
+        return jsonify({'success': False, 'error': 'Feedback is empty'}), 400
+
+    user_info = ''
+    if current_user.is_authenticated:
+        user_info = f"From: {current_user.display_name} ({current_user.email})"
+    else:
+        user_info = "From: Anonymous (not logged in)"
+
+    from notifications import send_email
+    success = send_email(
+        to_email='support@maiatech.ai',
+        subject=f'Vilora Feedback: {text[:50]}',
+        html_body=f"""
+        <h3>Vilora User Feedback</h3>
+        <p><strong>{user_info}</strong></p>
+        <p style="white-space: pre-wrap;">{text}</p>
+        <hr>
+        <p style="color: #888; font-size: 12px;">Sent from the Vilora feedback form</p>
+        """,
+        text_body=f"Vilora User Feedback\n\n{user_info}\n\n{text}"
+    )
+
+    return jsonify({'success': success})
+
+
 # --- Polish Helper ---
 
 @app.route('/api/polish', methods=['POST'])
