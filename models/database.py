@@ -111,6 +111,17 @@ def db_init():
                 invited_by INTEGER NOT NULL REFERENCES users(id),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )""",
+            """CREATE TABLE IF NOT EXISTS council_results (
+                id SERIAL PRIMARY KEY,
+                session_id INTEGER REFERENCES mediation_sessions(id),
+                requested_by INTEGER NOT NULL REFERENCES users(id),
+                question TEXT NOT NULL,
+                context TEXT,
+                advisors TEXT NOT NULL,
+                review TEXT NOT NULL,
+                synthesis TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )""",
             """CREATE TABLE IF NOT EXISTS nudge_log (
                 id SERIAL PRIMARY KEY,
                 session_id INTEGER NOT NULL REFERENCES mediation_sessions(id),
@@ -228,6 +239,20 @@ def db_init():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (session_id) REFERENCES mediation_sessions(id),
                 FOREIGN KEY (invited_by) REFERENCES users(id)
+            );
+
+            CREATE TABLE IF NOT EXISTS council_results (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id INTEGER,
+                requested_by INTEGER NOT NULL,
+                question TEXT NOT NULL,
+                context TEXT,
+                advisors TEXT NOT NULL,
+                review TEXT NOT NULL,
+                synthesis TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (session_id) REFERENCES mediation_sessions(id),
+                FOREIGN KEY (requested_by) REFERENCES users(id)
             );
 
             CREATE TABLE IF NOT EXISTS nudge_log (

@@ -1289,6 +1289,91 @@ body.summary-open .container {
     flex-shrink: 0;
 }
 
+/* Council explainer */
+.council-explainer {
+    margin-bottom: 1.25rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 0.85rem;
+}
+
+.council-explainer summary {
+    padding: 0.6rem 1rem;
+    cursor: pointer;
+    color: var(--primary);
+    font-weight: 500;
+    list-style: none;
+}
+
+.council-explainer summary::before {
+    content: '+ ';
+    color: var(--text-muted);
+}
+
+.council-explainer[open] summary::before {
+    content: '- ';
+}
+
+.council-explainer-body {
+    padding: 0 1rem 0.75rem;
+    color: var(--text-light);
+    line-height: 1.6;
+}
+
+.council-explainer-body ul {
+    margin: 0.5rem 0;
+    padding-left: 1.25rem;
+}
+
+.council-explainer-body li {
+    margin-bottom: 0.25rem;
+}
+
+/* Council advisor descriptions */
+.council-advisor-desc {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-weight: 400;
+    margin-top: 0.1rem;
+}
+
+/* Council actions */
+.council-actions {
+    display: flex;
+    gap: 0.4rem;
+    margin-top: 0.75rem;
+    flex-wrap: wrap;
+}
+
+/* Council chat indicator */
+.message-council {
+    align-self: center !important;
+    max-width: 90% !important;
+    background: none !important;
+    padding: 0 !important;
+}
+
+.council-indicator {
+    background: #F7F5F0;
+    border: 1px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 0.75rem 1rem;
+    text-align: center;
+    font-size: 0.85rem;
+}
+
+.council-indicator-label {
+    color: var(--text-muted);
+}
+
+.council-indicator-question {
+    display: block;
+    color: var(--text);
+    margin: 0.25rem 0 0.5rem;
+    font-style: italic;
+}
+
 .council-question-header {
     background: var(--bg);
     padding: 0.75rem 1rem;

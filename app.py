@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime, timedelta
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
-from models.database import db_init, get_db, _exec, User, MediationSession, Message
+from models.database import db_init, get_db, _exec, _is_postgres, User, MediationSession, Message
 from mediation.engine import MediationEngine
 from notifications import send_invite_email, send_password_reset_email, send_nudge_email
 
@@ -290,7 +290,7 @@ import threading
 
 _council_jobs = {}  # job_id -> {'status': 'running'|'done'|'error', 'result': ..., 'error': ...}
 
-def _run_council_background(job_id, question, context, user_memories):
+def _run_council_background(job_id, question, context, user_memories, session_id, user_id):
     try:
         sys.stderr.write(f"[Vilora] Council job {job_id} starting\n")
         result = mediation_engine.run_council(
@@ -298,8 +298,34 @@ def _run_council_background(job_id, question, context, user_memories):
             context=context,
             user_memories=user_memories
         )
+
+        # Persist the result to the database
+        import json
+        with app.app_context():
+            db = get_db()
+            advisors_json = json.dumps(result['advisors'])
+            if _is_postgres():
+                cur = _exec(db,
+                    "INSERT INTO council_results (session_id, requested_by, question, context, advisors, review, synthesis) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id",
+                    (session_id, user_id, question, context, advisors_json, result['review'], result['synthesis'])
+                )
+                council_result_id = cur.fetchone()['id']
+            else:
+                cur = _exec(db,
+                    "INSERT INTO council_results (session_id, requested_by, question, context, advisors, review, synthesis) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    (session_id, user_id, question, context, advisors_json, result['review'], result['synthesis'])
+                )
+                council_result_id = cur.lastrowid
+            db.commit()
+
+            # If within a session, create a council message in the chat timeline
+            if session_id:
+                council_msg_content = json.dumps({'council_result_id': council_result_id, 'question': question})
+                Message.create(db, session_id, user_id, council_msg_content, msg_type='council')
+
+        result['council_result_id'] = council_result_id
         _council_jobs[job_id] = {'status': 'done', 'result': result}
-        sys.stderr.write(f"[Vilora] Council job {job_id} completed\n")
+        sys.stderr.write(f"[Vilora] Council job {job_id} completed, result_id={council_result_id}\n")
     except Exception as e:
         sys.stderr.write(f"[Vilora] Council job {job_id} error: {e}\n")
         _council_jobs[job_id] = {'status': 'error', 'error': str(e)}
@@ -364,7 +390,7 @@ def start_council():
 
     thread = threading.Thread(
         target=_run_council_background,
-        args=(job_id, question, full_context or None, memories or None),
+        args=(job_id, question, full_context or None, memories or None, session_id, current_user.id),
         daemon=True
     )
     thread.start()
@@ -389,6 +415,38 @@ def poll_council(job_id):
         error = job.get('error', 'Unknown error')
         del _council_jobs[job_id]
         return jsonify({'success': False, 'status': 'error', 'error': error})
+
+
+@app.route('/api/council/results/<int:result_id>', methods=['GET'])
+@login_required
+def get_council_result(result_id):
+    import json
+    db = get_db()
+    cur = _exec(db, "SELECT * FROM council_results WHERE id = ?", (result_id,))
+    row = cur.fetchone()
+    if not row:
+        return jsonify({'success': False, 'error': 'Result not found'}), 404
+
+    # Access check: must be the requester or a session participant
+    if row['requested_by'] != current_user.id:
+        if row['session_id']:
+            med_session = MediationSession.get_by_id(db, row['session_id'])
+            if not med_session or not med_session.is_participant(db, current_user.id):
+                return jsonify({'success': False, 'error': 'Access denied'}), 403
+        else:
+            return jsonify({'success': False, 'error': 'Access denied'}), 403
+
+    return jsonify({
+        'success': True,
+        'council': {
+            'advisors': json.loads(row['advisors']),
+            'review': row['review'],
+            'synthesis': row['synthesis'],
+            'question': row['question'],
+            'council_result_id': row['id'],
+            'created_at': str(row['created_at'])
+        }
+    })
 
 
 # --- Polish Helper ---

@@ -124,9 +124,20 @@
 <div id="council-modal" class="modal" style="display:none">
     <div class="modal-content council-modal-content">
         <h2>Ask the Council</h2>
-        <p class="council-modal-desc">
-            Five AI advisors will analyze your question from different angles, review each other's blind spots, and deliver a synthesized recommendation.
-        </p>
+        <details class="council-explainer">
+            <summary>How does this work?</summary>
+            <div class="council-explainer-body">
+                <p>The Council gives you 5 different expert perspectives on any question:</p>
+                <ul>
+                    <li><strong>The Contrarian</strong> looks for what could go wrong or what you might be overlooking</li>
+                    <li><strong>The First Principles Thinker</strong> strips away assumptions and asks what you're really trying to solve</li>
+                    <li><strong>The Expansionist</strong> finds opportunities and upside you might be missing</li>
+                    <li><strong>The Outsider</strong> sees your situation with completely fresh eyes, no insider bias</li>
+                    <li><strong>The Executor</strong> focuses on what you should actually do next, concretely</li>
+                </ul>
+                <p>After all 5 respond independently, they review each other's blind spots. Then a synthesis pulls everything together into a clear recommendation with one concrete next step. The whole process takes about 30-60 seconds.</p>
+            </div>
+        </details>
         <div class="form-group">
             <label for="council-question">What do you want the Council's take on?</label>
             <textarea id="council-question" rows="3"
@@ -213,6 +224,19 @@ function renderMessages(messages) {
                 <div class="message-author">Vilora${canDelete ? deleteBtn : ''}</div>
                 <div class="message-content">${escapeHtml(m.content)}</div>
             </div>`;
+        } else if (m.msg_type === 'council') {
+            try {
+                const cdata = JSON.parse(m.content);
+                return `<div class="message message-council">
+                    <div class="council-indicator">
+                        <span class="council-indicator-label">${escapeHtml(m.display_name || 'Someone')} asked the Council:</span>
+                        <span class="council-indicator-question">"${escapeHtml(cdata.question)}"</span>
+                        <button class="btn btn-sm" onclick="viewCouncilResult(${cdata.council_result_id})">View</button>
+                    </div>
+                </div>`;
+            } catch (e) {
+                return '';
+            }
         } else if (m.msg_type === 'intake') {
             let intakeContent = m.content.replace(/\[Session tone:[^\]]*\]\s*/g, '');
             return `<div class="message message-intake">
@@ -524,17 +548,32 @@ async function pollCouncilResults(jobId, question, btn) {
     content.innerHTML = '<p class="error-msg">Council is taking longer than expected. Please try again.</p>';
 }
 
+const ADVISOR_DESCRIPTIONS = {
+    'The Contrarian': 'Looks for risks, flaws, and what could go wrong',
+    'The First Principles Thinker': 'Questions assumptions and reframes the real problem',
+    'The Expansionist': 'Finds upside, adjacent opportunities, and bigger possibilities',
+    'The Outsider': 'Fresh eyes with no insider bias or assumed context',
+    'The Executor': 'Focuses on concrete next steps and actionability'
+};
+
 function showCouncilResults(council, question) {
     const panel = document.getElementById('council-panel');
     const content = document.getElementById('council-content');
     document.body.classList.add('summary-open');
 
+    const resultId = council.council_result_id || '';
+
     let html = `<div class="council-question-header"><strong>Question:</strong> ${escapeHtml(question)}</div>`;
 
-    // Synthesis first
+    // Synthesis first with action buttons
     html += `<div class="council-section council-synthesis">
         <h4>Synthesis & Recommendation</h4>
         <div class="council-section-body">${formatCouncilText(council.synthesis)}</div>
+        <div class="council-actions">
+            ${!IS_PERSONAL ? `<button class="btn btn-sm" onclick="shareCouncilWithGroup(${resultId})" title="Post the synthesis to the session chat for other participants to see">Share with group</button>` : ''}
+            <button class="btn btn-sm" onclick="copyCouncilSynthesis()" title="Copy the synthesis text to your clipboard">Copy</button>
+            <button class="btn btn-sm" onclick="councilFollowUp('${escapeHtml(question).replace(/'/g, "\\'")}')" title="Ask the Council a follow-up question with this result as context">Ask a follow-up</button>
+        </div>
     </div>`;
 
     // Peer review
@@ -543,12 +582,13 @@ function showCouncilResults(council, question) {
         <div class="council-section-body">${formatCouncilText(council.review)}</div>
     </div>`;
 
-    // Individual advisors (collapsible)
+    // Individual advisors (collapsible) with descriptions
     html += '<div class="council-section"><h4>Individual Advisor Perspectives</h4>';
     for (const advisor of council.advisors) {
+        const desc = ADVISOR_DESCRIPTIONS[advisor.name] || '';
         html += `
             <details class="council-advisor">
-                <summary class="council-advisor-name">${escapeHtml(advisor.name)}</summary>
+                <summary class="council-advisor-name">${escapeHtml(advisor.name)}${desc ? `<span class="council-advisor-desc">${desc}</span>` : ''}</summary>
                 <div class="council-advisor-body">${formatCouncilText(advisor.response)}</div>
             </details>`;
     }
@@ -556,6 +596,65 @@ function showCouncilResults(council, question) {
 
     content.innerHTML = html;
     panel.style.display = 'block';
+}
+
+async function viewCouncilResult(resultId) {
+    const panel = document.getElementById('council-panel');
+    const content = document.getElementById('council-content');
+    content.innerHTML = '<p class="loading">Loading Council results...</p>';
+    panel.style.display = 'block';
+    document.body.classList.add('summary-open');
+
+    try {
+        const res = await fetch(`/api/council/results/${resultId}`);
+        const data = await res.json();
+        if (data.success && data.council) {
+            showCouncilResults(data.council, data.council.question);
+        } else {
+            content.innerHTML = `<p class="error-msg">${escapeHtml(data.error || 'Could not load results.')}</p>`;
+        }
+    } catch (err) {
+        content.innerHTML = '<p class="error-msg">Could not load Council results.</p>';
+    }
+}
+
+async function shareCouncilWithGroup(resultId) {
+    if (!resultId) return;
+    try {
+        const res = await fetch(`/api/council/results/${resultId}`);
+        const data = await res.json();
+        if (data.success && data.council) {
+            // Post synthesis as a user message
+            const msg = `The Council's recommendation on "${data.council.question}":\n\n${data.council.synthesis}`;
+            await fetch(`/api/sessions/${SESSION_ID}/messages`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content: msg })
+            });
+            loadMessages();
+            closeCouncil();
+        }
+    } catch (err) {
+        alert('Could not share Council results.');
+    }
+}
+
+function copyCouncilSynthesis() {
+    const synthesisEl = document.querySelector('.council-synthesis .council-section-body');
+    if (synthesisEl) {
+        navigator.clipboard.writeText(synthesisEl.innerText);
+        const btn = event.target;
+        btn.textContent = 'Copied!';
+        setTimeout(() => btn.textContent = 'Copy', 2000);
+    }
+}
+
+function councilFollowUp(previousQuestion) {
+    closeCouncil();
+    showCouncilModal();
+    document.getElementById('council-question').value = '';
+    document.getElementById('council-context').value = `Follow-up to previous Council question: "${previousQuestion}"`;
+    document.getElementById('council-question').focus();
 }
 
 function closeCouncil() {
