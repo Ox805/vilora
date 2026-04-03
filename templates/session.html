@@ -162,6 +162,47 @@
     </div>
 </div>
 
+<!-- Nudge info modal -->
+<div id="nudge-info-modal" class="modal" style="display:none">
+    <div class="modal-content" style="max-width: 480px;">
+        <h2>About Nudges</h2>
+        <p style="color: var(--text-light); margin-bottom: 1rem; font-size: 0.9rem;">
+            Nudges are friendly reminders you can send to participants to let them know the conversation is waiting for their input.
+        </p>
+
+        <div class="nudge-info-section">
+            <h4>What they receive</h4>
+            <div class="nudge-info-preview">
+                <p><strong>Subject:</strong> [Your name] is waiting for you on Vilora</p>
+                <p>"Hey [name], your conversation is waiting. [Your name] wanted to check in. Your conversation about [topic] has new activity and they'd love to hear your thoughts. No pressure. Just a friendly reminder that the conversation is there whenever you're ready."</p>
+            </div>
+        </div>
+
+        <div class="nudge-info-section">
+            <h4>Limits</h4>
+            <ul>
+                <li>You can send up to <strong>4 email nudges</strong> per person per session</li>
+                <li>There's a <strong>24-hour cooldown</strong> between email nudges to the same person</li>
+                <li>Text nudges (mobile only) open your messaging app and don't count toward the limit</li>
+            </ul>
+        </div>
+
+        <div class="nudge-info-section">
+            <h4>Tips for nudging</h4>
+            <ul>
+                <li>Give people time to respond before nudging. Not everyone checks email right away</li>
+                <li>If someone hasn't responded after 2-3 nudges, consider reaching out personally</li>
+                <li>Nudges work best when spaced out. A daily nudge feels persistent; an hourly one feels pushy</li>
+                <li>Remember that some people may need time to think before joining a conversation</li>
+            </ul>
+        </div>
+
+        <div class="form-actions">
+            <button type="button" onclick="document.getElementById('nudge-info-modal').style.display='none'" class="btn btn-primary">Got it</button>
+        </div>
+    </div>
+</div>
+
 <!-- Council results panel -->
 <div id="council-panel" class="summary-panel" style="display:none">
     <div class="summary-header">
@@ -310,7 +351,7 @@ async function showParticipantsPanel() {
 
     // Joined participants
     if (participants.length > 0) {
-        html += '<div class="participants-section-header"><span class="participants-section-label">Joined</span><span class="participants-section-label nudge-header-label">Nudge</span></div>';
+        html += '<div class="participants-section-header"><span class="participants-section-label">Joined</span><span class="participants-section-label nudge-header-label"><a href="#" onclick="showNudgeInfo(event)">Nudge</a></span></div>';
         html += participants.map(p => {
             const maxed = p.nudge_count >= 4;
             return `
@@ -356,6 +397,11 @@ async function showParticipantsPanel() {
     }
 
     list.innerHTML = html;
+}
+
+function showNudgeInfo(e) {
+    e.preventDefault();
+    document.getElementById('nudge-info-modal').style.display = 'flex';
 }
 
 function closeParticipantsPanel() {

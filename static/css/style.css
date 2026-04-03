@@ -1541,6 +1541,58 @@ body.summary-open .container {
     text-align: right;
 }
 
+.nudge-header-label a {
+    color: var(--primary);
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.nudge-header-label a:hover {
+    text-decoration: underline;
+}
+
+.nudge-info-section {
+    margin-bottom: 1.25rem;
+}
+
+.nudge-info-section h4 {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--accent);
+    margin-bottom: 0.4rem;
+}
+
+.nudge-info-section ul {
+    margin: 0;
+    padding-left: 1.25rem;
+}
+
+.nudge-info-section li {
+    font-size: 0.85rem;
+    color: var(--text-light);
+    line-height: 1.5;
+    margin-bottom: 0.3rem;
+}
+
+.nudge-info-preview {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.75rem 1rem;
+    font-size: 0.82rem;
+    color: var(--text-light);
+    line-height: 1.5;
+}
+
+.nudge-info-preview p {
+    margin: 0 0 0.4rem;
+}
+
+.nudge-info-preview p:last-child {
+    margin-bottom: 0;
+    font-style: italic;
+}
+
 .nudge-count {
     font-size: 0.7rem;
     color: var(--text-muted);
