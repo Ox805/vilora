@@ -17,9 +17,10 @@
     {% elif is_creator %}
     <div id="invite-banner" class="invite-banner">
         <div class="invite-banner-content">
-            <strong>Invite another party.</strong> Send them an email or share the link:
+            <strong>Invite another party.</strong> Send them an email, text, or share the link:
             <div class="invite-link-row">
-                <button onclick="showInviteModal()" class="btn btn-primary btn-sm" title="Send a branded email invitation to the other party with a link to join this session.">Send Invite</button>
+                <button onclick="showInviteModal()" class="btn btn-primary btn-sm" title="Send a branded email invitation to the other party with a link to join this session.">Email Invite</button>
+                <button onclick="shareViaText()" class="btn btn-sm" title="Open your messaging app with a pre-written invite message and link.">Text Invite</button>
                 <input type="text" id="invite-link" value="{{ invite_link }}" readonly>
                 <button onclick="copyInviteLink()" class="btn btn-sm" id="copy-btn">Copy</button>
             </div>
@@ -318,10 +319,11 @@ async function showParticipantsPanel() {
                     <span class="participant-name">${escapeHtml(p.display_name)}</span>
                 </div>
                 <div class="nudge-controls">
-                    <span class="nudge-count" title="Nudges sent: ${p.nudge_count} of 4. You can nudge once every 24 hours, up to 4 times total.">${p.nudge_count}/4</span>
+                    <button class="btn btn-sm btn-nudge-text" onclick="textNudge('${escapeHtml(p.display_name)}')" title="Open your messaging app to send ${escapeHtml(p.display_name)} a reminder">Text</button>
+                    <span class="nudge-count" title="Email nudges sent: ${p.nudge_count} of 4. Once per 24 hours, up to 4 total.">${p.nudge_count}/4</span>
                     <button class="btn btn-sm btn-nudge" id="nudge-${p.id}" onclick="nudgeOne(${p.id}, '${escapeHtml(p.display_name)}')"
                         ${maxed ? 'disabled' : ''}
-                        title="${maxed ? 'Maximum nudges reached (4 of 4)' : 'Send ' + escapeHtml(p.display_name) + ' a friendly reminder. ' + p.nudge_count + ' of 4 used. Once per 24 hours.'}">${maxed ? 'Maxed' : 'Nudge'}</button>
+                        title="${maxed ? 'Maximum email nudges reached (4 of 4)' : 'Email ' + escapeHtml(p.display_name) + ' a friendly reminder. ' + p.nudge_count + ' of 4 used.'}">${maxed ? 'Maxed' : 'Email'}</button>
                 </div>
             </div>`;
         }).join('');
@@ -339,10 +341,11 @@ async function showParticipantsPanel() {
                     <span class="participant-pending-label">Not yet joined</span>
                 </div>
                 <div class="nudge-controls">
-                    <span class="nudge-count" title="Nudges sent: ${inv.nudge_count} of 4. You can nudge once every 24 hours, up to 4 times total.">${inv.nudge_count}/4</span>
+                    <button class="btn btn-sm btn-nudge-text" onclick="textNudgePending('${escapeHtml(inv.email)}')" title="Open your messaging app to send a reminder">Text</button>
+                    <span class="nudge-count" title="Email nudges sent: ${inv.nudge_count} of 4. Once per 24 hours, up to 4 total.">${inv.nudge_count}/4</span>
                     <button class="btn btn-sm btn-nudge" onclick="nudgeByEmail('${escapeHtml(inv.email)}', this)"
                         ${maxed ? 'disabled' : ''}
-                        title="${maxed ? 'Maximum nudges reached (4 of 4)' : 'Send another reminder. ' + inv.nudge_count + ' of 4 used. Once per 24 hours.'}">${maxed ? 'Maxed' : 'Nudge'}</button>
+                        title="${maxed ? 'Maximum email nudges reached (4 of 4)' : 'Email another reminder. ' + inv.nudge_count + ' of 4 used.'}">${maxed ? 'Maxed' : 'Email'}</button>
                 </div>
             </div>`;
         }).join('');
@@ -409,6 +412,30 @@ async function nudgeByEmail(email, btn) {
         alert('Failed to send nudge.');
         btn.textContent = 'Nudge';
         btn.disabled = false;
+    }
+}
+
+function textNudge(name) {
+    const link = `${window.location.origin}/session/${SESSION_ID}`;
+    const topic = document.querySelector('.room-header h2')?.innerText?.split('\n')[0]?.trim() || 'our conversation';
+    const msg = `Hey ${name}, just a friendly reminder that our conversation on Vilora about "${topic}" is waiting for your input. Join here: ${link}`;
+
+    if (navigator.share) {
+        navigator.share({ title: 'Vilora reminder', text: msg }).catch(() => {});
+    } else {
+        window.open(`sms:?body=${encodeURIComponent(msg)}`, '_self');
+    }
+}
+
+function textNudgePending(email) {
+    const link = document.getElementById('invite-link')?.value || `${window.location.origin}/session/${SESSION_ID}`;
+    const topic = document.querySelector('.room-header h2')?.innerText?.split('\n')[0]?.trim() || 'a conversation';
+    const msg = `Hey, I invited you to a conversation on Vilora about "${topic}". Would love your input. Join here: ${link}`;
+
+    if (navigator.share) {
+        navigator.share({ title: 'Vilora invite', text: msg }).catch(() => {});
+    } else {
+        window.open(`sms:?body=${encodeURIComponent(msg)}`, '_self');
     }
 }
 
@@ -769,6 +796,25 @@ async function sendInviteEmail() {
     } finally {
         btn.disabled = false;
         btn.textContent = 'Send Invite';
+    }
+}
+
+function shareViaText() {
+    const link = document.getElementById('invite-link').value;
+    const topic = document.querySelector('.room-header h2')?.innerText?.split('\n')[0]?.trim() || 'a conversation';
+    const msg = `Hey, I'd like to work through something together using Vilora. The topic is "${topic}". Join here: ${link}`;
+
+    // Try native share API first (mobile), fall back to sms: link
+    if (navigator.share) {
+        navigator.share({
+            title: 'Join me on Vilora',
+            text: msg,
+            url: link
+        }).catch(() => {});
+    } else {
+        // Fall back to sms: URI (opens default messaging app)
+        const smsBody = encodeURIComponent(msg);
+        window.open(`sms:?body=${smsBody}`, '_self');
     }
 }
 

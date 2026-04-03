@@ -1546,6 +1546,18 @@ body.summary-open .container {
     background: var(--pale);
 }
 
+.btn-nudge-text {
+    color: var(--text-light);
+    border-color: var(--border);
+    font-size: 0.75rem;
+}
+
+.btn-nudge-text:hover {
+    color: var(--primary);
+    border-color: var(--primary-light);
+    background: var(--pale);
+}
+
 .btn-nudge:disabled {
     color: var(--text-muted);
     border-color: var(--border);
