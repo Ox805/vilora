@@ -248,14 +248,19 @@ function localTime(ts) {
 }
 
 const SUMMARY_DELIMITER = '<!--SUMMARY-->';
-const expandedMessages = new Set();  // Track which messages are expanded
+const expandedMessages = new Set();
 
 function parseMediatorContent(content) {
+    // Strip any existing AI summary delimiter (backwards compat)
     if (content.includes(SUMMARY_DELIMITER)) {
-        const parts = content.split(SUMMARY_DELIMITER);
-        return { summary: parts[0].trim(), full: parts[1].trim() };
+        content = content.split(SUMMARY_DELIMITER)[1].trim();
     }
-    return { summary: null, full: content };
+    // Generate preview from first 3 sentences
+    const sentences = content.match(/[^.!?]+[.!?]+/g);
+    if (sentences && sentences.length > 3) {
+        return { preview: sentences.slice(0, 3).join('').trim(), full: content };
+    }
+    return { preview: null, full: content };
 }
 
 function toggleFullResponse(msgId) {
@@ -296,10 +301,10 @@ function renderMessages(messages) {
             const fullHtml = escapeHtml(parsed.full);
 
             let contentHtml;
-            if (parsed.summary) {
+            if (parsed.preview) {
                 const isExpanded = expandedMessages.has(m.id);
                 contentHtml = `
-                <div class="message-content message-summary" id="preview-${m.id}" style="display:${isExpanded ? 'none' : 'block'}">${escapeHtml(parsed.summary)}</div>
+                <div class="message-content" id="preview-${m.id}" style="display:${isExpanded ? 'none' : 'block'}">${escapeHtml(parsed.preview)}</div>
                 <div class="message-content message-full" id="full-${m.id}" style="display:${isExpanded ? 'block' : 'none'}">${fullHtml}</div>
                 <button class="btn-expand-msg" id="expand-btn-${m.id}" onclick="toggleFullResponse(${m.id})">${isExpanded ? 'Show less' : 'View full response'}</button>`;
             } else {

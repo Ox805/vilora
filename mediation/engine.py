@@ -720,28 +720,8 @@ class MediationEngine:
             return "Synthesis was unable to be completed."
 
     def summarize_response(self, response_text):
-        """Generate a concise summary of a Vilora response that captures the key points."""
-        if not self.client or len(response_text) < 200:
-            return None  # Short responses don't need summaries
-
-        try:
-            result = self.client.messages.create(
-                model="claude-sonnet-4-20250514",
-                max_tokens=512,
-                system=(
-                    "Create a concise summary of the following response. "
-                    "Capture all the key points, recommendations, and important details. "
-                    "The summary should be helpful and digestible without being overwhelming. "
-                    "It can be as short as one sentence or as long as needed to cover the essentials. "
-                    "Use bullet points if there are multiple distinct points. "
-                    "Respond with ONLY the summary, nothing else."
-                ),
-                messages=[{"role": "user", "content": response_text}]
-            )
-            return result.content[0].text.strip()
-        except Exception as e:
-            sys.stderr.write(f"[Vilora] Summary generation error: {e}\n")
-            return None
+        """Not used. Previews are generated client-side from the first few sentences."""
+        return None
 
     def _fallback_response(self, messages):
         return (
