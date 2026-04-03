@@ -310,7 +310,7 @@ async function showParticipantsPanel() {
 
     // Joined participants
     if (participants.length > 0) {
-        html += '<div class="participants-section-label">Joined</div>';
+        html += '<div class="participants-section-header"><span class="participants-section-label">Joined</span><span class="participants-section-label nudge-header-label">Nudge</span></div>';
         html += participants.map(p => {
             const maxed = p.nudge_count >= 4;
             return `
@@ -319,7 +319,6 @@ async function showParticipantsPanel() {
                     <span class="participant-name">${escapeHtml(p.display_name)}</span>
                 </div>
                 <div class="nudge-controls">
-                    <span class="nudge-label">Nudge</span>
                     <button class="btn btn-sm btn-nudge-text" onclick="textNudge('${escapeHtml(p.display_name)}', this)" title="Opens your messaging app to send a reminder">Text</button>
                     <button class="btn btn-sm btn-nudge" id="nudge-${p.id}" onclick="nudgeOne(${p.id}, '${escapeHtml(p.display_name)}')"
                         ${maxed ? 'disabled' : ''}
@@ -332,7 +331,7 @@ async function showParticipantsPanel() {
 
     // Pending invites
     if (pendingInvites.length > 0) {
-        html += '<div class="participants-section-label" style="margin-top: 1rem;">Invited (pending)</div>';
+        html += '<div class="participants-section-header" style="margin-top: 1rem;"><span class="participants-section-label">Invited (pending)</span><span class="participants-section-label nudge-header-label">Nudge</span></div>';
         html += pendingInvites.map(inv => {
             const maxed = inv.nudge_count >= 4;
             return `
@@ -342,7 +341,6 @@ async function showParticipantsPanel() {
                     <span class="participant-pending-label">Not yet joined</span>
                 </div>
                 <div class="nudge-controls">
-                    <span class="nudge-label">Nudge</span>
                     <button class="btn btn-sm btn-nudge-text" onclick="textNudgePending('${escapeHtml(inv.email)}', this)" title="Opens your messaging app to send a reminder">Text</button>
                     <button class="btn btn-sm btn-nudge" onclick="nudgeByEmail('${escapeHtml(inv.email)}', this)"
                         ${maxed ? 'disabled' : ''}

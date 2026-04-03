@@ -1530,12 +1530,15 @@ body.summary-open .container {
     gap: 0.4rem;
 }
 
-.nudge-label {
-    font-size: 0.7rem;
-    font-weight: 500;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
+.participants-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.4rem;
+}
+
+.nudge-header-label {
+    text-align: right;
 }
 
 .nudge-count {
