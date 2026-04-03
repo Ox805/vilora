@@ -420,12 +420,13 @@ function showReactionPicker(messageId, btnEl) {
         `<button onclick="toggleReaction(${messageId}, '${key}')">${emoji}</button>`
     ).join('');
 
-    // Position relative to button
-    const msgEl = btnEl.closest('.message');
-    msgEl.style.position = 'relative';
-    msgEl.appendChild(picker);
+    // Position relative to the reaction bar, not the whole message
+    const barEl = btnEl.closest('.reaction-bar');
+    barEl.style.position = 'relative';
+    barEl.appendChild(picker);
 
-    // Align: left for self-messages, right for others
+    // Align: right for self-messages, left for others
+    const msgEl = btnEl.closest('.message');
     if (msgEl.classList.contains('message-self')) {
         picker.style.right = '0';
     } else {
