@@ -28,14 +28,16 @@ Registration Flow (New):
 1. User submits email + password + display name
 2. Account created with verified=FALSE
 3. Verification email sent via SendGrid with a secure token link
-4. User clicks link, token validated, verified=TRUE
-5. User can now fully access Vilora
+4. User is NOT logged in. Redirected to a "Verify your email" page.
+5. User clicks link in email, token validated, verified=TRUE
+6. User is logged in and redirected to dashboard
 
-Pre-verification access:
-- User CAN log in and see the dashboard
-- User CANNOT create sessions, send messages, or access any AI features
-- A banner prompts them to check their email and verify
-- "Resend verification" button available
+Pre-verification access (hard block):
+- User CANNOT log in or access any authenticated pages
+- "Verify your email" page shows with a "Resend" button
+- Public pages remain accessible: homepage, login, invite landing
+
+Exception: Invite-based registration auto-verifies (see Phase 4)
 ```
 
 ---
@@ -112,53 +114,31 @@ GET /verify-email/<token>
 1. Create user with `email_verified = FALSE`
 2. Generate verification token, store in DB
 3. Send verification email
-4. Log the user in (they can access limited features)
-5. Return success with `{ verified: false }` flag
+4. Do NOT log the user in
+5. Return `{ success: true, needs_verification: true }`
 
-#### 3.2 Verification Banner
+#### 3.2 Update Login API
 
-On all authenticated pages, if `email_verified` is false, show a persistent banner:
+`POST /api/login`:
+1. Validate credentials as normal
+2. If `email_verified` is false, do NOT log in
+3. Return `{ success: false, needs_verification: true, error: 'Please verify your email first.' }`
+4. Frontend redirects to the verification pending page
 
-```
-Your email hasn't been verified yet. Please check your inbox for a verification link.
-[Resend verification email]
-```
+#### 3.3 Verification Pending Page
 
-**Styling:**
-- Yellow/warning background, not dismissable
-- Fixed at top of the page (below navbar)
-- "Resend" button available (rate limited to once per 5 minutes)
+`GET /verify-pending`
 
-#### 3.3 Feature Gating
+A dedicated page shown after registration and when unverified users try to log in:
 
-Unverified users can:
-- Log in
-- View the dashboard (empty)
-- Access the About Me page
-- Access Settings
-- Verify their email
+- Vilora logo
+- "Check your email to get started"
+- "We sent a verification link to [email]. Click the link to verify your account and start using Vilora."
+- "Resend verification email" button (rate limited to once per 5 minutes)
+- "Back to login" link
+- "Didn't receive it? Check your spam folder."
 
-Unverified users CANNOT:
-- Create sessions
-- Send messages
-- Use Council
-- Use Polish
-- Send invites/nudges
-- Access the framing assistant
-
-**Implementation:** Add a decorator or check:
-
-```python
-def verified_required(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        if not current_user.email_verified:
-            return jsonify({'success': False, 'error': 'Please verify your email first.'}), 403
-        return f(*args, **kwargs)
-    return decorated
-```
-
-Apply to: session creation, message sending, council, polish, frame, invite, nudge endpoints.
+**Note:** The email address is passed via query parameter or session, not stored client-side.
 
 #### 3.4 Resend Verification
 
@@ -166,10 +146,11 @@ Apply to: session creation, message sending, council, polish, frame, invite, nud
 POST /api/resend-verification
 ```
 
-- Rate limited: once per 5 minutes
+- Accepts `{ email }`
+- Rate limited: once per 5 minutes (check `verification_sent_at`)
 - Generates a new token (invalidates the old one)
 - Sends a new verification email
-- Returns success
+- Always returns success (no email enumeration)
 
 ### Phase 4: Invite Flow Integration
 
@@ -247,43 +228,30 @@ No new environment variables needed. Uses existing SendGrid setup.
 
 ## UI Specifications
 
-### Verification Banner
+### Verification Pending Page (`/verify-pending`)
 
-```css
-.verification-banner {
-    background: #FEFCBF;  /* warm yellow */
-    border-bottom: 1px solid #ECC94B;
-    padding: 0.75rem 1rem;
-    text-align: center;
-    font-size: 0.9rem;
-    color: #744210;
-}
-```
+Centered card layout (similar to login page):
+- Vilora logo at top
+- "Check your email to get started"
+- "We sent a verification link to **[email]**."
+- "Click the link to verify your account and start using Vilora."
+- [Resend verification email] button
+- "Didn't receive it? Check your spam folder."
+- "Back to login" link
 
-Placement: between navbar and main content in `base.html`, conditionally rendered:
+### Verification Success Page (`/verify-email/<token>` on success)
 
-```html
-{% if current_user.is_authenticated and not current_user.email_verified %}
-<div class="verification-banner">
-    Your email hasn't been verified yet. Check your inbox for a verification link.
-    <button onclick="resendVerification()" class="btn btn-sm" id="resend-btn">Resend</button>
-</div>
-{% endif %}
-```
-
-### Verification Success Page
-
-Simple page with:
+Simple centered page:
 - Vilora logo
 - "Your email has been verified!"
 - "You're all set to start using Vilora."
-- "Go to Dashboard" button
+- [Go to Dashboard] button (logs user in automatically)
 
-### Verification Error Page
+### Verification Error Page (`/verify-email/<token>` on failure)
 
 - Vilora logo
 - "This verification link has expired" (or "is invalid")
-- "Resend verification email" button
+- [Resend verification email] button
 - "Back to login" link
 
 ---
@@ -293,9 +261,9 @@ Simple page with:
 | Criteria | Measurement |
 |----------|-------------|
 | New users receive verification email within 30 seconds | SendGrid delivery time |
-| Verification link works correctly | Click link, account verified |
-| Unverified users see banner on all pages | Visual inspection |
-| Unverified users cannot create sessions | API returns 403 |
+| Verification link works correctly | Click link, account verified, auto-logged in |
+| Unverified users cannot log in | Login returns needs_verification, redirects to pending page |
+| Unverified users cannot access any authenticated pages | All @login_required pages blocked |
 | Invite-based registrations auto-verify | No verification email sent for invite joins |
 | Resend works with rate limiting | Can resend, but not more than once per 5 minutes |
 | Existing users are not affected | All current users marked as verified |
@@ -306,10 +274,10 @@ Simple page with:
 
 1. Database migration (add columns, mark existing users as verified)
 2. Verification email template in `notifications.py`
-3. Registration flow changes (send verification on register)
-4. Verification endpoint (`GET /verify-email/<token>`)
-5. Verification banner in `base.html`
-6. Feature gating (`verified_required` decorator)
+3. Registration flow changes (send verification, don't log in)
+4. Login flow changes (block unverified users)
+5. Verification pending page (`/verify-pending`)
+6. Verification endpoint (`GET /verify-email/<token>`, auto-login on success)
 7. Resend endpoint with rate limiting
 8. Invite auto-verification
 9. Testing
