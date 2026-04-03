@@ -82,6 +82,17 @@ body {
     text-align: center;
     padding: 1.5rem;
     color: var(--text-muted);
+}
+
+.feedback-link {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    text-decoration: none;
+}
+
+.feedback-link:hover {
+    color: var(--primary);
+    text-decoration: underline;
     font-size: 0.85rem;
     border-top: 1px solid var(--border);
 }
