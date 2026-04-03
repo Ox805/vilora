@@ -55,6 +55,9 @@ def db_init():
                 email TEXT UNIQUE NOT NULL,
                 display_name TEXT NOT NULL,
                 password_hash TEXT NOT NULL,
+                email_verified BOOLEAN DEFAULT FALSE,
+                verification_token TEXT,
+                verification_sent_at TIMESTAMP,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )""",
             """CREATE TABLE IF NOT EXISTS mediation_sessions (
@@ -142,6 +145,14 @@ def db_init():
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )""",
             "CREATE INDEX IF NOT EXISTS idx_user_memories_user ON user_memories(user_id, active)",
+            """CREATE TABLE IF NOT EXISTS message_reactions (
+                id SERIAL PRIMARY KEY,
+                message_id INTEGER NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
+                user_id INTEGER NOT NULL REFERENCES users(id),
+                reaction TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(message_id, user_id, reaction)
+            )""",
         ]
         for stmt in statements:
             try:
@@ -278,6 +289,17 @@ def db_init():
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (user_id) REFERENCES users(id),
                 FOREIGN KEY (source_session_id) REFERENCES mediation_sessions(id)
+            );
+
+            CREATE TABLE IF NOT EXISTS message_reactions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                message_id INTEGER NOT NULL,
+                user_id INTEGER NOT NULL,
+                reaction TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE,
+                FOREIGN KEY (user_id) REFERENCES users(id),
+                UNIQUE(message_id, user_id, reaction)
             );
         """)
         db.commit()
@@ -489,3 +511,58 @@ class Message:
             Message(r['id'], r['session_id'], r['user_id'], r['content'], r['msg_type'], r['created_at'])
             for r in rows
         ]
+
+
+class MessageReaction:
+    VALID_REACTIONS = {'like', 'dislike', 'love', 'laugh', 'surprised', 'sad'}
+
+    EMOJI_MAP = {
+        'like': '\U0001f44d',
+        'dislike': '\U0001f44e',
+        'love': '\u2764\ufe0f',
+        'laugh': '\U0001f602',
+        'surprised': '\U0001f62e',
+        'sad': '\U0001f622',
+    }
+
+    @classmethod
+    def toggle(cls, db, message_id, user_id, reaction):
+        if reaction not in cls.VALID_REACTIONS:
+            raise ValueError(f"Invalid reaction: {reaction}")
+        cur = _exec(db,
+            "SELECT id FROM message_reactions WHERE message_id = ? AND user_id = ? AND reaction = ?",
+            (message_id, user_id, reaction)
+        )
+        existing = cur.fetchone()
+        if existing:
+            _exec(db, "DELETE FROM message_reactions WHERE id = ?", (existing['id'],))
+            db.commit()
+            return 'removed'
+        else:
+            _exec(db,
+                "INSERT INTO message_reactions (message_id, user_id, reaction) VALUES (?, ?, ?)",
+                (message_id, user_id, reaction)
+            )
+            db.commit()
+            return 'added'
+
+    @classmethod
+    def get_for_messages(cls, db, message_ids):
+        if not message_ids:
+            return {}
+        placeholders = ','.join(['?'] * len(message_ids))
+        cur = _exec(db,
+            f"SELECT message_id, reaction, user_id FROM message_reactions WHERE message_id IN ({placeholders})",
+            tuple(message_ids)
+        )
+        result = {}
+        for row in cur.fetchall():
+            mid = row['message_id']
+            r = row['reaction']
+            if mid not in result:
+                result[mid] = {}
+            if r not in result[mid]:
+                result[mid][r] = {'count': 0, 'user_ids': []}
+            result[mid][r]['count'] += 1
+            result[mid][r]['user_ids'].append(row['user_id'])
+        return result

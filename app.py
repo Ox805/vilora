@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime, timedelta
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
-from models.database import db_init, get_db, _exec, _is_postgres, User, MediationSession, Message
+from models.database import db_init, get_db, _exec, _is_postgres, User, MediationSession, Message, MessageReaction
 from mediation.engine import MediationEngine
 from notifications import send_invite_email, send_password_reset_email, send_nudge_email
 
@@ -749,11 +749,25 @@ def get_messages(session_id):
     messages = Message.get_by_session(db, session_id)
     participants = med_session.get_participants(db)
     name_map = {p.id: p.display_name for p in participants}
+
+    message_ids = [m.id for m in messages]
+    all_reactions = MessageReaction.get_for_messages(db, message_ids)
+
     msg_list = []
     for m in messages:
         d = m.to_dict()
         d['display_name'] = name_map.get(m.user_id)
         d['is_self'] = (m.user_id == current_user.id)
+        msg_reactions = all_reactions.get(m.id, {})
+        reactions_out = {}
+        for rkey, rdata in msg_reactions.items():
+            reactions_out[rkey] = {
+                'count': rdata['count'],
+                'user_ids': rdata['user_ids'],
+                'includes_self': current_user.id in rdata['user_ids'],
+                'names': [name_map.get(uid, 'Someone') for uid in rdata['user_ids']]
+            }
+        d['reactions'] = reactions_out
         msg_list.append(d)
     return jsonify({'messages': msg_list})
 
@@ -916,6 +930,40 @@ def delete_message(session_id, message_id):
     _exec(db, "DELETE FROM messages WHERE id = ?", (message_id,))
     db.commit()
     return jsonify({'success': True})
+
+
+@app.route('/api/sessions/<int:session_id>/messages/<int:message_id>/reactions', methods=['POST'])
+@login_required
+def toggle_reaction(session_id, message_id):
+    db = get_db()
+    med_session = MediationSession.get_by_id(db, session_id)
+    if not med_session or not med_session.is_participant(db, current_user.id):
+        return jsonify({'success': False, 'error': 'Access denied'}), 403
+
+    cur = _exec(db, "SELECT id FROM messages WHERE id = ? AND session_id = ?", (message_id, session_id))
+    if not cur.fetchone():
+        return jsonify({'success': False, 'error': 'Message not found'}), 404
+
+    data = request.get_json()
+    reaction = data.get('reaction', '')
+    if reaction not in MessageReaction.VALID_REACTIONS:
+        return jsonify({'success': False, 'error': 'Invalid reaction'}), 400
+
+    action = MessageReaction.toggle(db, message_id, current_user.id, reaction)
+
+    participants = med_session.get_participants(db)
+    name_map = {p.id: p.display_name for p in participants}
+    msg_reactions = MessageReaction.get_for_messages(db, [message_id]).get(message_id, {})
+    reactions_out = {}
+    for rkey, rdata in msg_reactions.items():
+        reactions_out[rkey] = {
+            'count': rdata['count'],
+            'user_ids': rdata['user_ids'],
+            'includes_self': current_user.id in rdata['user_ids'],
+            'names': [name_map.get(uid, 'Someone') for uid in rdata['user_ids']]
+        }
+
+    return jsonify({'success': True, 'action': action, 'reactions': reactions_out})
 
 
 @app.route('/api/sessions/<int:session_id>/ask-vilora', methods=['POST'])

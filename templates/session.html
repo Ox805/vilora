@@ -259,17 +259,19 @@ function renderMessages(messages) {
 
     container.innerHTML = messages.map(m => {
         const deleteBtn = `<button class="msg-delete-btn" onclick="deleteMessage(${m.id})" title="Delete this message">&times;</button>`;
+        const reactionBar = m.msg_type === 'council' ? '' : buildReactionBar(m.id, m.reactions || {});
 
         if (m.msg_type === 'mediator') {
             const canDelete = IS_CREATOR;
-            return `<div class="message message-mediator">
+            return `<div class="message message-mediator" data-message-id="${m.id}">
                 <div class="message-author">Vilora${canDelete ? deleteBtn : ''}</div>
                 <div class="message-content">${escapeHtml(m.content)}</div>
+                ${reactionBar}
             </div>`;
         } else if (m.msg_type === 'council') {
             try {
                 const cdata = JSON.parse(m.content);
-                return `<div class="message message-council">
+                return `<div class="message message-council" data-message-id="${m.id}">
                     <div class="council-indicator">
                         <span class="council-indicator-label">${escapeHtml(m.display_name || 'Someone')} asked the Council:</span>
                         <span class="council-indicator-question">"${escapeHtml(cdata.question)}"</span>
@@ -282,19 +284,22 @@ function renderMessages(messages) {
             }
         } else if (m.msg_type === 'intake') {
             let intakeContent = m.content.replace(/\[Session tone:[^\]]*\]\s*/g, '');
-            return `<div class="message message-intake">
+            return `<div class="message message-intake" data-message-id="${m.id}">
                 <div class="message-author">${escapeHtml(m.display_name || 'Participant')}'s Initial Perspective</div>
                 <div class="message-content">${escapeHtml(intakeContent)}</div>
+                ${reactionBar}
             </div>`;
         } else if (m.is_self) {
-            return `<div class="message message-self">
+            return `<div class="message message-self" data-message-id="${m.id}">
                 <div class="message-content">${escapeHtml(m.content)}${deleteBtn}</div>
+                ${reactionBar}
                 <div class="message-time">${localTime(m.created_at)}</div>
             </div>`;
         } else {
-            return `<div class="message message-other">
+            return `<div class="message message-other" data-message-id="${m.id}">
                 <div class="message-author">${escapeHtml(m.display_name || 'Participant')}</div>
                 <div class="message-content">${escapeHtml(m.content)}</div>
+                ${reactionBar}
                 <div class="message-time">${localTime(m.created_at)}</div>
             </div>`;
         }
@@ -305,6 +310,96 @@ function renderMessages(messages) {
     if (isNearBottom) {
         container.scrollTop = container.scrollHeight;
     }
+}
+
+// --- Emoji Reactions ---
+const REACTION_EMOJIS = {
+    like: '\u{1f44d}', dislike: '\u{1f44e}', love: '\u2764\ufe0f',
+    laugh: '\u{1f602}', surprised: '\u{1f62e}', sad: '\u{1f622}'
+};
+
+function buildReactionBar(messageId, reactions) {
+    let pills = '';
+    for (const [key, data] of Object.entries(reactions)) {
+        const activeClass = data.includes_self ? ' active' : '';
+        const tooltip = (data.names || []).join(', ');
+        pills += `<button class="reaction-pill${activeClass}" onclick="toggleReaction(${messageId}, '${key}')" title="${escapeHtml(tooltip)}">${REACTION_EMOJIS[key]} ${data.count}</button>`;
+    }
+    return `<div class="reaction-bar" data-reaction-bar="${messageId}">
+        ${pills}
+        <button class="reaction-add-btn" onclick="showReactionPicker(${messageId}, this)" title="Add reaction">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+        </button>
+    </div>`;
+}
+
+async function toggleReaction(messageId, reaction) {
+    closeReactionPicker();
+    const res = await fetch(`/api/sessions/${SESSION_ID}/messages/${messageId}/reactions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reaction })
+    });
+    const data = await res.json();
+    if (data.success) {
+        updateReactionBar(messageId, data.reactions);
+    }
+}
+
+function updateReactionBar(messageId, reactions) {
+    const bar = document.querySelector(`[data-reaction-bar="${messageId}"]`);
+    if (!bar) return;
+    let pills = '';
+    for (const [key, data] of Object.entries(reactions)) {
+        const activeClass = data.includes_self ? ' active' : '';
+        const tooltip = (data.names || []).join(', ');
+        pills += `<button class="reaction-pill${activeClass}" onclick="toggleReaction(${messageId}, '${key}')" title="${escapeHtml(tooltip)}">${REACTION_EMOJIS[key]} ${data.count}</button>`;
+    }
+    // Keep the add button at the end
+    const addBtn = bar.querySelector('.reaction-add-btn');
+    bar.innerHTML = pills;
+    if (addBtn) bar.appendChild(addBtn);
+}
+
+function showReactionPicker(messageId, btnEl) {
+    closeReactionPicker();
+    const picker = document.createElement('div');
+    picker.className = 'reaction-picker';
+    picker.innerHTML = Object.entries(REACTION_EMOJIS).map(([key, emoji]) =>
+        `<button onclick="toggleReaction(${messageId}, '${key}')">${emoji}</button>`
+    ).join('');
+
+    // Position relative to button
+    const msgEl = btnEl.closest('.message');
+    msgEl.style.position = 'relative';
+    msgEl.appendChild(picker);
+
+    // Align: left for self-messages, right for others
+    if (msgEl.classList.contains('message-self')) {
+        picker.style.right = '0';
+    } else {
+        picker.style.left = '0';
+    }
+    picker.style.bottom = '100%';
+    picker.style.marginBottom = '4px';
+
+    // Close on outside click
+    setTimeout(() => {
+        document.addEventListener('click', closePickerOutside);
+    }, 0);
+}
+
+function closePickerOutside(e) {
+    const picker = document.querySelector('.reaction-picker');
+    if (picker && !picker.contains(e.target) && !e.target.closest('.reaction-add-btn')) {
+        closeReactionPicker();
+    }
+}
+
+function closeReactionPicker() {
+    const picker = document.querySelector('.reaction-picker');
+    if (picker) picker.remove();
+    document.removeEventListener('click', closePickerOutside);
 }
 
 async function sendMessage(e) {
