@@ -231,6 +231,7 @@ function renderMessages(messages) {
                     <div class="council-indicator">
                         <span class="council-indicator-label">${escapeHtml(m.display_name || 'Someone')} asked the Council:</span>
                         <span class="council-indicator-question">"${escapeHtml(cdata.question)}"</span>
+                        <span class="council-indicator-time">${localTime(m.created_at)}</span>
                         <button class="btn btn-sm" onclick="viewCouncilResult(${cdata.council_result_id})">View</button>
                     </div>
                 </div>`;
