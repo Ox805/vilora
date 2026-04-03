@@ -1801,7 +1801,7 @@ body.summary-open .container {
     border: 1px dashed var(--border);
     background: none;
     cursor: pointer;
-    opacity: 0;
+    opacity: 0.4;
     transition: opacity 0.15s;
     font-size: 0.7rem;
     color: var(--text-muted);
@@ -1809,6 +1809,10 @@ body.summary-open .container {
 
 .message:hover .reaction-add-btn,
 .reaction-bar:has(.reaction-pill) .reaction-add-btn {
+    opacity: 0.7;
+}
+
+.reaction-add-btn:hover {
     opacity: 1;
 }
 
