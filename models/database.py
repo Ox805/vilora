@@ -525,7 +525,7 @@ class Message:
 
 
 class MessageReaction:
-    VALID_REACTIONS = {'like', 'dislike', 'love', 'laugh', 'surprised', 'sad'}
+    VALID_REACTIONS = {'like', 'dislike', 'love', 'laugh', 'surprised', 'sad', 'haha', 'emphasis'}
 
     EMOJI_MAP = {
         'like': '\U0001f44d',
@@ -534,6 +534,8 @@ class MessageReaction:
         'laugh': '\U0001f602',
         'surprised': '\U0001f62e',
         'sad': '\U0001f622',
+        'haha': '\U0001f923',
+        'emphasis': '\u2757',
     }
 
     @classmethod
