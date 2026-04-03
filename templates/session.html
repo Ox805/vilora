@@ -248,9 +248,9 @@ function localTime(ts) {
 }
 
 const SUMMARY_DELIMITER = '<!--SUMMARY-->';
+const expandedMessages = new Set();  // Track which messages are expanded
 
 function parseMediatorContent(content) {
-    // Split summary from full response if delimiter exists
     if (content.includes(SUMMARY_DELIMITER)) {
         const parts = content.split(SUMMARY_DELIMITER);
         return { summary: parts[0].trim(), full: parts[1].trim() };
@@ -263,14 +263,16 @@ function toggleFullResponse(msgId) {
     const full = document.getElementById('full-' + msgId);
     const btn = document.getElementById('expand-btn-' + msgId);
 
-    if (full.style.display === 'none') {
-        preview.style.display = 'none';
-        full.style.display = 'block';
-        btn.textContent = 'Show less';
-    } else {
+    if (expandedMessages.has(msgId)) {
+        expandedMessages.delete(msgId);
         preview.style.display = 'block';
         full.style.display = 'none';
         btn.textContent = 'View full response';
+    } else {
+        expandedMessages.add(msgId);
+        preview.style.display = 'none';
+        full.style.display = 'block';
+        btn.textContent = 'Show less';
     }
 }
 
@@ -295,10 +297,11 @@ function renderMessages(messages) {
 
             let contentHtml;
             if (parsed.summary) {
+                const isExpanded = expandedMessages.has(m.id);
                 contentHtml = `
-                <div class="message-content message-summary" id="preview-${m.id}">${escapeHtml(parsed.summary)}</div>
-                <div class="message-content message-full" id="full-${m.id}" style="display:none">${fullHtml}</div>
-                <button class="btn-expand-msg" id="expand-btn-${m.id}" onclick="toggleFullResponse(${m.id})">View full response</button>`;
+                <div class="message-content message-summary" id="preview-${m.id}" style="display:${isExpanded ? 'none' : 'block'}">${escapeHtml(parsed.summary)}</div>
+                <div class="message-content message-full" id="full-${m.id}" style="display:${isExpanded ? 'block' : 'none'}">${fullHtml}</div>
+                <button class="btn-expand-msg" id="expand-btn-${m.id}" onclick="toggleFullResponse(${m.id})">${isExpanded ? 'Show less' : 'View full response'}</button>`;
             } else {
                 contentHtml = `<div class="message-content">${fullHtml}</div>`;
             }
