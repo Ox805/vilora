@@ -1,0 +1,99 @@
+{
+  "name": "Welcome Message Quality",
+  "description": "Tests the quality of welcome messages across different session modes and topics",
+  "evaluate": {
+    "test_method": "welcome"
+  },
+  "cases": [
+    {
+      "name": "Personal: grief and loss",
+      "session_mode": "personal",
+      "session_type": "general",
+      "topic": "Dealing with the loss of my mom",
+      "creator_name": "Michael",
+      "perspective": "My mom passed away two months ago and I don't know how to function. Everyone says it gets easier but it hasn't. I just need someone to talk to who won't tell me to move on.",
+      "criteria": [
+        {
+          "name": "genuine_empathy",
+          "description": "Shows real warmth and care, not formulaic 'I'm sorry for your loss'. Should feel human.",
+          "weight": 3
+        },
+        {
+          "name": "no_toxic_positivity",
+          "description": "Does NOT say things like 'it gets better', 'she's in a better place', or 'time heals'. Respects the pain without trying to fix it.",
+          "weight": 3
+        },
+        {
+          "name": "safe_space",
+          "description": "Makes it clear they're here to listen without pressure to 'move on' or 'be strong'",
+          "weight": 2
+        },
+        {
+          "name": "appropriate_length",
+          "description": "Short and focused. Not a long monologue - this is a moment for quiet empathy.",
+          "weight": 1
+        }
+      ]
+    },
+    {
+      "name": "Mediation: business partnership dispute",
+      "session_mode": "mediation",
+      "session_type": "business",
+      "topic": "Equity split in our startup",
+      "creator_name": "Lisa",
+      "perspective": "My co-founder and I started this company together but I've been doing 80% of the work for the past year. We originally split equity 50/50 but that doesn't feel fair anymore given how much more I'm contributing.",
+      "criteria": [
+        {
+          "name": "professional_tone",
+          "description": "Appropriate for a business context - warm but not overly casual or therapeutic",
+          "weight": 2
+        },
+        {
+          "name": "acknowledges_perspective",
+          "description": "Shows understanding of Lisa's frustration without validating that she's necessarily right",
+          "weight": 2
+        },
+        {
+          "name": "mentions_invite",
+          "description": "Reminds Lisa to share the invite link with her co-founder",
+          "weight": 1
+        },
+        {
+          "name": "sets_expectations",
+          "description": "Sets the tone for productive mediation, not just commiseration",
+          "weight": 1
+        }
+      ]
+    },
+    {
+      "name": "Personal: anxiety with session tone",
+      "session_mode": "personal",
+      "session_type": "general",
+      "topic": "Constant anxiety about everything",
+      "creator_name": "Kai",
+      "perspective": "[Session tone: Keep things calm, Be gentle]\n\nI have this constant low-level anxiety about everything. Work, relationships, health, money. I wake up anxious and go to bed anxious. I've tried meditation apps and they don't really help. I just want to feel normal.",
+      "criteria": [
+        {
+          "name": "follows_tone",
+          "description": "Adopts a calm, gentle approach as requested by the session tone. Language should be soft and unhurried.",
+          "weight": 3
+        },
+        {
+          "name": "validates_experience",
+          "description": "Normalizes the experience of persistent anxiety without dismissing it. Does NOT say 'everyone feels anxious sometimes'.",
+          "weight": 2
+        },
+        {
+          "name": "no_quick_fixes",
+          "description": "Does NOT immediately suggest meditation, breathing exercises, or other solutions the user has likely already tried",
+          "weight": 2
+        },
+        {
+          "name": "appropriate_boundaries",
+          "description": "May gently note that professional support exists without being pushy about it",
+          "weight": 1
+        }
+      ]
+    }
+  ]
+}

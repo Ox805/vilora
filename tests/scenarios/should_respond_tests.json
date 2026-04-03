@@ -1,0 +1,116 @@
+{
+  "name": "Should Respond: Decision Accuracy",
+  "description": "Multiple sub-scenarios testing whether Vilora correctly decides when to chime in vs stay silent",
+  "session_mode": "mediation",
+  "session_type": "general",
+  "evaluate": {
+    "test_method": "should_respond"
+  },
+  "cases": [
+    {
+      "name": "Stay silent: productive exchange (2 msgs)",
+      "topic": "Splitting household expenses",
+      "expected": false,
+      "participants": [
+        {"id": 1, "display_name": "Alex"},
+        {"id": 2, "display_name": "Jamie"}
+      ],
+      "messages": [
+        {"msg_type": "mediator", "user_id": null, "content": "Thank you both for sharing your perspectives. It sounds like you both want a fair system but disagree on what fair looks like. Alex, can you tell me more about what feels unfair right now?"},
+        {"msg_type": "user", "user_id": 1, "content": "Yeah, I think the issue is Jamie makes twice what I do but we split everything 50/50. That doesn't feel equitable to me."},
+        {"msg_type": "user", "user_id": 2, "content": "I hear that. I guess I've always thought of fair as equal, but I can see how with the income difference it feels like I'm not carrying my share. What if we did proportional?"}
+      ]
+    },
+    {
+      "name": "Chime in: direct question to Vilora",
+      "topic": "Dividing vacation time with kids",
+      "expected": true,
+      "participants": [
+        {"id": 1, "display_name": "Rosa"},
+        {"id": 2, "display_name": "Mike"}
+      ],
+      "messages": [
+        {"msg_type": "mediator", "user_id": null, "content": "It sounds like vacation scheduling is a key concern for both of you."},
+        {"msg_type": "user", "user_id": 1, "content": "Vilora, what do most co-parenting plans say about holiday scheduling? Is there a standard approach?"}
+      ]
+    },
+    {
+      "name": "Chime in: escalation detected",
+      "topic": "Noise complaints in apartment",
+      "expected": true,
+      "participants": [
+        {"id": 1, "display_name": "Chris"},
+        {"id": 2, "display_name": "Dana"}
+      ],
+      "messages": [
+        {"msg_type": "mediator", "user_id": null, "content": "Let's try to understand each other's schedules and needs around noise."},
+        {"msg_type": "user", "user_id": 1, "content": "I've tried being reasonable but Dana clearly doesn't care about anyone else."},
+        {"msg_type": "user", "user_id": 2, "content": "That's rich coming from the person who bangs on my door at 9pm like a lunatic. You're completely unhinged."},
+        {"msg_type": "user", "user_id": 1, "content": "Unhinged?! You're the one who can't go one night without shaking the whole building with your bass!"}
+      ]
+    },
+    {
+      "name": "Stay silent: only 1 message since mediator",
+      "topic": "Budget disagreement",
+      "expected": false,
+      "participants": [
+        {"id": 1, "display_name": "Sam"},
+        {"id": 2, "display_name": "Pat"}
+      ],
+      "messages": [
+        {"msg_type": "mediator", "user_id": null, "content": "Sam, I'd love to hear more about your concerns with the current budget split."},
+        {"msg_type": "user", "user_id": 1, "content": "Sure. My main concern is that we agreed on a spending limit but Pat keeps going over it on non-essentials."}
+      ]
+    },
+    {
+      "name": "Chime in: concession made",
+      "topic": "Household chores division",
+      "expected": true,
+      "participants": [
+        {"id": 1, "display_name": "Lee"},
+        {"id": 2, "display_name": "Morgan"}
+      ],
+      "messages": [
+        {"msg_type": "mediator", "user_id": null, "content": "It sounds like you both feel you're contributing but see the contributions differently. Lee, what would a fair division look like to you?"},
+        {"msg_type": "user", "user_id": 1, "content": "Honestly, I think we should each pick the chores we hate least and split from there."},
+        {"msg_type": "user", "user_id": 2, "content": "You know what, that's actually a good idea. I've been so focused on the 50/50 thing that I didn't think about it that way. I'd much rather cook every night than touch the bathroom."},
+        {"msg_type": "user", "user_id": 1, "content": "And I actually don't mind cleaning bathrooms. So that works."}
+      ]
+    },
+    {
+      "name": "Chime in: 5+ messages without mediator",
+      "topic": "Wedding planning disagreements",
+      "expected": true,
+      "participants": [
+        {"id": 1, "display_name": "Taylor"},
+        {"id": 2, "display_name": "Casey"}
+      ],
+      "messages": [
+        {"msg_type": "mediator", "user_id": null, "content": "Congratulations on the engagement! Let's talk about what's important to each of you for the wedding."},
+        {"msg_type": "user", "user_id": 1, "content": "I want a small, intimate ceremony with just close family."},
+        {"msg_type": "user", "user_id": 2, "content": "I want a big celebration with all our friends and extended family."},
+        {"msg_type": "user", "user_id": 1, "content": "But that would cost a fortune. We're trying to save for a house."},
+        {"msg_type": "user", "user_id": 2, "content": "My parents offered to help pay. And this is a once in a lifetime event."},
+        {"msg_type": "user", "user_id": 1, "content": "I don't want to be obligated to your parents financially. That always comes with strings."},
+        {"msg_type": "user", "user_id": 2, "content": "That's not fair, my parents are generous without conditions."}
+      ]
+    },
+    {
+      "name": "Chime in: conversation going in circles",
+      "topic": "Who should drive on the road trip",
+      "expected": true,
+      "participants": [
+        {"id": 1, "display_name": "Noor"},
+        {"id": 2, "display_name": "Blake"}
+      ],
+      "messages": [
+        {"msg_type": "mediator", "user_id": null, "content": "Let's figure out a driving arrangement that works for both of you."},
+        {"msg_type": "user", "user_id": 1, "content": "I think we should split the driving evenly."},
+        {"msg_type": "user", "user_id": 2, "content": "But I'm a better driver and you know it."},
+        {"msg_type": "user", "user_id": 1, "content": "That's not the point. I should get to drive too."},
+        {"msg_type": "user", "user_id": 2, "content": "But why would we choose the worse driver? That doesn't make sense."},
+        {"msg_type": "user", "user_id": 1, "content": "I'm not a worse driver! I just think we should split it fairly."}
+      ]
+    }
+  ]
+}

@@ -1,0 +1,57 @@
+{
+  "name": "Personal: Relationship Doubt",
+  "description": "A user questioning whether to stay in a long-term relationship",
+  "session_mode": "personal",
+  "session_type": "relationship",
+  "topic": "Not sure if I should stay in my relationship",
+  "participants": [
+    {"id": 1, "display_name": "Jordan"}
+  ],
+  "messages": [
+    {
+      "msg_type": "intake",
+      "user_id": 1,
+      "content": "I've been with my partner for 5 years. Things aren't bad exactly, but I feel like we've become roommates. We don't fight but we also don't really connect anymore. I keep wondering if this is just what long relationships become or if something is really wrong."
+    },
+    {
+      "msg_type": "user",
+      "user_id": 1,
+      "content": "We used to talk for hours and now we mostly just watch TV together. When I try to bring up how I'm feeling, they say everything is fine and I'm overthinking it."
+    },
+    {
+      "msg_type": "user",
+      "user_id": 1,
+      "content": "A coworker has been flirting with me and honestly it feels nice to feel wanted again. I haven't done anything but I feel guilty even enjoying the attention."
+    }
+  ],
+  "evaluate": {
+    "test_method": "mediate",
+    "criteria": [
+      {
+        "name": "no_judgment",
+        "description": "Does NOT judge the user for enjoying the coworker's attention or make them feel guilty. Normalizes the feeling while gently exploring what it reveals about their needs.",
+        "weight": 2
+      },
+      {
+        "name": "explores_needs",
+        "description": "Helps the user identify what's actually missing (connection, being seen, feeling desired) rather than jumping to 'talk to your partner' or 'don't cheat'",
+        "weight": 2
+      },
+      {
+        "name": "empathy",
+        "description": "Validates that the situation is genuinely difficult and confusing, not dismissive",
+        "weight": 1
+      },
+      {
+        "name": "empowering_questions",
+        "description": "Asks questions that help the user think more clearly rather than telling them what to do",
+        "weight": 2
+      },
+      {
+        "name": "boundaries_awareness",
+        "description": "Appropriately positions itself as an advisor, not a couples therapist. Might suggest professional support if relevant.",
+        "weight": 1
+      }
+    ]
+  }
+}

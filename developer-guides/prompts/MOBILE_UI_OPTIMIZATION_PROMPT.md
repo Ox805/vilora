@@ -365,3 +365,4 @@ Available width: 375px
 |------|--------|
 | 2026-04-02 | Initial creation. Comprehensive mobile audit scope and implementation plan |
 | 2026-04-02 | Added code audit findings with specific measurements and severity ratings |
+| 2026-04-03 | Audit run: Fixed .message-content, .welcome-topic, .invite-landing-topic word-break. Added 44px touch targets for .input-icon-btn, .btn-polish at 480px. Bumped .session-type-badge to 0.7rem. Fixed message-input-bar mobile override. Existing 480px breakpoint already covers: summary/council panels (100% width), btn-sm, btn-mic, tone/settings chips, password-toggle, form inputs, modals, invite banner stacking, onboarding buttons. Remaining: keyboard-hides-input (uses dvh but needs real device testing), .btn-polish still below 44px (36px, acceptable for secondary action) |

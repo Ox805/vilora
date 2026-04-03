@@ -1,0 +1,163 @@
+{
+  "timestamp": "2026-04-03T14:07:02.638842",
+  "total_tests": 15,
+  "passed": 5,
+  "failed": 10,
+  "scenarios": [
+    {
+      "name": "Mediation: Finding Common Ground",
+      "file": "mediation_common_ground",
+      "test_method": "mediate",
+      "response": "I appreciate you sharing that. To provide the best mediation experience, please ensure the ANTHROPIC_API_KEY environment variable is configured. Once set up, I'll be able to fully engage as your mediator.",
+      "passed": false,
+      "evaluation": {
+        "error": "\"Could not resolve authentication method. Expected either api_key or auth_token to be set. Or for one of the `X-Api-Key` or `Authorization` headers to be explicitly omitted\"",
+        "criteria_results": [],
+        "overall_score": 0.0
+      },
+      "score": 0.0
+    },
+    {
+      "name": "Mediation: Escalating Roommate Conflict",
+      "file": "mediation_escalation",
+      "test_method": "mediate",
+      "response": "I appreciate you sharing that. To provide the best mediation experience, please ensure the ANTHROPIC_API_KEY environment variable is configured. Once set up, I'll be able to fully engage as your mediator.",
+      "passed": false,
+      "evaluation": {
+        "error": "\"Could not resolve authentication method. Expected either api_key or auth_token to be set. Or for one of the `X-Api-Key` or `Authorization` headers to be explicitly omitted\"",
+        "criteria_results": [],
+        "overall_score": 0.0
+      },
+      "score": 0.0
+    },
+    {
+      "name": "Mediation: Workplace Credit Dispute",
+      "file": "mediation_workplace",
+      "test_method": "mediate",
+      "response": "I appreciate you sharing that. To provide the best mediation experience, please ensure the ANTHROPIC_API_KEY environment variable is configured. Once set up, I'll be able to fully engage as your mediator.",
+      "passed": false,
+      "evaluation": {
+        "error": "\"Could not resolve authentication method. Expected either api_key or auth_token to be set. Or for one of the `X-Api-Key` or `Authorization` headers to be explicitly omitted\"",
+        "criteria_results": [],
+        "overall_score": 0.0
+      },
+      "score": 0.0
+    },
+    {
+      "name": "Personal: Relationship Doubt",
+      "file": "personal_relationship",
+      "test_method": "mediate",
+      "response": "I appreciate you sharing that. To provide the best mediation experience, please ensure the ANTHROPIC_API_KEY environment variable is configured. Once set up, I'll be able to fully engage as your mediator.",
+      "passed": false,
+      "evaluation": {
+        "error": "\"Could not resolve authentication method. Expected either api_key or auth_token to be set. Or for one of the `X-Api-Key` or `Authorization` headers to be explicitly omitted\"",
+        "criteria_results": [],
+        "overall_score": 0.0
+      },
+      "score": 0.0
+    },
+    {
+      "name": "Personal: Work Stress",
+      "file": "personal_work_stress",
+      "test_method": "mediate",
+      "response": "I appreciate you sharing that. To provide the best mediation experience, please ensure the ANTHROPIC_API_KEY environment variable is configured. Once set up, I'll be able to fully engage as your mediator.",
+      "passed": false,
+      "evaluation": {
+        "error": "\"Could not resolve authentication method. Expected either api_key or auth_token to be set. Or for one of the `X-Api-Key` or `Authorization` headers to be explicitly omitted\"",
+        "criteria_results": [],
+        "overall_score": 0.0
+      },
+      "score": 0.0
+    },
+    {
+      "name": "Should Respond: Decision Accuracy",
+      "file": "should_respond_tests",
+      "test_method": "should_respond",
+      "cases": [
+        {
+          "name": "Stay silent: productive exchange (2 msgs)",
+          "expected": false,
+          "actual": true,
+          "passed": false
+        },
+        {
+          "name": "Chime in: direct question to Vilora",
+          "expected": true,
+          "actual": true,
+          "passed": true
+        },
+        {
+          "name": "Chime in: escalation detected",
+          "expected": true,
+          "actual": true,
+          "passed": true
+        },
+        {
+          "name": "Stay silent: only 1 message since mediator",
+          "expected": false,
+          "actual": true,
+          "passed": false
+        },
+        {
+          "name": "Chime in: concession made",
+          "expected": true,
+          "actual": true,
+          "passed": true
+        },
+        {
+          "name": "Chime in: 5+ messages without mediator",
+          "expected": true,
+          "actual": true,
+          "passed": true
+        },
+        {
+          "name": "Chime in: conversation going in circles",
+          "expected": true,
+          "actual": true,
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "Welcome Message Quality",
+      "file": "welcome_messages",
+      "test_method": "welcome",
+      "cases": [
+        {
+          "name": "Personal: grief and loss",
+          "response": "Thanks for sharing that, Michael. I'm here to help you think this through. What would be most helpful right now?",
+          "passed": false,
+          "evaluation": {
+            "error": "\"Could not resolve authentication method. Expected either api_key or auth_token to be set. Or for one of the `X-Api-Key` or `Authorization` headers to be explicitly omitted\"",
+            "criteria_results": [],
+            "overall_score": 0.0
+          },
+          "score": 0.0
+        },
+        {
+          "name": "Mediation: business partnership dispute",
+          "response": "Thank you for sharing your perspective, Lisa. I'm ready to help mediate once the other party joins. Please share the invite link with them so we can begin.",
+          "passed": false,
+          "evaluation": {
+            "error": "\"Could not resolve authentication method. Expected either api_key or auth_token to be set. Or for one of the `X-Api-Key` or `Authorization` headers to be explicitly omitted\"",
+            "criteria_results": [],
+            "overall_score": 0.0
+          },
+          "score": 0.0
+        },
+        {
+          "name": "Personal: anxiety with session tone",
+          "response": "Thanks for sharing that, Kai. I'm here to help you think this through. What would be most helpful right now?",
+          "passed": false,
+          "evaluation": {
+            "error": "\"Could not resolve authentication method. Expected either api_key or auth_token to be set. Or for one of the `X-Api-Key` or `Authorization` headers to be explicitly omitted\"",
+            "criteria_results": [],
+            "overall_score": 0.0
+          },
+          "score": 0.0
+        }
+      ]
+    }
+  ],
+  "pass_rate": 33.33333333333333
+}

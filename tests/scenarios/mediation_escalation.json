@@ -1,0 +1,63 @@
+{
+  "name": "Mediation: Escalating Roommate Conflict",
+  "description": "Two roommates in a heated argument about noise and respect. Tests de-escalation and reframing.",
+  "session_mode": "mediation",
+  "session_type": "roommate",
+  "topic": "Noise levels and respecting shared living space",
+  "participants": [
+    {"id": 1, "display_name": "Marcus"},
+    {"id": 2, "display_name": "Priya"}
+  ],
+  "messages": [
+    {
+      "msg_type": "intake",
+      "user_id": 1,
+      "content": "Priya plays loud music at all hours and doesn't give a damn about anyone else in the apartment. I've asked her a hundred times to keep it down and she just ignores me. I'm losing sleep and I can't focus on my work anymore."
+    },
+    {
+      "msg_type": "intake",
+      "user_id": 2,
+      "content": "Marcus is always trying to control the apartment. I pay rent too and I should be able to listen to music in my own home. He acts like he's my parent and it's suffocating."
+    },
+    {
+      "msg_type": "user",
+      "user_id": 1,
+      "content": "See, this is exactly what I'm talking about. She doesn't care about anyone but herself. I have early morning meetings and she's blasting music at midnight."
+    },
+    {
+      "msg_type": "user",
+      "user_id": 2,
+      "content": "Oh please, it was 10pm and it wasn't even that loud. You're just a control freak who wants the whole apartment silent like a library."
+    }
+  ],
+  "evaluate": {
+    "test_method": "mediate",
+    "criteria": [
+      {
+        "name": "de_escalation",
+        "description": "Actively lowers the temperature. Does NOT match the participants' hostile energy. Uses calm, measured language.",
+        "weight": 3
+      },
+      {
+        "name": "reframing",
+        "description": "Translates accusations ('doesn't give a damn', 'control freak') into neutral observations about needs and feelings",
+        "weight": 3
+      },
+      {
+        "name": "impartiality",
+        "description": "Does not side with either Marcus or Priya. Validates both perspectives without declaring one right.",
+        "weight": 2
+      },
+      {
+        "name": "identifies_needs",
+        "description": "Gets beneath the positions to the underlying needs (Marcus needs rest/focus, Priya needs autonomy/enjoyment in her home)",
+        "weight": 2
+      },
+      {
+        "name": "no_lecturing",
+        "description": "Does NOT lecture participants about how to behave or speak to each other. Guides rather than scolds.",
+        "weight": 1
+      }
+    ]
+  }
+}

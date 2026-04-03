@@ -1,0 +1,57 @@
+{
+  "name": "Personal: Work Stress",
+  "description": "A user in personal mode seeking advice about burnout and work-life balance",
+  "session_mode": "personal",
+  "session_type": "general",
+  "topic": "Feeling burned out and unsure how to set boundaries at work",
+  "participants": [
+    {"id": 1, "display_name": "Sarah"}
+  ],
+  "messages": [
+    {
+      "msg_type": "intake",
+      "user_id": 1,
+      "content": "I've been working 60+ hour weeks for the past three months. My boss keeps piling on more projects and I don't know how to say no. I'm exhausted, I'm snapping at my partner, and I dread going to work every morning. I used to love this job but now I just feel trapped."
+    },
+    {
+      "msg_type": "user",
+      "user_id": 1,
+      "content": "The thing is, I got promoted six months ago and I feel like if I push back they'll think I can't handle it. Other managers seem to handle the load fine."
+    },
+    {
+      "msg_type": "user",
+      "user_id": 1,
+      "content": "My partner keeps telling me to just quit but it's not that simple. We have a mortgage and I actually liked the work before it became this much."
+    }
+  ],
+  "evaluate": {
+    "test_method": "mediate",
+    "criteria": [
+      {
+        "name": "empathy",
+        "description": "Shows genuine understanding of the user's emotional state (exhaustion, feeling trapped, fear of appearing incapable)",
+        "weight": 2
+      },
+      {
+        "name": "not_clinical",
+        "description": "Tone is warm and conversational, not clinical or formulaic. Should feel like talking to a caring friend, not a therapist reading from a script.",
+        "weight": 2
+      },
+      {
+        "name": "actionable",
+        "description": "Offers concrete perspective or asks a question that helps the user think more clearly, not just generic advice like 'set boundaries'",
+        "weight": 2
+      },
+      {
+        "name": "no_premature_solutions",
+        "description": "Does NOT jump straight to telling the user what to do. Acknowledges their feelings and explores the situation before offering perspective.",
+        "weight": 1
+      },
+      {
+        "name": "appropriate_length",
+        "description": "Response is concise and focused (not a wall of text). Should be 2-4 paragraphs, not 6+.",
+        "weight": 1
+      }
+    ]
+  }
+}

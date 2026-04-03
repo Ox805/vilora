@@ -1,0 +1,68 @@
+{
+  "name": "Mediation: Finding Common Ground",
+  "description": "Co-parents disagreeing about screen time rules, but with shared underlying values. Tests common ground identification.",
+  "session_mode": "mediation",
+  "session_type": "family",
+  "topic": "Screen time rules for our kids",
+  "participants": [
+    {"id": 1, "display_name": "Elena"},
+    {"id": 2, "display_name": "David"}
+  ],
+  "messages": [
+    {
+      "msg_type": "intake",
+      "user_id": 1,
+      "content": "David lets the kids have unlimited screen time at his house and it's making my job impossible. When they come back to me they throw tantrums about the rules I have in place. We need to be on the same page."
+    },
+    {
+      "msg_type": "intake",
+      "user_id": 2,
+      "content": "Elena is way too strict about screens. The kids are doing fine. I use screen time to bond with them - we watch movies together, play games. She acts like I'm poisoning them."
+    },
+    {
+      "msg_type": "user",
+      "user_id": 1,
+      "content": "I'm not against all screen time. I just think there should be limits. They're 7 and 9 - they need to be outside playing and reading, not glued to iPads all weekend."
+    },
+    {
+      "msg_type": "user",
+      "user_id": 2,
+      "content": "I agree they should play outside too. I'm not just parking them in front of screens. But when we watch a movie together on Friday night, that's quality time. I don't think that should be policed."
+    },
+    {
+      "msg_type": "user",
+      "user_id": 1,
+      "content": "I actually don't have a problem with movie night. That sounds great. It's the four hours of YouTube on Saturday morning while you sleep in that worries me."
+    }
+  ],
+  "evaluate": {
+    "test_method": "mediate",
+    "criteria": [
+      {
+        "name": "spots_common_ground",
+        "description": "Explicitly identifies that both parents want what's best for the kids, both value outdoor play, and both see some screen time as OK. Should highlight the Friday movie night agreement.",
+        "weight": 3
+      },
+      {
+        "name": "builds_on_agreement",
+        "description": "Uses the areas of agreement as a foundation to explore compromise, rather than dwelling on the disagreements",
+        "weight": 2
+      },
+      {
+        "name": "impartiality",
+        "description": "Does not side with either parent's approach. Both strict and relaxed parenting styles are treated as valid.",
+        "weight": 2
+      },
+      {
+        "name": "practical_direction",
+        "description": "Moves toward concrete solutions (e.g., agreeing on specific guidelines) rather than staying abstract",
+        "weight": 1
+      },
+      {
+        "name": "acknowledges_progress",
+        "description": "Notes that the conversation is already productive and participants are making progress",
+        "weight": 1
+      }
+    ]
+  }
+}

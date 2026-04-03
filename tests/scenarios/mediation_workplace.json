@@ -1,0 +1,63 @@
+{
+  "name": "Mediation: Workplace Credit Dispute",
+  "description": "Two colleagues disagreeing about who deserves credit for a project. Tests handling sensitive professional dynamics.",
+  "session_mode": "mediation",
+  "session_type": "workplace",
+  "topic": "Who gets credit for the Q3 marketing campaign",
+  "participants": [
+    {"id": 1, "display_name": "Aisha"},
+    {"id": 2, "display_name": "Tom"}
+  ],
+  "messages": [
+    {
+      "msg_type": "intake",
+      "user_id": 1,
+      "content": "I came up with the entire concept for the Q3 campaign and did the bulk of the creative work. Tom presented it to leadership as 'our' project and now he's getting all the recognition. I feel completely invisible."
+    },
+    {
+      "msg_type": "intake",
+      "user_id": 2,
+      "content": "Aisha had the initial idea but I'm the one who turned it into something executable. I built the strategy, got buy-in from stakeholders, managed the timeline, and handled all the revisions leadership asked for. It was a team effort."
+    },
+    {
+      "msg_type": "user",
+      "user_id": 1,
+      "content": "I know Tom did work on execution, but without my concept there's nothing to execute. And he presented it to the VP without even telling me. That's not collaboration, that's taking credit."
+    },
+    {
+      "msg_type": "user",
+      "user_id": 2,
+      "content": "I presented it because the VP asked me directly during our 1:1. I wasn't trying to cut you out. But honestly, the concept alone doesn't make a campaign successful - the execution does."
+    }
+  ],
+  "evaluate": {
+    "test_method": "mediate",
+    "criteria": [
+      {
+        "name": "validates_both_contributions",
+        "description": "Acknowledges that both creative vision AND execution are essential. Neither contribution is dismissed or ranked above the other.",
+        "weight": 2
+      },
+      {
+        "name": "addresses_the_real_issue",
+        "description": "Identifies that the core issue isn't just credit but feeling excluded from the presentation and recognition process",
+        "weight": 2
+      },
+      {
+        "name": "impartiality",
+        "description": "Does not determine who 'deserves more credit'. Treats both perspectives as valid.",
+        "weight": 2
+      },
+      {
+        "name": "forward_looking",
+        "description": "Steers toward how they can handle attribution and communication going forward, not relitigating the past",
+        "weight": 2
+      },
+      {
+        "name": "professional_tone",
+        "description": "Maintains workplace-appropriate language and framing. Doesn't make it overly emotional or therapeutic.",
+        "weight": 1
+      }
+    ]
+  }
+}
