@@ -1707,6 +1707,15 @@ body.summary-open .container {
     color: white;
 }
 
+@media (hover: none) and (pointer: coarse) {
+    .msg-delete-btn {
+        opacity: 0.4;
+    }
+    .message-self .msg-delete-btn {
+        opacity: 0.5;
+    }
+}
+
 /* === Ask Vilora === */
 .ask-vilora-bar {
     display: flex;
