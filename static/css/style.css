@@ -189,6 +189,21 @@ body {
 .auth-toggle { text-align: center; margin-top: 1rem; font-size: 0.9rem; }
 .auth-toggle a { color: var(--primary); }
 
+.verify-banner {
+    background: #FEFCBF;
+    border: 1px solid #ECC94B;
+    border-radius: var(--radius);
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    font-size: 0.85rem;
+    color: #744210;
+    text-align: center;
+}
+
+.verify-banner p {
+    margin: 0 0 0.5rem;
+}
+
 .error-msg {
     background: #FFF5F5;
     color: var(--error);

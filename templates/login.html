@@ -5,6 +5,10 @@
 <div class="auth-container">
     <div class="auth-card">
         <h2 id="auth-title">Login</h2>
+        <div id="verify-banner" class="verify-banner" style="display:none">
+            <p>Your email hasn't been verified yet. Check your inbox for a verification link.</p>
+            <button type="button" onclick="resendFromLogin()" class="btn btn-sm" id="login-resend-btn">Resend verification</button>
+        </div>
         <div id="auth-error" class="error-msg" style="display:none"></div>
 
         <form id="login-form" onsubmit="handleLogin(event)">
@@ -86,11 +90,15 @@ async function handleLogin(e) {
         });
         const data = await res.json();
         if (data.success && data.needs_verification) {
+            // New registration, go to pending page
             window.location.href = '/verify-pending?email=' + encodeURIComponent(data.email || email);
         } else if (data.success) {
             window.location.href = data.redirect || '/dashboard';
         } else if (data.needs_verification) {
-            window.location.href = '/verify-pending?email=' + encodeURIComponent(data.email || email);
+            // Login attempt with unverified email, show banner on this page
+            window._pendingVerifyEmail = data.email || email;
+            document.getElementById('verify-banner').style.display = 'block';
+            document.getElementById('auth-error').style.display = 'none';
         } else {
             const errEl = document.getElementById('auth-error');
             errEl.textContent = data.error || 'Something went wrong';
@@ -100,6 +108,33 @@ async function handleLogin(e) {
         const errEl = document.getElementById('auth-error');
         errEl.textContent = 'Connection error. Please try again.';
         errEl.style.display = 'block';
+    }
+}
+
+async function resendFromLogin() {
+    const email = window._pendingVerifyEmail;
+    if (!email) return;
+    const btn = document.getElementById('login-resend-btn');
+    btn.disabled = true;
+    btn.textContent = 'Sending...';
+
+    try {
+        const res = await fetch('/api/resend-verification', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email })
+        });
+        const data = await res.json();
+        if (data.success) {
+            btn.textContent = 'Sent!';
+            setTimeout(() => { btn.textContent = 'Resend verification'; btn.disabled = false; }, 3000);
+        } else {
+            btn.textContent = data.error || 'Try again later';
+            setTimeout(() => { btn.textContent = 'Resend verification'; btn.disabled = false; }, 3000);
+        }
+    } catch (err) {
+        btn.textContent = 'Resend verification';
+        btn.disabled = false;
     }
 }
 </script>
