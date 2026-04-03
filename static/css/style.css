@@ -1546,16 +1546,22 @@ body.summary-open .container {
     background: var(--pale);
 }
 
-.btn-nudge-text {
+.btn-nudge-text, .btn-text-invite {
     color: var(--text-light);
     border-color: var(--border);
     font-size: 0.75rem;
+    display: none; /* hidden by default (desktop) */
 }
 
-.btn-nudge-text:hover {
+.btn-nudge-text:hover, .btn-text-invite:hover {
     color: var(--primary);
     border-color: var(--primary-light);
     background: var(--pale);
+}
+
+@media (hover: none) and (pointer: coarse) {
+    /* Show text buttons only on touch devices (phones/tablets) */
+    .btn-nudge-text, .btn-text-invite { display: inline-flex; }
 }
 
 .btn-nudge:disabled {

@@ -20,7 +20,7 @@
             <strong>Invite another party.</strong> Send them an email, text, or share the link:
             <div class="invite-link-row">
                 <button onclick="showInviteModal()" class="btn btn-primary btn-sm" title="Send a branded email invitation to the other party with a link to join this session.">Email Invite</button>
-                <button onclick="shareViaText()" class="btn btn-sm" title="Open your messaging app with a pre-written invite message and link.">Text Invite</button>
+                <button onclick="shareViaText()" class="btn btn-sm btn-text-invite" title="Open your messaging app with a pre-written invite message and link.">Text Invite</button>
                 <input type="text" id="invite-link" value="{{ invite_link }}" readonly>
                 <button onclick="copyInviteLink()" class="btn btn-sm" id="copy-btn">Copy</button>
             </div>
