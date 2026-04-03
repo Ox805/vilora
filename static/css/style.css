@@ -1346,6 +1346,31 @@ body.summary-open .container {
     flex-wrap: wrap;
 }
 
+.btn-share-section {
+    font-size: 0.7rem;
+    padding: 0.15rem 0.5rem;
+    color: var(--primary);
+    border-color: var(--primary-light);
+    vertical-align: middle;
+    margin-left: 0.5rem;
+}
+
+.btn-share-section:hover {
+    background: var(--pale);
+}
+
+.council-advisor-actions {
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--border);
+}
+
+.council-section h4 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
 /* Council chat indicator */
 .message-council {
     align-self: center !important;

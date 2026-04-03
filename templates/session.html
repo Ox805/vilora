@@ -566,31 +566,46 @@ function showCouncilResults(council, question) {
 
     let html = `<div class="council-question-header"><strong>Question:</strong> ${escapeHtml(question)}</div>`;
 
+    const shareBtn = (label, text) => !IS_PERSONAL
+        ? `<button class="btn btn-sm btn-share-section" onclick="shareCouncilSection(\`${text.replace(/`/g, '\\`').replace(/\\/g, '\\\\')}\`)" title="Share this section with the group">Share</button>`
+        : '';
+
+    // Store synthesis for copy
+    window._councilSynthesisText = council.synthesis;
+
     // Synthesis first with action buttons
     html += `<div class="council-section council-synthesis">
         <h4>Synthesis & Recommendation</h4>
-        <div class="council-section-body">${formatCouncilText(council.synthesis)}</div>
+        <div class="council-section-body" id="council-synthesis-body">${formatCouncilText(council.synthesis)}</div>
         <div class="council-actions">
-            ${!IS_PERSONAL ? `<button class="btn btn-sm" onclick="shareCouncilWithGroup(${resultId})" title="Post the synthesis to the session chat for other participants to see">Share with group</button>` : ''}
+            ${!IS_PERSONAL ? `<button class="btn btn-sm" onclick="shareCouncilSection(window._councilSynthesisText)" title="Post the synthesis to the session chat">Share with group</button>` : ''}
             <button class="btn btn-sm" onclick="copyCouncilSynthesis()" title="Copy the synthesis text to your clipboard">Copy</button>
             <button class="btn btn-sm" onclick="councilFollowUp('${escapeHtml(question).replace(/'/g, "\\'")}')" title="Ask the Council a follow-up question with this result as context">Ask a follow-up</button>
         </div>
     </div>`;
 
     // Peer review
+    window._councilReviewText = council.review;
     html += `<div class="council-section">
-        <h4>Peer Review</h4>
+        <h4>Peer Review ${!IS_PERSONAL ? `<button class="btn btn-sm btn-share-section" onclick="shareCouncilSection(window._councilReviewText)" title="Share peer review with the group">Share</button>` : ''}</h4>
         <div class="council-section-body">${formatCouncilText(council.review)}</div>
     </div>`;
 
-    // Individual advisors (collapsible) with descriptions
+    // Individual advisors (collapsible) with descriptions and share buttons
     html += '<div class="council-section"><h4>Individual Advisor Perspectives</h4>';
-    for (const advisor of council.advisors) {
+    for (let i = 0; i < council.advisors.length; i++) {
+        const advisor = council.advisors[i];
         const desc = ADVISOR_DESCRIPTIONS[advisor.name] || '';
+        window['_councilAdvisor' + i] = advisor.response;
         html += `
             <details class="council-advisor">
-                <summary class="council-advisor-name">${escapeHtml(advisor.name)}${desc ? `<span class="council-advisor-desc">${desc}</span>` : ''}</summary>
-                <div class="council-advisor-body">${formatCouncilText(advisor.response)}</div>
+                <summary class="council-advisor-name">
+                    ${escapeHtml(advisor.name)}${desc ? `<span class="council-advisor-desc">${desc}</span>` : ''}
+                </summary>
+                <div class="council-advisor-body">
+                    ${formatCouncilText(advisor.response)}
+                    ${!IS_PERSONAL ? `<div class="council-advisor-actions"><button class="btn btn-sm btn-share-section" onclick="shareCouncilSection(window._councilAdvisor${i}, '${escapeHtml(advisor.name)}')" title="Share ${escapeHtml(advisor.name)}'s perspective with the group">Share with group</button></div>` : ''}
+                </div>
             </details>`;
     }
     html += '</div>';
@@ -619,24 +634,21 @@ async function viewCouncilResult(resultId) {
     }
 }
 
-async function shareCouncilWithGroup(resultId) {
-    if (!resultId) return;
+async function shareCouncilSection(text, advisorName) {
+    if (!text) return;
+    const prefix = advisorName
+        ? `From the Council (${advisorName}):\n\n`
+        : `From the Council:\n\n`;
+    const msg = prefix + text;
     try {
-        const res = await fetch(`/api/council/results/${resultId}`);
-        const data = await res.json();
-        if (data.success && data.council) {
-            // Post synthesis as a user message
-            const msg = `The Council's recommendation on "${data.council.question}":\n\n${data.council.synthesis}`;
-            await fetch(`/api/sessions/${SESSION_ID}/messages`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ content: msg })
-            });
-            loadMessages();
-            closeCouncil();
-        }
+        await fetch(`/api/sessions/${SESSION_ID}/messages`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content: msg })
+        });
+        loadMessages();
     } catch (err) {
-        alert('Could not share Council results.');
+        alert('Could not share with group.');
     }
 }
 
