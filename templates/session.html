@@ -319,7 +319,7 @@ async function showParticipantsPanel() {
                     <span class="participant-name">${escapeHtml(p.display_name)}</span>
                 </div>
                 <div class="nudge-controls">
-                    <button class="btn btn-sm btn-nudge-text" onclick="textNudge('${escapeHtml(p.display_name)}')" title="Open your messaging app to send ${escapeHtml(p.display_name)} a reminder">Text</button>
+                    <button class="btn btn-sm btn-nudge-text" onclick="textNudge('${escapeHtml(p.display_name)}', this)" title="On mobile: opens your messaging app. On desktop: copies a nudge message to your clipboard.">Text</button>
                     <span class="nudge-count" title="Email nudges sent: ${p.nudge_count} of 4. Once per 24 hours, up to 4 total.">${p.nudge_count}/4</span>
                     <button class="btn btn-sm btn-nudge" id="nudge-${p.id}" onclick="nudgeOne(${p.id}, '${escapeHtml(p.display_name)}')"
                         ${maxed ? 'disabled' : ''}
@@ -341,7 +341,7 @@ async function showParticipantsPanel() {
                     <span class="participant-pending-label">Not yet joined</span>
                 </div>
                 <div class="nudge-controls">
-                    <button class="btn btn-sm btn-nudge-text" onclick="textNudgePending('${escapeHtml(inv.email)}')" title="Open your messaging app to send a reminder">Text</button>
+                    <button class="btn btn-sm btn-nudge-text" onclick="textNudgePending('${escapeHtml(inv.email)}', this)" title="On mobile: opens your messaging app. On desktop: copies a nudge message to your clipboard.">Text</button>
                     <span class="nudge-count" title="Email nudges sent: ${inv.nudge_count} of 4. Once per 24 hours, up to 4 total.">${inv.nudge_count}/4</span>
                     <button class="btn btn-sm btn-nudge" onclick="nudgeByEmail('${escapeHtml(inv.email)}', this)"
                         ${maxed ? 'disabled' : ''}
@@ -415,28 +415,35 @@ async function nudgeByEmail(email, btn) {
     }
 }
 
-function textNudge(name) {
-    const link = `${window.location.origin}/session/${SESSION_ID}`;
-    const topic = document.querySelector('.room-header h2')?.innerText?.split('\n')[0]?.trim() || 'our conversation';
-    const msg = `Hey ${name}, just a friendly reminder that our conversation on Vilora about "${topic}" is waiting for your input. Join here: ${link}`;
+function isMobile() {
+    return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+}
 
-    if (navigator.share) {
-        navigator.share({ title: 'Vilora reminder', text: msg }).catch(() => {});
+function shareOrCopy(msg, btn) {
+    if (isMobile() && navigator.share) {
+        navigator.share({ text: msg }).catch(() => {});
     } else {
-        window.open(`sms:?body=${encodeURIComponent(msg)}`, '_self');
+        navigator.clipboard.writeText(msg);
+        if (btn) {
+            const orig = btn.textContent;
+            btn.textContent = 'Copied!';
+            setTimeout(() => btn.textContent = orig, 2000);
+        }
     }
 }
 
-function textNudgePending(email) {
+function textNudge(name, btn) {
+    const link = `${window.location.origin}/session/${SESSION_ID}`;
+    const topic = document.querySelector('.room-header h2')?.innerText?.split('\n')[0]?.trim() || 'our conversation';
+    const msg = `Hey ${name}, just a friendly reminder that our conversation on Vilora about "${topic}" is waiting for your input. Join here: ${link}`;
+    shareOrCopy(msg, btn);
+}
+
+function textNudgePending(email, btn) {
     const link = document.getElementById('invite-link')?.value || `${window.location.origin}/session/${SESSION_ID}`;
     const topic = document.querySelector('.room-header h2')?.innerText?.split('\n')[0]?.trim() || 'a conversation';
     const msg = `Hey, I invited you to a conversation on Vilora about "${topic}". Would love your input. Join here: ${link}`;
-
-    if (navigator.share) {
-        navigator.share({ title: 'Vilora invite', text: msg }).catch(() => {});
-    } else {
-        window.open(`sms:?body=${encodeURIComponent(msg)}`, '_self');
-    }
+    shareOrCopy(msg, btn);
 }
 
 // --- Delete Message ---
@@ -803,19 +810,8 @@ function shareViaText() {
     const link = document.getElementById('invite-link').value;
     const topic = document.querySelector('.room-header h2')?.innerText?.split('\n')[0]?.trim() || 'a conversation';
     const msg = `Hey, I'd like to work through something together using Vilora. The topic is "${topic}". Join here: ${link}`;
-
-    // Try native share API first (mobile), fall back to sms: link
-    if (navigator.share) {
-        navigator.share({
-            title: 'Join me on Vilora',
-            text: msg,
-            url: link
-        }).catch(() => {});
-    } else {
-        // Fall back to sms: URI (opens default messaging app)
-        const smsBody = encodeURIComponent(msg);
-        window.open(`sms:?body=${smsBody}`, '_self');
-    }
+    const btn = document.querySelector('[onclick="shareViaText()"]');
+    shareOrCopy(msg, btn);
 }
 
 function copyInviteLink() {
