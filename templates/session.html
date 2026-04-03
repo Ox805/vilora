@@ -319,11 +319,12 @@ async function showParticipantsPanel() {
                     <span class="participant-name">${escapeHtml(p.display_name)}</span>
                 </div>
                 <div class="nudge-controls">
-                    <button class="btn btn-sm btn-nudge-text" onclick="textNudge('${escapeHtml(p.display_name)}', this)" title="On mobile: opens your messaging app. On desktop: copies a nudge message to your clipboard.">Text</button>
-                    <span class="nudge-count" title="Email nudges sent: ${p.nudge_count} of 4. Once per 24 hours, up to 4 total.">${p.nudge_count}/4</span>
+                    <span class="nudge-label">Nudge</span>
+                    <button class="btn btn-sm btn-nudge-text" onclick="textNudge('${escapeHtml(p.display_name)}', this)" title="Opens your messaging app to send a reminder">Text</button>
                     <button class="btn btn-sm btn-nudge" id="nudge-${p.id}" onclick="nudgeOne(${p.id}, '${escapeHtml(p.display_name)}')"
                         ${maxed ? 'disabled' : ''}
                         title="${maxed ? 'Maximum email nudges reached (4 of 4)' : 'Email ' + escapeHtml(p.display_name) + ' a friendly reminder. ' + p.nudge_count + ' of 4 used.'}">${maxed ? 'Maxed' : 'Email'}</button>
+                    <span class="nudge-count" title="Email nudges sent: ${p.nudge_count} of 4. Once per 24 hours, up to 4 total.">${p.nudge_count}/4</span>
                 </div>
             </div>`;
         }).join('');
@@ -341,11 +342,12 @@ async function showParticipantsPanel() {
                     <span class="participant-pending-label">Not yet joined</span>
                 </div>
                 <div class="nudge-controls">
-                    <button class="btn btn-sm btn-nudge-text" onclick="textNudgePending('${escapeHtml(inv.email)}', this)" title="On mobile: opens your messaging app. On desktop: copies a nudge message to your clipboard.">Text</button>
-                    <span class="nudge-count" title="Email nudges sent: ${inv.nudge_count} of 4. Once per 24 hours, up to 4 total.">${inv.nudge_count}/4</span>
+                    <span class="nudge-label">Nudge</span>
+                    <button class="btn btn-sm btn-nudge-text" onclick="textNudgePending('${escapeHtml(inv.email)}', this)" title="Opens your messaging app to send a reminder">Text</button>
                     <button class="btn btn-sm btn-nudge" onclick="nudgeByEmail('${escapeHtml(inv.email)}', this)"
                         ${maxed ? 'disabled' : ''}
                         title="${maxed ? 'Maximum email nudges reached (4 of 4)' : 'Email another reminder. ' + inv.nudge_count + ' of 4 used.'}">${maxed ? 'Maxed' : 'Email'}</button>
+                    <span class="nudge-count" title="Email nudges sent: ${inv.nudge_count} of 4. Once per 24 hours, up to 4 total.">${inv.nudge_count}/4</span>
                 </div>
             </div>`;
         }).join('');
