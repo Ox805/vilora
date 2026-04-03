@@ -247,6 +247,29 @@ function localTime(ts) {
     return d.toLocaleTimeString();
 }
 
+function getPreview(text) {
+    // Extract first 2-3 sentences as a preview
+    const sentences = text.match(/[^.!?]+[.!?]+/g);
+    if (!sentences || sentences.length <= 3) return text;
+    return sentences.slice(0, 3).join('').trim();
+}
+
+function toggleFullResponse(msgId) {
+    const preview = document.getElementById('preview-' + msgId);
+    const full = document.getElementById('full-' + msgId);
+    const btn = document.getElementById('expand-btn-' + msgId);
+
+    if (full.style.display === 'none') {
+        preview.style.display = 'none';
+        full.style.display = 'block';
+        btn.textContent = 'Show less';
+    } else {
+        preview.style.display = 'block';
+        full.style.display = 'none';
+        btn.textContent = 'View full response';
+    }
+}
+
 function renderMessages(messages) {
     const container = document.getElementById('messages');
     if (messages.length === 0) {
@@ -263,9 +286,19 @@ function renderMessages(messages) {
 
         if (m.msg_type === 'mediator') {
             const canDelete = IS_CREATOR;
+            const full = escapeHtml(m.content);
+            const preview = getPreview(m.content);
+            const needsExpand = preview.length < m.content.length;
+
             return `<div class="message message-mediator" data-message-id="${m.id}">
                 <div class="message-author">Vilora${canDelete ? deleteBtn : ''}</div>
-                <div class="message-content">${escapeHtml(m.content)}</div>
+                ${needsExpand ? `
+                <div class="message-content message-preview" id="preview-${m.id}">${escapeHtml(preview)}</div>
+                <div class="message-content message-full" id="full-${m.id}" style="display:none">${full}</div>
+                <button class="btn-expand-msg" id="expand-btn-${m.id}" onclick="toggleFullResponse(${m.id})">View full response</button>
+                ` : `
+                <div class="message-content">${full}</div>
+                `}
                 ${reactionBar}
             </div>`;
         } else if (m.msg_type === 'council') {

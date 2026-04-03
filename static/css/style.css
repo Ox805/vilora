@@ -791,6 +791,21 @@ body.modal-open {
 }
 
 .message-content { white-space: pre-wrap; line-height: 1.5; word-break: break-word; overflow-wrap: break-word; }
+
+.btn-expand-msg {
+    background: none;
+    border: none;
+    color: var(--primary);
+    font-size: 0.8rem;
+    cursor: pointer;
+    padding: 0.25rem 0;
+    margin-top: 0.25rem;
+    font-family: inherit;
+}
+
+.btn-expand-msg:hover {
+    text-decoration: underline;
+}
 .message-time { font-size: 0.75rem; opacity: 0.7; margin-top: 0.25rem; text-align: right; }
 
 .mediator-welcome {
