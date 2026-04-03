@@ -164,6 +164,10 @@ def db_init():
         # Migrations for existing tables
         migrations = [
             "ALTER TABLE mediation_sessions ADD COLUMN session_mode TEXT DEFAULT 'mediation'",
+            "ALTER TABLE users ADD COLUMN email_verified BOOLEAN DEFAULT FALSE",
+            "ALTER TABLE users ADD COLUMN verification_token TEXT",
+            "ALTER TABLE users ADD COLUMN verification_sent_at TIMESTAMP",
+            "UPDATE users SET email_verified = TRUE WHERE email_verified IS NULL OR email_verified = FALSE",
         ]
         for migration in migrations:
             try:
@@ -178,6 +182,9 @@ def db_init():
                 email TEXT UNIQUE NOT NULL,
                 display_name TEXT NOT NULL,
                 password_hash TEXT NOT NULL,
+                email_verified INTEGER DEFAULT 0,
+                verification_token TEXT,
+                verification_sent_at TIMESTAMP,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
 
@@ -306,12 +313,13 @@ def db_init():
 
 
 class User(UserMixin):
-    def __init__(self, id, email, display_name, password_hash, created_at=None):
+    def __init__(self, id, email, display_name, password_hash, created_at=None, email_verified=True):
         self.id = id
         self.email = email
         self.display_name = display_name
         self.password_hash = password_hash
         self.created_at = created_at
+        self.email_verified = bool(email_verified)
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
@@ -325,38 +333,41 @@ class User(UserMixin):
         }
 
     @staticmethod
-    def create(db, email, display_name, password):
+    def _from_row(row):
+        return User(
+            row['id'], row['email'], row['display_name'], row['password_hash'],
+            row.get('created_at'), row.get('email_verified', True)
+        )
+
+    @staticmethod
+    def create(db, email, display_name, password, email_verified=False):
         password_hash = generate_password_hash(password)
         if _is_postgres():
             cur = _exec(db,
-                "INSERT INTO users (email, display_name, password_hash) VALUES (?, ?, ?) RETURNING id",
-                (email, display_name, password_hash)
+                "INSERT INTO users (email, display_name, password_hash, email_verified) VALUES (?, ?, ?, ?) RETURNING id",
+                (email, display_name, password_hash, email_verified)
             )
             user_id = cur.fetchone()['id']
         else:
             cur = _exec(db,
-                "INSERT INTO users (email, display_name, password_hash) VALUES (?, ?, ?)",
-                (email, display_name, password_hash)
+                "INSERT INTO users (email, display_name, password_hash, email_verified) VALUES (?, ?, ?, ?)",
+                (email, display_name, password_hash, email_verified)
             )
             user_id = cur.lastrowid
         db.commit()
-        return User(user_id, email, display_name, password_hash)
+        return User(user_id, email, display_name, password_hash, email_verified=email_verified)
 
     @staticmethod
     def get_by_id(db, user_id):
         cur = _exec(db, "SELECT * FROM users WHERE id = ?", (user_id,))
         row = cur.fetchone()
-        if row:
-            return User(row['id'], row['email'], row['display_name'], row['password_hash'], row['created_at'])
-        return None
+        return User._from_row(row) if row else None
 
     @staticmethod
     def get_by_email(db, email):
         cur = _exec(db, "SELECT * FROM users WHERE email = ?", (email,))
         row = cur.fetchone()
-        if row:
-            return User(row['id'], row['email'], row['display_name'], row['password_hash'], row['created_at'])
-        return None
+        return User._from_row(row) if row else None
 
     def update_password(self, db, new_password):
         self.password_hash = generate_password_hash(new_password)

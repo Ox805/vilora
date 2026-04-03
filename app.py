@@ -8,7 +8,7 @@ from flask import Flask, render_template, request, jsonify, redirect, url_for, s
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from models.database import db_init, get_db, _exec, _is_postgres, User, MediationSession, Message, MessageReaction
 from mediation.engine import MediationEngine
-from notifications import send_invite_email, send_password_reset_email, send_nudge_email
+from notifications import send_invite_email, send_password_reset_email, send_nudge_email, send_verification_email
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(32))
@@ -56,6 +56,9 @@ def login():
     db = get_db()
     user = User.get_by_email(db, email)
     if user and user.check_password(password):
+        if not user.email_verified:
+            return jsonify({'success': False, 'needs_verification': True, 'email': email,
+                           'error': 'Please verify your email first. Check your inbox for a verification link.'}), 401
         login_user(user)
         redirect_url = '/dashboard'
         pending = session.pop('pending_join', None)
@@ -79,13 +82,102 @@ def register():
     if User.get_by_email(db, email):
         return jsonify({'success': False, 'error': 'Email already registered'}), 400
 
-    user = User.create(db, email, display_name, password)
-    login_user(user)
-    redirect_url = '/dashboard'
-    pending = session.pop('pending_join', None)
+    # Check if registering via an invite link (auto-verify)
+    pending = session.get('pending_join')
+    auto_verify = False
     if pending:
-        redirect_url = url_for('join_session', code=pending)
-    return jsonify({'success': True, 'redirect': redirect_url})
+        med_session = MediationSession.get_by_invite_code(db, pending)
+        if med_session:
+            cur = _exec(db, "SELECT id FROM session_invites WHERE session_id = ? AND email = ? AND status = 'pending'",
+                        (med_session.id, email))
+            if cur.fetchone():
+                auto_verify = True
+
+    user = User.create(db, email, display_name, password, email_verified=auto_verify)
+
+    if auto_verify:
+        # Invited user: log in directly, skip verification
+        login_user(user)
+        redirect_url = url_for('join_session', code=session.pop('pending_join'))
+        return jsonify({'success': True, 'redirect': redirect_url})
+    else:
+        # Normal registration: send verification email, don't log in
+        token = secrets.token_urlsafe(32)
+        _exec(db, "UPDATE users SET verification_token = ?, verification_sent_at = CURRENT_TIMESTAMP WHERE id = ?",
+              (token, user.id))
+        db.commit()
+        verify_link = url_for('verify_email', token=token, _external=True)
+        send_verification_email(email, display_name, verify_link)
+        return jsonify({'success': True, 'needs_verification': True, 'email': email})
+
+
+@app.route('/verify-pending')
+def verify_pending():
+    email = request.args.get('email', '')
+    return render_template('verify_pending.html', email=email)
+
+
+@app.route('/verify-email/<token>')
+def verify_email(token):
+    db = get_db()
+    cur = _exec(db, "SELECT * FROM users WHERE verification_token = ?", (token,))
+    row = cur.fetchone()
+
+    if not row:
+        return render_template('error.html', message='This verification link is invalid or has already been used.'), 400
+
+    # Check expiry (24 hours)
+    sent_at = row.get('verification_sent_at')
+    if sent_at:
+        from datetime import datetime, timedelta
+        sent_time = datetime.fromisoformat(str(sent_at))
+        if datetime.utcnow() - sent_time > timedelta(hours=24):
+            return render_template('verify_expired.html', email=row['email'])
+
+    # Verify the user
+    _exec(db, "UPDATE users SET email_verified = ?, verification_token = NULL WHERE id = ?",
+          (True, row['id']))
+    db.commit()
+
+    # Auto-login
+    user = User.get_by_id(db, row['id'])
+    login_user(user)
+
+    return redirect(url_for('dashboard'))
+
+
+@app.route('/api/resend-verification', methods=['POST'])
+def resend_verification():
+    data = request.get_json()
+    email = data.get('email', '').strip().lower()
+
+    if not email:
+        return jsonify({'success': True})  # no enumeration
+
+    db = get_db()
+    user = User.get_by_email(db, email)
+
+    if not user or user.email_verified:
+        return jsonify({'success': True})  # no enumeration
+
+    # Rate limit: once per 5 minutes
+    cur = _exec(db, "SELECT verification_sent_at FROM users WHERE id = ?", (user.id,))
+    row = cur.fetchone()
+    if row and row['verification_sent_at']:
+        from datetime import datetime, timedelta
+        sent_time = datetime.fromisoformat(str(row['verification_sent_at']))
+        if datetime.utcnow() - sent_time < timedelta(minutes=5):
+            return jsonify({'success': False, 'error': 'Verification email was sent recently. Please check your inbox or try again in a few minutes.'}), 400
+
+    token = secrets.token_urlsafe(32)
+    _exec(db, "UPDATE users SET verification_token = ?, verification_sent_at = CURRENT_TIMESTAMP WHERE id = ?",
+          (token, user.id))
+    db.commit()
+
+    verify_link = url_for('verify_email', token=token, _external=True)
+    send_verification_email(email, user.display_name, verify_link)
+
+    return jsonify({'success': True})
 
 
 @app.route('/api/logout', methods=['POST'])

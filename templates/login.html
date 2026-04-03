@@ -85,8 +85,12 @@ async function handleLogin(e) {
             body: JSON.stringify(body)
         });
         const data = await res.json();
-        if (data.success) {
+        if (data.success && data.needs_verification) {
+            window.location.href = '/verify-pending?email=' + encodeURIComponent(data.email || email);
+        } else if (data.success) {
             window.location.href = data.redirect || '/dashboard';
+        } else if (data.needs_verification) {
+            window.location.href = '/verify-pending?email=' + encodeURIComponent(data.email || email);
         } else {
             const errEl = document.getElementById('auth-error');
             errEl.textContent = data.error || 'Something went wrong';

@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Verification Expired{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card" style="max-width: 460px; text-align: center;">
+        <h2>This verification link has expired</h2>
+        <p style="color: var(--text-light); margin-bottom: 1.5rem; font-size: 0.95rem;">
+            Verification links are valid for 24 hours. Click below to send a new one.
+        </p>
+        <div id="resend-status" style="display:none; margin-bottom: 1rem;"></div>
+        <button onclick="resendExpired()" class="btn btn-primary" id="resend-btn">Send new verification email</button>
+        <p style="margin-top: 1rem;">
+            <a href="/login" style="color: var(--primary); font-size: 0.9rem;">Back to login</a>
+        </p>
+    </div>
+</div>
+
+<script>
+async function resendExpired() {
+    const btn = document.getElementById('resend-btn');
+    const status = document.getElementById('resend-status');
+    btn.disabled = true;
+    btn.textContent = 'Sending...';
+
+    try {
+        const res = await fetch('/api/resend-verification', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: '{{ email }}' })
+        });
+        const data = await res.json();
+        if (data.success) {
+            status.innerHTML = '<p style="color: var(--primary); background: var(--pale); padding: 0.5rem; border-radius: var(--radius); font-size: 0.9rem;">New verification email sent! Check your inbox.</p>';
+        } else {
+            status.innerHTML = `<p class="error-msg">${data.error || 'Could not resend.'}</p>`;
+        }
+        status.style.display = 'block';
+    } catch (err) {
+        status.innerHTML = '<p class="error-msg">Could not resend. Please try again.</p>';
+        status.style.display = 'block';
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Send new verification email';
+    }
+}
+</script>
+{% endblock %}
