@@ -421,20 +421,26 @@ function showReactionPicker(messageId, btnEl) {
         `<button onclick="toggleReaction(${messageId}, '${key}')">${emoji}</button>`
     ).join('');
 
-    // Position relative to the reaction bar, not the whole message
-    const barEl = btnEl.closest('.reaction-bar');
-    barEl.style.position = 'relative';
-    barEl.appendChild(picker);
+    const isMobile = window.matchMedia('(hover: none) and (pointer: coarse)').matches;
 
-    // Align: right for self-messages, left for others
-    const msgEl = btnEl.closest('.message');
-    if (msgEl.classList.contains('message-self')) {
-        picker.style.right = '0';
+    if (isMobile) {
+        // Append to body as a fixed bottom sheet (CSS handles positioning)
+        document.body.appendChild(picker);
     } else {
-        picker.style.left = '0';
+        // Desktop: position relative to the reaction bar
+        const barEl = btnEl.closest('.reaction-bar');
+        barEl.style.position = 'relative';
+        barEl.appendChild(picker);
+
+        const msgEl = btnEl.closest('.message');
+        if (msgEl.classList.contains('message-self')) {
+            picker.style.right = '0';
+        } else {
+            picker.style.left = '0';
+        }
+        picker.style.bottom = '100%';
+        picker.style.marginBottom = '4px';
     }
-    picker.style.bottom = '100%';
-    picker.style.marginBottom = '4px';
 
     // Close on outside click
     setTimeout(() => {
