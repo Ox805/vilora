@@ -2,6 +2,8 @@
 
 Run a comprehensive mobile responsiveness and layout audit of the Vilora application. Review every page and component for mobile optimization issues and fix them.
 
+**Best run from the VS Code extension** (not the CLI). The extension can use Chrome remote control (`/chrome`) to visually inspect pages and Puppeteer to take automated screenshots at mobile viewports. The CLI can only do code-level analysis and cannot see rendered pages.
+
 ## Trigger Conditions
 
 Run this audit:
