@@ -464,25 +464,17 @@ function closeReactionPicker() {
 }
 
 // --- Text-to-Speech ---
-const SPEAK_SPEEDS = [1, 1.25, 1.5, 0.75];
-let currentSpeedIndex = 0;
-let currentSpeakingBtn = null;
+const SPEAK_SPEEDS = [0.75, 1, 1.25, 1.5];
+let currentSpeedIndex = 1; // default 1x
 let currentSpeakText = '';
 let currentSpeakMsgId = null;
 
 function speakMessage(messageId, btnEl) {
-    // If already speaking this message, cycle speed
-    if (window.speechSynthesis.speaking && currentSpeakMsgId === messageId) {
-        currentSpeedIndex = (currentSpeedIndex + 1) % SPEAK_SPEEDS.length;
-        window.speechSynthesis.cancel();
-        // Re-speak at new speed (will restart from beginning)
-        startSpeech(currentSpeakText, btnEl, messageId);
-        return;
+    // If already speaking, stop everything
+    if (window.speechSynthesis.speaking) {
+        stopSpeech();
+        if (currentSpeakMsgId === messageId) return; // was toggle-off
     }
-
-    // Stop any other speech
-    window.speechSynthesis.cancel();
-    if (currentSpeakingBtn) currentSpeakingBtn.classList.remove('speaking');
 
     // Get the full message text
     const msgEl = document.querySelector(`[data-message-id="${messageId}"]`);
@@ -494,30 +486,60 @@ function speakMessage(messageId, btnEl) {
     if (!text) return;
 
     currentSpeakText = text;
-    startSpeech(text, btnEl, messageId);
+    currentSpeakMsgId = messageId;
+
+    // Show speed controls below the speaker button
+    showSpeakControls(messageId, btnEl);
+    startSpeech(text, messageId);
 }
 
-function startSpeech(text, btnEl, messageId) {
+function showSpeakControls(messageId, btnEl) {
+    hideSpeakControls();
+    const msgEl = btnEl.closest('.message');
+    const controls = document.createElement('div');
+    controls.className = 'speak-controls';
+    controls.innerHTML = SPEAK_SPEEDS.map((s, i) =>
+        `<button class="speak-speed-btn${i === currentSpeedIndex ? ' active' : ''}" onclick="changeSpeed(${i}, ${messageId})">${s}x</button>`
+    ).join('') +
+    `<button class="speak-stop-btn" onclick="stopSpeech()" title="Stop"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg></button>`;
+
+    // Insert after the message-author row
+    const authorEl = msgEl.querySelector('.message-author');
+    authorEl.after(controls);
+}
+
+function hideSpeakControls() {
+    document.querySelectorAll('.speak-controls').forEach(el => el.remove());
+}
+
+function changeSpeed(speedIndex, messageId) {
+    currentSpeedIndex = speedIndex;
+    window.speechSynthesis.cancel();
+
+    // Update active state on speed buttons
+    document.querySelectorAll('.speak-speed-btn').forEach((btn, i) => {
+        btn.classList.toggle('active', i === speedIndex);
+    });
+
+    startSpeech(currentSpeakText, messageId);
+}
+
+function startSpeech(text, messageId) {
     const utterance = new SpeechSynthesisUtterance(text);
-    const speed = SPEAK_SPEEDS[currentSpeedIndex];
-    utterance.rate = speed;
+    utterance.rate = SPEAK_SPEEDS[currentSpeedIndex];
     utterance.pitch = 1;
 
-    currentSpeakingBtn = btnEl;
-    currentSpeakMsgId = messageId;
-    btnEl.classList.add('speaking');
-    btnEl.title = `Playing at ${speed}x (tap to change speed)`;
+    const speakBtn = document.querySelector(`[data-message-id="${messageId}"] .btn-speak`);
+    if (speakBtn) speakBtn.classList.add('speaking');
 
     utterance.onend = () => {
-        btnEl.classList.remove('speaking');
-        btnEl.title = 'Read aloud';
-        currentSpeakingBtn = null;
+        if (speakBtn) speakBtn.classList.remove('speaking');
+        hideSpeakControls();
         currentSpeakMsgId = null;
     };
     utterance.onerror = () => {
-        btnEl.classList.remove('speaking');
-        btnEl.title = 'Read aloud';
-        currentSpeakingBtn = null;
+        if (speakBtn) speakBtn.classList.remove('speaking');
+        hideSpeakControls();
         currentSpeakMsgId = null;
     };
 
@@ -526,11 +548,8 @@ function startSpeech(text, btnEl, messageId) {
 
 function stopSpeech() {
     window.speechSynthesis.cancel();
-    if (currentSpeakingBtn) {
-        currentSpeakingBtn.classList.remove('speaking');
-        currentSpeakingBtn.title = 'Read aloud';
-    }
-    currentSpeakingBtn = null;
+    document.querySelectorAll('.btn-speak.speaking').forEach(b => b.classList.remove('speaking'));
+    hideSpeakControls();
     currentSpeakMsgId = null;
 }
 
