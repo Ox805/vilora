@@ -468,13 +468,27 @@ const SPEAK_SPEEDS = [0.75, 1, 1.25, 1.5];
 let currentSpeedIndex = 1; // default 1x
 let currentSpeakText = '';
 let currentSpeakMsgId = null;
+let isSpeechPlaying = false;
+
+const ICON_PLAY = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>';
+const ICON_STOP = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>';
 
 function speakMessage(messageId, btnEl) {
-    // If already speaking, stop everything
-    if (window.speechSynthesis.speaking) {
-        stopSpeech();
-        if (currentSpeakMsgId === messageId) return; // was toggle-off
+    // If controls are already showing for this message, toggle them off
+    if (currentSpeakMsgId === messageId && document.querySelector('.speak-controls')) {
+        window.speechSynthesis.cancel();
+        isSpeechPlaying = false;
+        hideSpeakControls();
+        btnEl.classList.remove('speaking');
+        currentSpeakMsgId = null;
+        return;
     }
+
+    // Stop any other speech and clean up
+    window.speechSynthesis.cancel();
+    isSpeechPlaying = false;
+    document.querySelectorAll('.btn-speak.speaking').forEach(b => b.classList.remove('speaking'));
+    hideSpeakControls();
 
     // Get the full message text
     const msgEl = document.querySelector(`[data-message-id="${messageId}"]`);
@@ -488,7 +502,7 @@ function speakMessage(messageId, btnEl) {
     currentSpeakText = text;
     currentSpeakMsgId = messageId;
 
-    // Show speed controls below the speaker button
+    // Show controls and start playing
     showSpeakControls(messageId, btnEl);
     startSpeech(text, messageId);
 }
@@ -498,30 +512,50 @@ function showSpeakControls(messageId, btnEl) {
     const msgEl = btnEl.closest('.message');
     const controls = document.createElement('div');
     controls.className = 'speak-controls';
-    controls.innerHTML = SPEAK_SPEEDS.map((s, i) =>
-        `<button class="speak-speed-btn${i === currentSpeedIndex ? ' active' : ''}" onclick="changeSpeed(${i}, ${messageId})">${s}x</button>`
-    ).join('') +
-    `<button class="speak-stop-btn" onclick="stopSpeech()" title="Stop"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg></button>`;
+    controls.innerHTML = buildControlsHtml(messageId);
 
-    // Insert after the message-author row
     const authorEl = msgEl.querySelector('.message-author');
     authorEl.after(controls);
+}
+
+function buildControlsHtml(messageId) {
+    return `<button class="speak-playstop-btn" onclick="togglePlayStop(${messageId})" title="${isSpeechPlaying ? 'Stop' : 'Play'}">${isSpeechPlaying ? ICON_STOP : ICON_PLAY}</button>` +
+        SPEAK_SPEEDS.map((s, i) =>
+            `<button class="speak-speed-btn${i === currentSpeedIndex ? ' active' : ''}" onclick="changeSpeed(${i}, ${messageId})">${s}x</button>`
+        ).join('');
+}
+
+function updateControlsUi(messageId) {
+    const controls = document.querySelector('.speak-controls');
+    if (controls) controls.innerHTML = buildControlsHtml(messageId);
 }
 
 function hideSpeakControls() {
     document.querySelectorAll('.speak-controls').forEach(el => el.remove());
 }
 
+function togglePlayStop(messageId) {
+    if (isSpeechPlaying) {
+        // Stop
+        window.speechSynthesis.cancel();
+        isSpeechPlaying = false;
+        const speakBtn = document.querySelector(`[data-message-id="${messageId}"] .btn-speak`);
+        if (speakBtn) speakBtn.classList.remove('speaking');
+        updateControlsUi(messageId);
+    } else {
+        // Play (restart from beginning)
+        startSpeech(currentSpeakText, messageId);
+    }
+}
+
 function changeSpeed(speedIndex, messageId) {
     currentSpeedIndex = speedIndex;
-    window.speechSynthesis.cancel();
-
-    // Update active state on speed buttons
-    document.querySelectorAll('.speak-speed-btn').forEach((btn, i) => {
-        btn.classList.toggle('active', i === speedIndex);
-    });
-
-    startSpeech(currentSpeakText, messageId);
+    if (isSpeechPlaying) {
+        window.speechSynthesis.cancel();
+        startSpeech(currentSpeakText, messageId);
+    } else {
+        updateControlsUi(messageId);
+    }
 }
 
 function startSpeech(text, messageId) {
@@ -529,28 +563,24 @@ function startSpeech(text, messageId) {
     utterance.rate = SPEAK_SPEEDS[currentSpeedIndex];
     utterance.pitch = 1;
 
+    isSpeechPlaying = true;
     const speakBtn = document.querySelector(`[data-message-id="${messageId}"] .btn-speak`);
     if (speakBtn) speakBtn.classList.add('speaking');
+    updateControlsUi(messageId);
 
     utterance.onend = () => {
+        isSpeechPlaying = false;
         if (speakBtn) speakBtn.classList.remove('speaking');
-        hideSpeakControls();
-        currentSpeakMsgId = null;
+        updateControlsUi(messageId);
+        // Controls stay visible -- user can replay or dismiss via speaker icon
     };
     utterance.onerror = () => {
+        isSpeechPlaying = false;
         if (speakBtn) speakBtn.classList.remove('speaking');
-        hideSpeakControls();
-        currentSpeakMsgId = null;
+        updateControlsUi(messageId);
     };
 
     window.speechSynthesis.speak(utterance);
-}
-
-function stopSpeech() {
-    window.speechSynthesis.cancel();
-    document.querySelectorAll('.btn-speak.speaking').forEach(b => b.classList.remove('speaking'));
-    hideSpeakControls();
-    currentSpeakMsgId = null;
 }
 
 async function sendMessage(e) {

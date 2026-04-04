@@ -1784,7 +1784,7 @@ body.summary-open .container {
     color: white;
 }
 
-.speak-stop-btn {
+.speak-playstop-btn {
     background: none;
     border: 1px solid var(--border);
     border-radius: 1rem;
@@ -1796,9 +1796,9 @@ body.summary-open .container {
     transition: color 0.15s, border-color 0.15s;
 }
 
-.speak-stop-btn:hover {
-    color: var(--error);
-    border-color: var(--error);
+.speak-playstop-btn:hover {
+    color: var(--primary);
+    border-color: var(--primary);
 }
 
 /* === Message Delete === */
