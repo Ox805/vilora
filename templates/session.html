@@ -232,10 +232,11 @@ async function loadMessages() {
     const data = await res.json();
     const messages = data.messages || [];
 
-    // Skip re-render if nothing changed and user might be selecting text
+    // Skip re-render if nothing changed and user is selecting text or using TTS
     if (messages.length === lastMessageCount) {
         const sel = window.getSelection();
         if (sel && sel.toString().length > 0) return;
+        if (currentSpeakMsgId !== null) return;
     }
     lastMessageCount = messages.length;
     renderMessages(messages);
