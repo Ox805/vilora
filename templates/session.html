@@ -312,8 +312,10 @@ function renderMessages(messages) {
                 contentHtml = `<div class="message-content">${fullHtml}</div>`;
             }
 
+            const speakBtn = `<button class="btn-speak" onclick="speakMessage(${m.id}, this)" title="Read aloud"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg></button>`;
+
             return `<div class="message message-mediator" data-message-id="${m.id}">
-                <div class="message-author">Vilora${canDelete ? deleteBtn : ''}</div>
+                <div class="message-author">Vilora${speakBtn}${canDelete ? deleteBtn : ''}</div>
                 ${contentHtml}
                 <div class="message-time">${localTime(m.created_at)}</div>
                 ${reactionBar}
@@ -459,6 +461,77 @@ function closeReactionPicker() {
     const picker = document.querySelector('.reaction-picker');
     if (picker) picker.remove();
     document.removeEventListener('click', closePickerOutside);
+}
+
+// --- Text-to-Speech ---
+const SPEAK_SPEEDS = [1, 1.25, 1.5, 0.75];
+let currentSpeedIndex = 0;
+let currentSpeakingBtn = null;
+let currentSpeakText = '';
+let currentSpeakMsgId = null;
+
+function speakMessage(messageId, btnEl) {
+    // If already speaking this message, cycle speed
+    if (window.speechSynthesis.speaking && currentSpeakMsgId === messageId) {
+        currentSpeedIndex = (currentSpeedIndex + 1) % SPEAK_SPEEDS.length;
+        window.speechSynthesis.cancel();
+        // Re-speak at new speed (will restart from beginning)
+        startSpeech(currentSpeakText, btnEl, messageId);
+        return;
+    }
+
+    // Stop any other speech
+    window.speechSynthesis.cancel();
+    if (currentSpeakingBtn) currentSpeakingBtn.classList.remove('speaking');
+
+    // Get the full message text
+    const msgEl = document.querySelector(`[data-message-id="${messageId}"]`);
+    if (!msgEl) return;
+    const fullEl = msgEl.querySelector('.message-full') || msgEl.querySelector('.message-content');
+    if (!fullEl) return;
+
+    const text = fullEl.textContent.trim();
+    if (!text) return;
+
+    currentSpeakText = text;
+    startSpeech(text, btnEl, messageId);
+}
+
+function startSpeech(text, btnEl, messageId) {
+    const utterance = new SpeechSynthesisUtterance(text);
+    const speed = SPEAK_SPEEDS[currentSpeedIndex];
+    utterance.rate = speed;
+    utterance.pitch = 1;
+
+    currentSpeakingBtn = btnEl;
+    currentSpeakMsgId = messageId;
+    btnEl.classList.add('speaking');
+    btnEl.title = `Playing at ${speed}x (tap to change speed)`;
+
+    utterance.onend = () => {
+        btnEl.classList.remove('speaking');
+        btnEl.title = 'Read aloud';
+        currentSpeakingBtn = null;
+        currentSpeakMsgId = null;
+    };
+    utterance.onerror = () => {
+        btnEl.classList.remove('speaking');
+        btnEl.title = 'Read aloud';
+        currentSpeakingBtn = null;
+        currentSpeakMsgId = null;
+    };
+
+    window.speechSynthesis.speak(utterance);
+}
+
+function stopSpeech() {
+    window.speechSynthesis.cancel();
+    if (currentSpeakingBtn) {
+        currentSpeakingBtn.classList.remove('speaking');
+        currentSpeakingBtn.title = 'Read aloud';
+    }
+    currentSpeakingBtn = null;
+    currentSpeakMsgId = null;
 }
 
 async function sendMessage(e) {

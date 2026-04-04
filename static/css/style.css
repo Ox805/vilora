@@ -1725,6 +1725,35 @@ body.summary-open .container {
     }
 }
 
+/* === Read Aloud (TTS) === */
+.btn-speak {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 0 0.3rem;
+    opacity: 0.5;
+    transition: opacity 0.15s, color 0.15s;
+    vertical-align: middle;
+    margin-left: 0.35rem;
+}
+
+.btn-speak:hover {
+    opacity: 1;
+    color: var(--primary);
+}
+
+.btn-speak.speaking {
+    opacity: 1;
+    color: var(--primary);
+    animation: pulse-speak 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-speak {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+}
+
 /* === Message Delete === */
 .msg-delete-btn {
     background: none;
