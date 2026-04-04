@@ -343,7 +343,8 @@ function renderMessages(messages) {
             </div>`;
         } else if (m.is_self) {
             return `<div class="message message-self" data-message-id="${m.id}">
-                <div class="message-content">${escapeHtml(m.content)}${speakBtn}${deleteBtn}</div>
+                <div class="message-author">You${speakBtn}${deleteBtn}</div>
+                <div class="message-content">${escapeHtml(m.content)}</div>
                 ${reactionBar}
                 <div class="message-time">${localTime(m.created_at)}</div>
             </div>`;

@@ -768,6 +768,11 @@ html.modal-open {
     align-self: flex-end;
 }
 
+.message-self .message-author {
+    color: rgba(255, 255, 255, 0.85);
+    text-align: right;
+}
+
 .message-other {
     background: #E6F4F1;
     align-self: flex-start;
