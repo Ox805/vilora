@@ -2053,37 +2053,68 @@ body.summary-open .container {
     .council-modal-content { max-width: 100% !important; }
 
     /* --- Session room --- */
+    .page-session .footer { display: none; }
     .mediation-room {
-        height: calc(100dvh - 120px); /* dvh handles mobile keyboard */
-    }
-    .room-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 0.5rem;
-        margin-bottom: 0.75rem;
-    }
-    .room-header h2 {
-        max-width: 100%;
-        font-size: 1.1rem;
-    }
-    .room-actions {
-        width: 100%;
-        justify-content: flex-start;
+        height: calc(100dvh - 100px); /* dvh handles mobile keyboard, tighter now with hidden footer */
     }
 
-    /* --- Messages --- */
-    .message { max-width: 92%; word-break: break-word; }
+    /* Header: single row, topic truncated, actions as text links */
+    .room-header {
+        flex-direction: row;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.5rem;
+    }
+    .room-header h2 {
+        flex: 1;
+        min-width: 0;
+        font-size: 1rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .room-actions {
+        flex-shrink: 0;
+        gap: 0.6rem;
+    }
+    .room-actions .btn,
+    .room-actions .btn-sm {
+        background: none;
+        border: none;
+        padding: 0;
+        color: var(--primary);
+        font-size: 0.75rem;
+        min-height: auto;
+        min-width: auto;
+    }
+
+    /* --- Messages: edge-to-edge, no container chrome --- */
+    .message-list {
+        border: none;
+        border-radius: 0;
+        padding: 0.5rem;
+    }
+    .message { max-width: 95%; word-break: break-word; }
     .message-mediator, .message-intake { max-width: 98%; }
     .message-content { font-size: 0.9rem; }
     .message-time { font-size: 0.7rem; }
-    .message-list { padding: 0.75rem; }
 
-    /* --- Message input --- */
+    /* --- Message input: compact --- */
+    .message-input-area { margin-top: 0.25rem; }
     .message-input-bar {
         padding: 0.35rem 0.4rem 0.35rem 0.75rem;
     }
     .message-input-bar textarea {
         font-size: 16px; /* prevents iOS zoom */
+    }
+
+    /* Ask Vilora: text link instead of button */
+    .btn-ask-vilora {
+        background: none;
+        border: none;
+        padding: 0.25rem 0;
+        font-size: 0.75rem;
+        min-height: auto;
     }
 
     /* --- Invite banner --- */
