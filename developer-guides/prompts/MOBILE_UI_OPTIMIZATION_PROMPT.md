@@ -207,12 +207,27 @@ Remove visual chrome from the message list to maximize space, following ChatGPT'
 
 ```
 Screen height:         667px (iPhone SE) / 844px (iPhone 14)
-Navbar:                ~44px
-Header (single row):   ~36px (down from ~70px)
-Message list:          MAXIMUM (flex: 1, fills remaining space)
-Input area:            ~48px (textarea) + ~20px (Ask Vilora text link)
-Total chrome:          ~148px
-Chat space:            ~519px (SE) / ~696px (14) -- up from ~460px / ~637px
+
+CURRENT (from iPhone 12 screenshot):
+  Navbar:              ~44px
+  Header (2 rows):     ~70px
+  Message list border: ~2px + 32px padding
+  Input area:          ~48px
+  Ask Vilora button:   ~36px
+  Footer:              ~60px
+  Total chrome:        ~292px
+
+TARGET (after Phase 2 changes):
+  Navbar:              ~44px
+  Header (single row): ~36px
+  Message list:        no border, 16px padding
+  Input area:          ~48px
+  Ask Vilora text:     ~20px
+  Footer:              HIDDEN on session page
+  Total chrome:        ~164px
+
+  Space savings:       ~128px more for chat messages
+  Chat space:          ~503px (SE) / ~680px (14)
 ```
 
 #### 2.8 Reference: Design Patterns from Leading Chat UIs
@@ -393,6 +408,25 @@ All mobile CSS should be added to the existing `@media (max-width: 768px)` block
 - **Apple HIG Touch Targets:** 44x44pt minimum
 - **Google Material Design:** 48x48dp recommended touch target
 
+### Competitor Mobile Screenshots (iPhone 12, April 4, 2026)
+
+These screenshots were captured on a real iPhone 12 and serve as reference for mobile design decisions. Saved in `developer-guides/references/mobile-screenshots/`.
+
+| Screenshot | File | Key Observations |
+|------------|------|-----------------|
+| **Vilora session** | `vilora-session-iphone12.png` | Footer visible in chat view (~60px wasted). Three outlined action buttons take full row. Topic wraps to 2 lines. "Ask Vilora to weigh in" is a bordered pill button. Message list has visible border/padding. Emoji reaction smiley is visible below messages. |
+| **ChatGPT chat** | `chatgpt-chat-iphone12.png` | Input bar flush at bottom, no footer, no extra buttons. Messages edge-to-edge with minimal padding. Header is one thin row. "Ask anything" input is clean with just mic and voice icons. No visible container borders. Disclaimer text is tiny and unobtrusive. |
+| **Claude home** | `claude-home-iphone12.png` | Extremely clean and spacious. Minimal navigation chrome. Large greeting text, single input area. Action chips below input are compact text with small icons. No borders, no outlines on secondary actions. Warm background with no visual noise. |
+
+**Key design principles observed in competitors:**
+1. Chat views have zero footer -- every pixel goes to conversation
+2. Action buttons are text/icon-only, never outlined buttons
+3. Message containers have no visible borders or box styling
+4. Input bar sits flush at screen bottom with no margin
+5. Secondary actions (attachments, tools) are small icons or text links
+6. Headers are single-line, minimal height
+7. Overall aesthetic: content-first, chrome-last
+
 ---
 
 ## Code Audit Findings (April 2, 2026)
@@ -418,6 +452,7 @@ All mobile CSS should be added to the existing `@media (max-width: 768px)` block
 | ~~Only one breakpoint~~ | style.css | **FIXED 2026-04-03** | 480px breakpoint now exists |
 | Tone chips don't reflow | dashboard.html | OPEN | Chips are 140-200px wide. On 375px minus padding = 343px. Chips wrap unpredictably |
 | ~~No word-break on messages~~ | `.message` | **FIXED 2026-04-03** | Added `word-break: break-word` |
+| Footer visible in session chat | base.html / style.css | OPEN | Footer ("Vilora \| Strength through dialogue" + tagline) is visible in the session page on mobile, wasting ~60px. ChatGPT and Claude hide footers entirely in chat views. Should be hidden on session page on mobile. See competitor screenshots. |
 | Session header wastes space | session.html | OPEN | Header stacks to 2 rows on mobile (~70px). Should be single compact row (~36px). See Phase 2.1 |
 | Action buttons too heavy | session.html | OPEN | "Participants", "Council", "Summary" use outlined `btn-sm` on mobile. Should be plain text links. See Phase 2.1 |
 | "Ask Vilora" button too heavy | session.html | OPEN | Bordered pill button wastes space. Should be plain text link on mobile. See Phase 2.3 |
@@ -459,5 +494,6 @@ Available width: 375px
 | 2026-04-02 | Added code audit findings with specific measurements and severity ratings |
 | 2026-04-03 | Audit run: Fixed .message-content, .welcome-topic, .invite-landing-topic word-break. Added 44px touch targets for .input-icon-btn, .btn-polish at 480px. Bumped .session-type-badge to 0.7rem. Fixed message-input-bar mobile override. Existing 480px breakpoint already covers: summary/council panels (100% width), btn-sm, btn-mic, tone/settings chips, password-toggle, form inputs, modals, invite banner stacking, onboarding buttons. Remaining: keyboard-hides-input (uses dvh but needs real device testing), .btn-polish still below 44px (36px, acceptable for secondary action) |
 | 2026-04-04 | Added emoji reaction picker to component audit scope |
+| 2026-04-04 | Added real-device screenshots (iPhone 12): Vilora session, ChatGPT chat, Claude home. Saved to `developer-guides/references/mobile-screenshots/`. Added competitor design principles reference table. Discovered footer visible in session chat (~60px wasted), added as HIGH issue. Updated space budget: 128px of savings identified |
 | 2026-04-04 | Major rewrite of Phase 2 (Session Room): new "maximize chat space" direction. Single-row header with ellipsis title + text-link actions. Edge-to-edge message list (no border/padding). "Ask Vilora" as text link not button. Space budget analysis. Reference table of ChatGPT/iMessage/WhatsApp mobile patterns. Updated all audit findings with fix status and dates. Added new HIGH issues for header/button/message-list space waste |
 | 2026-04-04 | Audit run: **Fixed** inline max-width styles on modals overriding mobile CSS (added `!important` to `.modal-content` max-width at both 768px and 480px breakpoints — inline styles like `max-width: 460px/480px/500px` on session.html, dashboard.html, about_me.html, base.html modals were defeating responsive overrides). **Fixed** iOS Safari scroll lock — added `html.modal-open { overflow: hidden }` in CSS and `document.documentElement.classList` toggle in api.js (iOS Safari requires overflow hidden on both html and body). Added `left: 0; right: 0` to `body.modal-open` for full iOS position anchoring. Added `.council-modal-content { max-width: 100% !important }` at 480px. **Puppeteer visual verification (375px + 1280px):** All 6 pages pass — landing, login, dashboard, session, about-me, settings. No horizontal overflow, no cut-off content, no overlapping elements, text readable on all pages. Screenshots saved to `/tmp/mobile-screenshots/`. **Remaining:** real-device testing on iOS Safari (scroll lock, keyboard behavior with dvh) and Android Chrome recommended. |
