@@ -2,7 +2,7 @@
 
 **Created:** April 2, 2026
 **Last Updated:** April 4, 2026
-**Status:** Planning
+**Status:** In Progress (audit findings partially fixed, Phase 2 redesign pending implementation)
 **Dependencies:** None (can begin independently)
 **Priority:** High. Majority of consumer app usage happens on mobile. Current UI is desktop-first.
 **Design Reference:** `developer-guides/architecture/design-reference.md`
@@ -102,46 +102,130 @@ Mobile navbar should:
 - Reduce padding on mobile: `padding: 1rem` (already exists, verify)
 - Ensure max-width doesn't cause issues
 
-### Phase 2: Session Room (Most Critical)
+### Phase 2: Session Room (Most Critical -- Maximize Chat Space)
 
-The session room is where users spend the most time. It must work perfectly on mobile.
+The session room is where users spend the most time. The #1 goal on mobile is **maximizing vertical space for the chat messages** while keeping actions accessible. Follow the design principle used by ChatGPT and other leading chat UIs: every pixel not devoted to messages needs to justify its existence.
 
-#### 2.1 Message Input Area
+#### 2.1 Header: Single-Row, Compact
 
-- Textarea should be full-width
-- Send button should be easily tappable (min 44x44px touch target)
-- Voice mic button needs adequate touch target
-- Polish button should not overlap other elements
-- On-screen keyboard consideration: when keyboard opens, the input area should remain visible and not be hidden behind the keyboard
-- Consider: `position: sticky` for the input area at the bottom
+The current mobile header stacks the title and actions into two rows, wasting ~40px of vertical space. Redesign to a single compact row:
 
-#### 2.2 Message List
+- **Topic title:** Truncate with ellipsis on one line. Keep the session type badge inline (e.g., "Apartment noise is... `General`"). CSS: `white-space: nowrap; overflow: hidden; text-overflow: ellipsis;`
+- **Action links:** Replace "Participants", "Council", and "Summary" outlined `btn-sm` buttons with plain text links in green (`color: var(--primary); background: none; border: none; padding: 0; font-size: 0.8rem;`). These are secondary actions and do not need button chrome on mobile. Place them on the same line as the title, right-aligned.
+- **Result:** The entire header fits in one ~36px row instead of two rows at ~70px total.
 
-- Messages should use more width on mobile (max-width: 95% instead of 80%)
-- Font size should remain readable (min 14px)
-- Timestamps should be smaller but still readable
-- Mediator messages should be clearly distinguished
+```css
+@media (max-width: 480px) {
+    .room-header {
+        flex-direction: row;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.5rem;
+    }
+    .room-header h2 {
+        flex: 1;
+        min-width: 0;  /* allows ellipsis to work in flex */
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-size: 1rem;
+    }
+    .room-actions .btn {
+        background: none;
+        border: none;
+        padding: 0;
+        color: var(--primary);
+        font-size: 0.8rem;
+        min-height: auto;
+    }
+}
+```
 
-#### 2.3 Header Actions
+#### 2.2 Message List: Edge-to-Edge, Maximum Width
 
-- "Council" and "Get Summary" buttons may overflow the header on narrow screens
-- Options:
-  - Stack vertically below the topic
-  - Use icon-only buttons on mobile
-  - Move to a "more actions" dropdown
-  - Recommendation: Use a compact layout with smaller buttons
+Remove visual chrome from the message list to maximize space, following ChatGPT's mobile pattern:
 
-#### 2.4 Invite Banner
+- Remove `border` and `border-radius` from `.message-list` on mobile (the container doesn't need a visible box)
+- Reduce padding from `1rem` to `0.5rem`
+- Increase message `max-width` to `90-95%` on mobile
+- Ensure `word-break: break-word` on all message content
+
+```css
+@media (max-width: 480px) {
+    .message-list {
+        border: none;
+        border-radius: 0;
+        padding: 0.5rem;
+    }
+    .message, .message-mediator, .message-intake {
+        max-width: 95%;
+    }
+}
+```
+
+#### 2.3 Message Input Area: Flush Bottom, Minimal Chrome
+
+- Remove `margin-top` on `.message-input-area` on mobile (no gap between messages and input)
+- Reduce `border-radius` on `.message-input-bar` (less pill-shaped, more flush)
+- Input bar sits flush at the bottom of the screen
+- "Ask Vilora to weigh in" should be a **plain text link** on mobile, not a bordered button. Remove the button styling (`background`, `border`, `padding`) and render as a small green text link below the input, left-aligned. This saves ~12px of vertical space.
+
+```css
+@media (max-width: 480px) {
+    .message-input-area {
+        margin-top: 0.25rem;
+    }
+    .btn-ask-vilora {
+        background: none;
+        border: none;
+        padding: 0.25rem 0;
+        font-size: 0.75rem;
+    }
+}
+```
+
+#### 2.4 Emoji Reactions on Mobile
+
+- Reaction picker renders as a fixed bottom sheet (`position: fixed; bottom: 0;`) -- already implemented
+- Reaction pills need adequate touch targets (min 32px height, 44px preferred)
+- Add-reaction button (smiley) is always visible on touch devices (no hover) -- already implemented
+- Verify picker doesn't overlap the input area or get hidden behind the keyboard
+
+#### 2.5 Invite Banner
 
 - The link input + Copy + Send Invite row needs to stack on mobile
 - Recommendation: Stack vertically (full-width input, buttons below)
 
-#### 2.5 Summary and Council Panels
+#### 2.6 Summary and Council Panels
 
-- Already has `width: 100%` on mobile (existing CSS)
+- Already has `width: 100%` on mobile (existing CSS, fixed April 4)
 - Verify the panel fills the screen properly
 - Ensure close button is easily tappable
 - Council advisor details should be easy to expand/collapse with touch
+
+#### 2.7 Overall Space Budget at 375px (Target)
+
+```
+Screen height:         667px (iPhone SE) / 844px (iPhone 14)
+Navbar:                ~44px
+Header (single row):   ~36px (down from ~70px)
+Message list:          MAXIMUM (flex: 1, fills remaining space)
+Input area:            ~48px (textarea) + ~20px (Ask Vilora text link)
+Total chrome:          ~148px
+Chat space:            ~519px (SE) / ~696px (14) -- up from ~460px / ~637px
+```
+
+#### 2.8 Reference: Design Patterns from Leading Chat UIs
+
+These patterns from ChatGPT, iMessage, and WhatsApp informed the recommendations above:
+
+| Pattern | Description | Apply to Vilora |
+|---------|-------------|-----------------|
+| Minimal header | Single line, no outlined buttons, back arrow + title only | Compact single-row header with text-link actions |
+| Edge-to-edge messages | No border/padding on chat container, messages use full width | Remove message-list border, reduce padding |
+| Flush input bar | Input sits at true screen bottom with no margin/gap | Reduce margin, tighten input area |
+| Progressive disclosure | Secondary actions hidden behind menus or smaller affordances | Actions as text links, not buttons |
+| No visual containers | Chat area has no visible box/border, blends with background | Remove border-radius and border on mobile |
 
 ### Phase 3: Session Creation Flows
 
@@ -315,48 +399,54 @@ All mobile CSS should be added to the existing `@media (max-width: 768px)` block
 
 ### CRITICAL Issues (Breaks Functionality on Mobile)
 
-| Issue | Location | Detail |
-|-------|----------|--------|
-| Summary panel overflow | style.css line ~946 | `.summary-panel` is 480px fixed width. On 375px screen = 105px horizontal overflow. The 768px media query sets `width: 100%` but does not cover screens below 768px properly |
-| Keyboard hides input | session.html | `.mediation-room` uses `height: calc(100vh - 140px)`. When mobile keyboard opens (50-60% of screen), input bar scrolls out of view. User types blind |
-| Council panel same issue | session.html | Same 480px fixed width as summary panel |
+| Issue | Location | Status | Detail |
+|-------|----------|--------|--------|
+| ~~Summary panel overflow~~ | style.css | **FIXED 2026-04-03** | Added `width: 100%` at 480px breakpoint |
+| Keyboard hides input | session.html | MITIGATED | Changed to `calc(100dvh - 120px)`. Needs real-device testing on iOS Safari |
+| ~~Council panel overflow~~ | session.html | **FIXED 2026-04-03** | Same fix as summary panel |
 
 ### HIGH Issues (Accessibility/Usability)
 
-| Issue | Location | Detail |
-|-------|----------|--------|
-| Touch targets too small | All `.input-icon-btn` | Send/mic buttons are ~29px (padding 0.35rem + 18px icon). Minimum should be 44px |
-| Form inputs too short | style.css `.form-group input` | `padding: 0.6rem 0.75rem` = ~27px height. Below 44px touch target |
-| `.btn-sm` too small | style.css | `padding: 0.25rem 0.75rem` = ~24px height |
-| Settings/tone chips | style.css | `padding: 0.5rem 1rem` / `0.35rem 0.75rem` = ~28px height. Below 44px |
-| Password toggle tiny | style.css `.password-toggle` | `padding: 0.25rem` + 20px SVG = ~28px. Hard to tap |
-| ~~Modal too wide~~ | style.css `.modal-content` | **FIXED 2026-04-04:** Added `!important` to mobile max-width overrides at 768px and 480px breakpoints. Inline max-width styles on modals no longer defeat responsive CSS |
-| Only one breakpoint | style.css | Single `@media (max-width: 768px)` breakpoint. Missing 480px for phones, 360px for small phones |
-| Tone chips don't reflow | dashboard.html | Chips are 140-200px wide. On 375px minus padding = 343px. Chips wrap unpredictably |
-| No word-break on messages | style.css `.message` | Long words in messages can cause horizontal overflow. Missing `word-break: break-word` |
+| Issue | Location | Status | Detail |
+|-------|----------|--------|--------|
+| ~~Touch targets too small~~ | `.input-icon-btn` | **FIXED 2026-04-03** | Added 44px touch targets at 480px breakpoint |
+| ~~Form inputs too short~~ | `.form-group input` | **FIXED 2026-04-03** | Addressed in 480px breakpoint |
+| ~~`.btn-sm` too small~~ | style.css | **FIXED 2026-04-03** | Addressed in 480px breakpoint |
+| ~~Settings/tone chips~~ | style.css | **FIXED 2026-04-03** | Addressed in 480px breakpoint |
+| ~~Password toggle tiny~~ | `.password-toggle` | **FIXED 2026-04-03** | Addressed in 480px breakpoint |
+| ~~Modal too wide~~ | `.modal-content` | **FIXED 2026-04-04** | Added `!important` to mobile max-width overrides |
+| ~~Only one breakpoint~~ | style.css | **FIXED 2026-04-03** | 480px breakpoint now exists |
+| Tone chips don't reflow | dashboard.html | OPEN | Chips are 140-200px wide. On 375px minus padding = 343px. Chips wrap unpredictably |
+| ~~No word-break on messages~~ | `.message` | **FIXED 2026-04-03** | Added `word-break: break-word` |
+| Session header wastes space | session.html | OPEN | Header stacks to 2 rows on mobile (~70px). Should be single compact row (~36px). See Phase 2.1 |
+| Action buttons too heavy | session.html | OPEN | "Participants", "Council", "Summary" use outlined `btn-sm` on mobile. Should be plain text links. See Phase 2.1 |
+| "Ask Vilora" button too heavy | session.html | OPEN | Bordered pill button wastes space. Should be plain text link on mobile. See Phase 2.3 |
+| Message list has unnecessary chrome | style.css | OPEN | Border, border-radius, and 1rem padding on `.message-list` waste space on mobile. See Phase 2.2 |
 
 ### MEDIUM Issues (Polish)
 
-| Issue | Location | Detail |
-|-------|----------|--------|
-| Hero text too large | style.css | h1 reduces to 1.8rem at 768px but stays 1.8rem down to 320px. Should be 1.4rem on phones |
-| Onboarding buttons cramped | about_me.html | "Skip for now" + "Back" + "Next" use `justify-content: space-between`. On 360px screens buttons nearly touch |
-| Delete button hard to tap | dashboard.html | Session card delete button is ~32px with `position: absolute`. Below 44px target |
-| Invite banner doesn't stack | session.html | Link input + Copy + Send Invite row stays horizontal on mobile. Should stack vertically |
-| Settings saved toast | style.css `.settings-saved` | `position: fixed; right: 2rem` might overlap content on small screens |
-| Navbar padding excessive | style.css | `padding: 1rem 2rem`. 32px each side on 375px screen = 64px lost to padding |
-| No mobile font scaling | style.css | All text sizes stay same from 320px to 767px. No progressive reduction |
+| Issue | Location | Status | Detail |
+|-------|----------|--------|--------|
+| Hero text too large | style.css | OPEN | h1 stays 1.8rem down to 320px. Should be 1.4rem on phones |
+| Onboarding buttons cramped | about_me.html | OPEN | "Skip for now" + "Back" + "Next" nearly touch on 360px |
+| Delete button hard to tap | dashboard.html | OPEN | Session card delete button is ~32px. Below 44px target |
+| Invite banner doesn't stack | session.html | OPEN | Link input + Copy + Send row stays horizontal on mobile |
+| Settings saved toast | `.settings-saved` | OPEN | `position: fixed; right: 2rem` might overlap on small screens |
+| ~~Navbar padding excessive~~ | style.css | **FIXED 2026-04-03** | Reduced at 480px breakpoint |
+| No mobile font scaling | style.css | OPEN | All text sizes stay same from 320px to 767px |
 
 ### Specific Component Measurements at 375px
 
 ```
 Available width: 375px
 - Container padding (1rem each): 375 - 32 = 343px usable
-- Modal (max-width 500px): constrained to 343px, edge-to-edge
-- Summary panel (480px): OVERFLOWS by 105px
-- Tone chip (~150px): 2 per row max
-- Session type badge + Council btn + Summary btn: ~300px needed, barely fits
-- Invite link input + Copy + Send: ~400px needed, OVERFLOWS
+- Modal (max-width 500px): constrained to 343px, edge-to-edge [FIXED]
+- Summary panel: 100% width on mobile [FIXED]
+- Tone chip (~150px): 2 per row max [OPEN]
+- Session header: currently 2 rows (~70px), target 1 row (~36px) [OPEN]
+- Message list padding: 1rem = 32px wasted, target 0.5rem [OPEN]
+- Ask Vilora button: ~32px tall, target ~20px as text link [OPEN]
+- Estimated space savings from Phase 2 changes: ~60px more chat space
 ```
 
 ---
@@ -368,5 +458,6 @@ Available width: 375px
 | 2026-04-02 | Initial creation. Comprehensive mobile audit scope and implementation plan |
 | 2026-04-02 | Added code audit findings with specific measurements and severity ratings |
 | 2026-04-03 | Audit run: Fixed .message-content, .welcome-topic, .invite-landing-topic word-break. Added 44px touch targets for .input-icon-btn, .btn-polish at 480px. Bumped .session-type-badge to 0.7rem. Fixed message-input-bar mobile override. Existing 480px breakpoint already covers: summary/council panels (100% width), btn-sm, btn-mic, tone/settings chips, password-toggle, form inputs, modals, invite banner stacking, onboarding buttons. Remaining: keyboard-hides-input (uses dvh but needs real device testing), .btn-polish still below 44px (36px, acceptable for secondary action) |
-| 2026-04-04 | Added emoji reaction picker to component audit scope (bottom sheet on mobile, pill touch targets, add-reaction button visibility) |
+| 2026-04-04 | Added emoji reaction picker to component audit scope |
+| 2026-04-04 | Major rewrite of Phase 2 (Session Room): new "maximize chat space" direction. Single-row header with ellipsis title + text-link actions. Edge-to-edge message list (no border/padding). "Ask Vilora" as text link not button. Space budget analysis. Reference table of ChatGPT/iMessage/WhatsApp mobile patterns. Updated all audit findings with fix status and dates. Added new HIGH issues for header/button/message-list space waste |
 | 2026-04-04 | Audit run: **Fixed** inline max-width styles on modals overriding mobile CSS (added `!important` to `.modal-content` max-width at both 768px and 480px breakpoints — inline styles like `max-width: 460px/480px/500px` on session.html, dashboard.html, about_me.html, base.html modals were defeating responsive overrides). **Fixed** iOS Safari scroll lock — added `html.modal-open { overflow: hidden }` in CSS and `document.documentElement.classList` toggle in api.js (iOS Safari requires overflow hidden on both html and body). Added `left: 0; right: 0` to `body.modal-open` for full iOS position anchoring. Added `.council-modal-content { max-width: 100% !important }` at 480px. **Puppeteer visual verification (375px + 1280px):** All 6 pages pass — landing, login, dashboard, session, about-me, settings. No horizontal overflow, no cut-off content, no overlapping elements, text readable on all pages. Screenshots saved to `/tmp/mobile-screenshots/`. **Remaining:** real-device testing on iOS Safari (scroll lock, keyboard behavior with dvh) and Android Chrome recommended. |
