@@ -1743,6 +1743,18 @@ body.summary-open .container {
     color: var(--primary);
 }
 
+.message-self .btn-speak {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.message-self .btn-speak:hover {
+    color: white;
+}
+
+.message-self .btn-speak.speaking {
+    color: white;
+}
+
 .btn-speak.speaking {
     opacity: 1;
     color: var(--primary);

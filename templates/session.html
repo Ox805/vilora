@@ -295,6 +295,7 @@ function renderMessages(messages) {
     container.innerHTML = messages.map(m => {
         const deleteBtn = `<button class="msg-delete-btn" onclick="deleteMessage(${m.id})" title="Delete this message">&times;</button>`;
         const reactionBar = m.msg_type === 'council' ? '' : buildReactionBar(m.id, m.reactions || {});
+        const speakBtn = `<button class="btn-speak" onclick="speakMessage(${m.id}, this)" title="Read aloud"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg></button>`;
 
         if (m.msg_type === 'mediator') {
             const canDelete = IS_CREATOR;
@@ -311,8 +312,6 @@ function renderMessages(messages) {
             } else {
                 contentHtml = `<div class="message-content">${fullHtml}</div>`;
             }
-
-            const speakBtn = `<button class="btn-speak" onclick="speakMessage(${m.id}, this)" title="Read aloud"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg></button>`;
 
             return `<div class="message message-mediator" data-message-id="${m.id}">
                 <div class="message-author">Vilora${speakBtn}${canDelete ? deleteBtn : ''}</div>
@@ -337,19 +336,19 @@ function renderMessages(messages) {
         } else if (m.msg_type === 'intake') {
             let intakeContent = m.content.replace(/\[Session tone:[^\]]*\]\s*/g, '');
             return `<div class="message message-intake" data-message-id="${m.id}">
-                <div class="message-author">${escapeHtml(m.display_name || 'Participant')}'s Initial Perspective</div>
+                <div class="message-author">${escapeHtml(m.display_name || 'Participant')}'s Initial Perspective${speakBtn}</div>
                 <div class="message-content">${escapeHtml(intakeContent)}</div>
                 ${reactionBar}
             </div>`;
         } else if (m.is_self) {
             return `<div class="message message-self" data-message-id="${m.id}">
-                <div class="message-content">${escapeHtml(m.content)}${deleteBtn}</div>
+                <div class="message-content">${escapeHtml(m.content)}${speakBtn}${deleteBtn}</div>
                 ${reactionBar}
                 <div class="message-time">${localTime(m.created_at)}</div>
             </div>`;
         } else {
             return `<div class="message message-other" data-message-id="${m.id}">
-                <div class="message-author">${escapeHtml(m.display_name || 'Participant')}</div>
+                <div class="message-author">${escapeHtml(m.display_name || 'Participant')}${speakBtn}</div>
                 <div class="message-content">${escapeHtml(m.content)}</div>
                 ${reactionBar}
                 <div class="message-time">${localTime(m.created_at)}</div>
