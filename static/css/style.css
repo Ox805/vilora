@@ -2137,24 +2137,23 @@ body.summary-open .container {
         height: calc(100dvh - 100px); /* dvh handles mobile keyboard, tighter now with hidden footer */
     }
 
-    /* Header: single row, topic truncated, actions as text links */
+    /* Header: topic truncated on one line, actions as text links on second line */
     .room-header {
-        flex-direction: row;
-        align-items: center;
-        gap: 0.5rem;
-        margin-bottom: 0.5rem;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.2rem;
+        margin-bottom: 0.35rem;
     }
     .room-header h2 {
-        flex: 1;
-        min-width: 0;
+        width: 100%;
         font-size: 1rem;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
     }
     .room-actions {
-        flex-shrink: 0;
-        gap: 0.6rem;
+        width: 100%;
+        gap: 0.75rem;
     }
     .room-actions .btn,
     .room-actions .btn-sm {
@@ -2162,7 +2161,7 @@ body.summary-open .container {
         border: none;
         padding: 0;
         color: var(--primary);
-        font-size: 0.75rem;
+        font-size: 0.8rem;
         min-height: auto;
         min-width: auto;
     }
