@@ -91,44 +91,44 @@ Check these JS files for specific mobile-breaking patterns:
 - Check: does `position: fixed` on body work on iOS Safari? (iOS requires both `overflow: hidden` AND `position: fixed` with `top: -scrollY` to prevent background scroll.)
 - Search for `MutationObserver` -- does it correctly detect modal open/close via style attribute changes?
 
-## Step 5: Visual Verification via Chrome Remote Control
+## Step 5: Visual Verification via Puppeteer Screenshots
 
-**IMPORTANT: Do NOT use Puppeteer or headless Chrome. Puppeteer does not work in this WSL environment and will hang indefinitely.**
+**IMPORTANT WSL SETUP:** Puppeteer requires `pipe: true` in WSL. The default WebSocket transport hangs. Always launch like this:
 
-Use the VS Code Chrome remote control (`/chrome`) to visually verify mobile layout:
+```javascript
+const browser = await puppeteer.launch({
+  headless: 'new',
+  pipe: true,  // REQUIRED in WSL - WebSocket transport hangs
+  args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-gpu', '--disable-dev-shm-usage'],
+  timeout: 15000
+});
+```
 
-1. **Open Chrome** using `/chrome` and navigate to `https://www.vilora.ai`
+**Setup:** Ensure Puppeteer is installed globally and use NODE_PATH:
+```bash
+export NVM_DIR="$HOME/.nvm"; [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+export NODE_PATH="$(npm root -g)"
+```
 
-2. **Set mobile viewport** using Chrome DevTools device emulation:
-   - Open DevTools (F12 or Ctrl+Shift+I)
-   - Click the device toggle toolbar (phone/tablet icon) or Ctrl+Shift+M
-   - Set viewport to iPhone SE (375x667) or iPhone 14 (390x844)
+**Screenshot process:**
+1. Create a temp script that captures pages at mobile (375px) and desktop (1280px) viewports
+2. Capture public pages: `/`, `/login`
+3. Login with test credentials, then capture: `/dashboard`, `/about-me`, `/settings`, most recent session
+4. Save screenshots to `/tmp/mobile-screenshots/`
+5. Read each screenshot PNG to visually inspect
 
-3. **Screenshot each page** at mobile viewport:
-   - Landing page (`/`)
-   - Login page (`/login`)
-   - Dashboard (`/dashboard`) -- requires login
-   - Session room (`/session/{id}`) -- open most recent session
-   - About Me (`/about-me`)
-   - Settings (`/settings`)
+**Test credentials:** Ask the user or check memory for test account credentials.
 
-4. **For each page, check:**
-   - Any horizontal scrollbar or content cut off on the right
-   - Elements overlapping or misaligned
-   - Text too small to read
-   - Buttons/links that look too small to tap
-   - Modals or panels that overflow the viewport
+**For each screenshot, check:**
+- Any horizontal scrollbar or content cut off
+- Elements overlapping or misaligned
+- Text too small to read
+- Buttons that look too small to tap
+- Modals or panels that overflow the viewport
 
-5. **Test interactions at mobile viewport:**
-   - Open the "New Session" chooser and check layout
-   - Open a tone chips section and verify wrapping
-   - Open the participants panel
-   - Click "Get Summary" or "Council" and check panel display
-
-6. **Also verify via code analysis:**
-   - Search templates for `style="max-width:` -- inline max-widths override CSS media queries at 480px
-   - Calculate widths at 375px: container padding 16px*2 = 343px usable
-   - Check that no elements exceed 343px without wrapping
+**Also verify via code analysis:**
+- Search templates for `style="max-width:` -- inline max-widths override CSS media queries
+- Calculate widths at 375px: container padding 16px*2 = 343px usable
 
 ## Step 6: Fix Issues
 
