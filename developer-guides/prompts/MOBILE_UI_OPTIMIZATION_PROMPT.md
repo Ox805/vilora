@@ -1,6 +1,7 @@
 # Mobile UI Optimization
 
 **Created:** April 2, 2026
+**Last Updated:** April 4, 2026
 **Status:** Planning
 **Dependencies:** None (can begin independently)
 **Priority:** High. Majority of consumer app usage happens on mobile. Current UI is desktop-first.
@@ -64,6 +65,7 @@ Every page and component needs to be reviewed on mobile viewports (375px, 414px,
 | Invite Banner | `static/css/style.css` | Link input + copy button + send invite layout |
 | Session Cards | `static/css/style.css` | Card layout, delete button, date display |
 | Onboarding Steps | `templates/about_me.html` | Step navigation, field layout, progress bar |
+| Emoji Reactions | `templates/session.html` + `static/css/style.css` | Reaction picker positions as bottom sheet on mobile, pill touch targets, add-reaction button visibility |
 
 ---
 
@@ -366,4 +368,5 @@ Available width: 375px
 | 2026-04-02 | Initial creation. Comprehensive mobile audit scope and implementation plan |
 | 2026-04-02 | Added code audit findings with specific measurements and severity ratings |
 | 2026-04-03 | Audit run: Fixed .message-content, .welcome-topic, .invite-landing-topic word-break. Added 44px touch targets for .input-icon-btn, .btn-polish at 480px. Bumped .session-type-badge to 0.7rem. Fixed message-input-bar mobile override. Existing 480px breakpoint already covers: summary/council panels (100% width), btn-sm, btn-mic, tone/settings chips, password-toggle, form inputs, modals, invite banner stacking, onboarding buttons. Remaining: keyboard-hides-input (uses dvh but needs real device testing), .btn-polish still below 44px (36px, acceptable for secondary action) |
-| 2026-04-04 | Audit run: **Fixed** inline max-width styles on modals overriding mobile CSS (added `!important` to `.modal-content` max-width at both 768px and 480px breakpoints — inline styles like `max-width: 460px/480px/500px` on session.html, dashboard.html, about_me.html, base.html modals were defeating responsive overrides). **Fixed** iOS Safari scroll lock — added `html.modal-open { overflow: hidden }` in CSS and `document.documentElement.classList` toggle in api.js (iOS Safari requires overflow hidden on both html and body). Added `left: 0; right: 0` to `body.modal-open` for full iOS position anchoring. Added `.council-modal-content { max-width: 100% !important }` at 480px. **Verified OK:** viewport meta on all pages, touch targets at 480px, word-break on user content, summary/council panels 100% width, invite banner stacking, tone chip wrapping, font sizes (metadata 0.7-0.75rem acceptable). **Remaining:** Puppeteer visual testing blocked (browser launch hangs in WSL); recommend real-device testing on iOS Safari and Android Chrome. |
+| 2026-04-04 | Added emoji reaction picker to component audit scope (bottom sheet on mobile, pill touch targets, add-reaction button visibility) |
+| 2026-04-04 | Audit run: **Fixed** inline max-width styles on modals overriding mobile CSS (added `!important` to `.modal-content` max-width at both 768px and 480px breakpoints — inline styles like `max-width: 460px/480px/500px` on session.html, dashboard.html, about_me.html, base.html modals were defeating responsive overrides). **Fixed** iOS Safari scroll lock — added `html.modal-open { overflow: hidden }` in CSS and `document.documentElement.classList` toggle in api.js (iOS Safari requires overflow hidden on both html and body). Added `left: 0; right: 0` to `body.modal-open` for full iOS position anchoring. Added `.council-modal-content { max-width: 100% !important }` at 480px. **Puppeteer visual verification (375px + 1280px):** All 6 pages pass — landing, login, dashboard, session, about-me, settings. No horizontal overflow, no cut-off content, no overlapping elements, text readable on all pages. Screenshots saved to `/tmp/mobile-screenshots/`. **Remaining:** real-device testing on iOS Safari (scroll lock, keyboard behavior with dvh) and Android Chrome recommended. |
