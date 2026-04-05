@@ -365,21 +365,36 @@ function renderMessages(messages) {
                 const fileData = JSON.parse(m.content);
                 const isImage = fileData.content_type.startsWith('image/');
                 const sizeStr = formatFileSize(fileData.file_size);
-                const downloadUrl = `/api/sessions/${SESSION_ID}/files/${fileData.attachment_id}`;
+                const fileUrl = `/api/sessions/${SESSION_ID}/files/${fileData.attachment_id}`;
+                const viewUrl = `${fileUrl}?view=1`;
+                const ct = fileData.content_type;
+                const canView = ct.startsWith('image/') || ct === 'application/pdf' || ct.startsWith('text/');
 
                 let preview;
                 if (isImage) {
-                    preview = `<a href="${downloadUrl}" target="_blank" class="file-preview-link">
-                        <img src="${downloadUrl}" class="file-preview-img" alt="${escapeHtml(fileData.filename)}">
-                    </a>`;
+                    preview = `<a href="#" onclick="openLightbox('${fileUrl}');return false" class="file-preview-link">
+                        <img src="${fileUrl}" class="file-preview-img" alt="${escapeHtml(fileData.filename)}">
+                    </a>
+                    <div class="file-actions">
+                        <a href="#" onclick="openLightbox('${fileUrl}');return false" class="file-action-btn">View</a>
+                        <a href="${fileUrl}" class="file-action-btn">Download</a>
+                        <span class="file-size">${sizeStr}</span>
+                    </div>`;
                 } else {
-                    preview = `<a href="${downloadUrl}" target="_blank" class="file-download-link">
-                        <span class="file-icon">${getFileIcon(fileData.content_type)}</span>
+                    const viewBtn = canView
+                        ? `<a href="${viewUrl}" target="_blank" class="file-action-btn">View</a>`
+                        : '';
+                    preview = `<div class="file-download-link">
+                        <span class="file-icon">${getFileIcon(ct)}</span>
                         <span class="file-info">
                             <span class="file-name">${escapeHtml(fileData.filename)}</span>
                             <span class="file-size">${sizeStr}</span>
                         </span>
-                    </a>`;
+                        <span class="file-actions-inline">
+                            ${viewBtn}
+                            <a href="${fileUrl}" class="file-action-btn">Download</a>
+                        </span>
+                    </div>`;
                 }
 
                 const authorName = m.is_self ? 'You' : escapeHtml(m.display_name || 'Participant');
@@ -648,8 +663,11 @@ function stopAndReset(messageId) {
 
 function pickSpeed(speedIndex, messageId) {
     currentSpeedIndex = speedIndex;
-    // Speed takes effect on next play -- don't interrupt current playback
-    refreshControls(messageId);
+    if (speechState === 'playing' || speechState === 'paused') {
+        doSpeak(currentSpeakText, messageId);
+    } else {
+        refreshControls(messageId);
+    }
 }
 
 function doSpeak(text, messageId) {
@@ -715,6 +733,22 @@ async function sendMessage(e) {
         sendBtn.disabled = false;
         sendBtn.textContent = 'Send';
     }
+}
+
+// --- File Lightbox ---
+function openLightbox(imgUrl) {
+    const overlay = document.getElementById('file-lightbox');
+    const img = document.getElementById('lightbox-img');
+    const dlLink = document.getElementById('lightbox-download');
+    img.src = imgUrl;
+    dlLink.href = imgUrl;
+    overlay.style.display = 'flex';
+}
+
+function closeLightbox() {
+    const overlay = document.getElementById('file-lightbox');
+    overlay.style.display = 'none';
+    document.getElementById('lightbox-img').src = '';
 }
 
 // --- File Upload ---
@@ -1382,6 +1416,15 @@ polling = setInterval(() => {
     if (!IS_PERSONAL) checkParticipants();
 }, 5000);
 </script>
+
+<!-- File Lightbox -->
+<div id="file-lightbox" class="file-lightbox" onclick="if(event.target===this)closeLightbox()">
+    <div class="lightbox-controls">
+        <a id="lightbox-download" href="#" class="lightbox-btn">Download</a>
+        <button onclick="closeLightbox()" class="lightbox-btn lightbox-close">&times;</button>
+    </div>
+    <img id="lightbox-img" src="" alt="Preview">
+</div>
 {% endblock %}
 
 {% block scripts %}
