@@ -883,7 +883,7 @@ async function askCouncilToWeighIn() {
     btn.disabled = true;
     btn.textContent = 'Council is deliberating...';
 
-    const question = 'Based on the conversation so far, what perspectives, risks, and opportunities should the participants consider? What concrete next step would you recommend?';
+    const question = 'Please evaluate and provide your expert thoughts and feedback as an unbiased observer of this conversation so far. If you\'ve chimed in earlier in the conversation, this request is for your feedback on the conversation since you last chimed in.';
     const payload = { question, context: '', session_id: SESSION_ID };
 
     try {
