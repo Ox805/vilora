@@ -501,6 +501,7 @@ function closeReactionPicker() {
 // --- Text-to-Speech ---
 const SPEAK_SPEEDS = [0.75, 1, 1.25, 1.5];
 let currentSpeedIndex = 1; // default 1x
+let playingSpeedIndex = 1; // speed of current utterance
 let currentSpeakText = '';
 let currentSpeakMsgId = null;
 // States: 'idle' | 'playing' | 'paused' | 'finished'
@@ -570,10 +571,12 @@ function buildControlsHtml(messageId) {
         stopBtn = '';
     }
 
+    const speedPending = (speechState === 'playing' || speechState === 'paused') && currentSpeedIndex !== playingSpeedIndex;
     return pausePlayBtn + stopBtn +
         SPEAK_SPEEDS.map((s, i) =>
-            `<button class="speak-speed-btn${i === currentSpeedIndex ? ' active' : ''}" onclick="changeSpeed(${i}, ${messageId})">${s}x</button>`
-        ).join('');
+            `<button class="speak-speed-btn${i === currentSpeedIndex ? ' active' : ''}${i === playingSpeedIndex && speechState === 'playing' ? ' current' : ''}" onclick="changeSpeed(${i}, ${messageId})" title="${i === currentSpeedIndex && speedPending ? 'Will apply on next play' : ''}">${s}x</button>`
+        ).join('') +
+        (speedPending ? '<span class="speak-speed-pending">on next play</span>' : '');
 }
 
 function updateControlsUi(messageId) {
@@ -614,13 +617,8 @@ let speechGeneration = 0;
 
 function changeSpeed(speedIndex, messageId) {
     currentSpeedIndex = speedIndex;
-    if (speechState === 'playing') {
-        speechGeneration++;
-        window.speechSynthesis.cancel();
-        startSpeech(currentSpeakText, messageId);
-    } else {
-        updateControlsUi(messageId);
-    }
+    // Speed change takes effect on next play/replay -- can't change mid-utterance
+    updateControlsUi(messageId);
 }
 
 function startSpeech(text, messageId) {
@@ -630,6 +628,7 @@ function startSpeech(text, messageId) {
     utterance.pitch = 1;
 
     speechState = 'playing';
+    playingSpeedIndex = currentSpeedIndex;
     const speakBtn = document.querySelector(`[data-message-id="${messageId}"] .btn-speak`);
     if (speakBtn) speakBtn.classList.add('speaking');
     updateControlsUi(messageId);

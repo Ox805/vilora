@@ -1911,6 +1911,13 @@ body.summary-open .container {
     border-color: var(--error);
 }
 
+.speak-speed-pending {
+    font-size: 0.6rem;
+    color: var(--text-muted);
+    font-style: italic;
+    white-space: nowrap;
+}
+
 /* === Message Delete === */
 .msg-delete-btn {
     background: none;
