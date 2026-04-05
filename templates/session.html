@@ -108,6 +108,9 @@
             <button type="button" onclick="askVilora()" class="btn btn-sm btn-ask-vilora" id="ask-vilora-btn" title="Request Vilora's input on the conversation so far. Vilora will read the discussion and offer perspective, suggestions, or information.">
                 Ask Vilora to weigh in
             </button>
+            <button type="button" onclick="askCouncilToWeighIn()" class="btn btn-sm btn-ask-vilora" id="ask-council-btn" title="The Council provides five expert perspectives on the conversation so far, then synthesizes them into a clear recommendation.">
+                Ask the Council to weigh in
+            </button>
         </div>
         {% endif %}
     </div>
@@ -875,6 +878,36 @@ async function askVilora() {
     }
 }
 
+async function askCouncilToWeighIn() {
+    const btn = document.getElementById('ask-council-btn');
+    btn.disabled = true;
+    btn.textContent = 'Council is deliberating...';
+
+    const question = 'Based on the conversation so far, what perspectives, risks, and opportunities should the participants consider? What concrete next step would you recommend?';
+    const payload = { question, context: '', session_id: SESSION_ID };
+
+    try {
+        const res = await fetch('/api/council', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+
+        if (data.success && data.job_id) {
+            pollCouncilResults(data.job_id, question, btn, 'Ask the Council to weigh in');
+        } else {
+            alert(data.error || 'Council encountered an error.');
+            btn.disabled = false;
+            btn.textContent = 'Ask the Council to weigh in';
+        }
+    } catch (err) {
+        alert('Failed to start Council. Please try again.');
+        btn.disabled = false;
+        btn.textContent = 'Ask the Council to weigh in';
+    }
+}
+
 // --- Council ---
 function showCouncilModal() {
     document.getElementById('council-modal').style.display = 'flex';
@@ -927,7 +960,8 @@ async function runCouncil() {
     }
 }
 
-async function pollCouncilResults(jobId, question, btn) {
+async function pollCouncilResults(jobId, question, btn, btnResetText) {
+    const resetLabel = btnResetText || "Get the Council's take";
     // Show progress in the council panel
     const panel = document.getElementById('council-panel');
     const content = document.getElementById('council-content');
@@ -951,11 +985,11 @@ async function pollCouncilResults(jobId, question, btn) {
             const data = await res.json();
 
             if (data.status === 'done' && data.council) {
-                if (btn) { btn.disabled = false; btn.textContent = "Get the Council's take"; }
+                if (btn) { btn.disabled = false; btn.textContent = resetLabel; }
                 showCouncilResults(data.council, question);
                 return;
             } else if (data.status === 'error') {
-                if (btn) { btn.disabled = false; btn.textContent = "Get the Council's take"; }
+                if (btn) { btn.disabled = false; btn.textContent = resetLabel; }
                 content.innerHTML = `<p class="error-msg">${escapeHtml(data.error || 'Council encountered an error.')}</p>`;
                 return;
             }
@@ -966,7 +1000,7 @@ async function pollCouncilResults(jobId, question, btn) {
     }
 
     // timeout
-    if (btn) { btn.disabled = false; btn.textContent = "Get the Council's take"; }
+    if (btn) { btn.disabled = false; btn.textContent = resetLabel; }
     content.innerHTML = '<p class="error-msg">Council is taking longer than expected. Please try again.</p>';
 }
 
