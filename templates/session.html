@@ -514,6 +514,7 @@ const ICON_STOP = '<svg width="12" height="12" viewBox="0 0 24 24" fill="current
 function speakMessage(messageId, btnEl) {
     // If controls are already showing for this message, dismiss everything
     if (currentSpeakMsgId === messageId && document.querySelector('.speak-controls')) {
+        speechGeneration += 2;
         window.speechSynthesis.cancel();
         speechState = 'idle';
         hideSpeakControls();
@@ -523,6 +524,7 @@ function speakMessage(messageId, btnEl) {
     }
 
     // Stop any other speech and clean up
+    speechGeneration += 2;
     window.speechSynthesis.cancel();
     speechState = 'idle';
     document.querySelectorAll('.btn-speak.speaking').forEach(b => b.classList.remove('speaking'));
@@ -599,7 +601,7 @@ function resumeSpeech(messageId) {
 }
 
 function stopSpeech(messageId) {
-    speechGeneration++;
+    speechGeneration += 2;
     window.speechSynthesis.cancel();
     speechState = 'idle';
     const speakBtn = document.querySelector(`[data-message-id="${messageId}"] .btn-speak`);
@@ -616,11 +618,12 @@ let speechGeneration = 0;
 function changeSpeed(speedIndex, messageId) {
     currentSpeedIndex = speedIndex;
     if (speechState === 'playing') {
-        // Restart at new speed
-        speechGeneration++;
+        // Bump generation twice: once to invalidate the current utterance's callbacks,
+        // and startSpeech will bump again for the new utterance
+        speechGeneration += 2;
         window.speechSynthesis.cancel();
         // Small delay to let cancel() settle before starting new speech
-        setTimeout(() => startSpeech(currentSpeakText, messageId), 50);
+        setTimeout(() => startSpeech(currentSpeakText, messageId), 100);
     } else {
         updateControlsUi(messageId);
     }
