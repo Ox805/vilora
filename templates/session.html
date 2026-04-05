@@ -226,11 +226,18 @@
 const SESSION_ID = {{ session.id }};
 let polling = null;
 let lastMessageCount = 0;
+let initialScrollDone = false;
+let savedLastSeenAt = null;
 
 async function loadMessages() {
     const res = await fetch(`/api/sessions/${SESSION_ID}/messages`);
     const data = await res.json();
     const messages = data.messages || [];
+
+    // Capture last_seen_at on first load only (before server updates it)
+    if (!initialScrollDone && data.last_seen_at) {
+        savedLastSeenAt = data.last_seen_at;
+    }
 
     // Skip re-render if nothing changed and user is selecting text or using TTS
     if (messages.length === lastMessageCount) {
@@ -358,7 +365,31 @@ function renderMessages(messages) {
         }
     }).join('');
 
-    // Only auto-scroll if user is near the bottom (within 150px)
+    // On first load, scroll to first unread message or bottom
+    if (!initialScrollDone) {
+        initialScrollDone = true;
+        if (savedLastSeenAt) {
+            // Find the first message after last_seen_at
+            const firstUnread = messages.find(m => {
+                if (!m.created_at) return false;
+                const msgTime = m.created_at.endsWith('Z') ? m.created_at : m.created_at + 'Z';
+                const seenTime = savedLastSeenAt.endsWith('Z') ? savedLastSeenAt : savedLastSeenAt + 'Z';
+                return new Date(msgTime) > new Date(seenTime);
+            });
+            if (firstUnread) {
+                const el = container.querySelector(`[data-message-id="${firstUnread.id}"]`);
+                if (el) {
+                    el.scrollIntoView({ block: 'start' });
+                    return;
+                }
+            }
+        }
+        // No unread or no last_seen -- scroll to bottom
+        container.scrollTop = container.scrollHeight;
+        return;
+    }
+
+    // On subsequent polls, only auto-scroll if user is near the bottom (within 150px)
     const isNearBottom = (container.scrollHeight - container.scrollTop - container.clientHeight) < 150;
     if (isNearBottom) {
         container.scrollTop = container.scrollHeight;

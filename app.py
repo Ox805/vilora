@@ -1059,6 +1059,19 @@ def get_messages(session_id):
     message_ids = [m.id for m in messages]
     all_reactions = MessageReaction.get_for_messages(db, message_ids)
 
+    # Get last_seen_at BEFORE updating it (for scroll-to-unread)
+    last_seen_at = None
+    try:
+        cur_ls = _exec(db,
+            "SELECT last_seen_at FROM session_last_seen WHERE session_id = ? AND user_id = ?",
+            (session_id, current_user.id)
+        )
+        row_ls = cur_ls.fetchone()
+        if row_ls:
+            last_seen_at = str(row_ls['last_seen_at'])
+    except Exception:
+        pass
+
     msg_list = []
     for m in messages:
         d = m.to_dict()
@@ -1089,7 +1102,7 @@ def get_messages(session_id):
     except Exception:
         db.rollback()
 
-    return jsonify({'messages': msg_list})
+    return jsonify({'messages': msg_list, 'last_seen_at': last_seen_at})
 
 
 @app.route('/api/sessions/<int:session_id>/messages', methods=['POST'])
