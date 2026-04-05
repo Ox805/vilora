@@ -595,6 +595,7 @@ function resumeSpeech(messageId) {
 }
 
 function stopSpeech(messageId) {
+    ignoreSpeechEnd = true;
     window.speechSynthesis.cancel();
     speechState = 'idle';
     const speakBtn = document.querySelector(`[data-message-id="${messageId}"] .btn-speak`);
@@ -606,10 +607,13 @@ function replaySpeech(messageId) {
     startSpeech(currentSpeakText, messageId);
 }
 
+let ignoreSpeechEnd = false;
+
 function changeSpeed(speedIndex, messageId) {
     currentSpeedIndex = speedIndex;
     if (speechState === 'playing') {
-        // Restart at new speed (can't change speed mid-utterance)
+        // Ignore the onend/onerror from cancel() since we're restarting immediately
+        ignoreSpeechEnd = true;
         window.speechSynthesis.cancel();
         startSpeech(currentSpeakText, messageId);
     } else {
@@ -623,17 +627,19 @@ function startSpeech(text, messageId) {
     utterance.pitch = 1;
 
     speechState = 'playing';
+    ignoreSpeechEnd = false;
     const speakBtn = document.querySelector(`[data-message-id="${messageId}"] .btn-speak`);
     if (speakBtn) speakBtn.classList.add('speaking');
     updateControlsUi(messageId);
 
     utterance.onend = () => {
+        if (ignoreSpeechEnd) { ignoreSpeechEnd = false; return; }
         speechState = 'finished';
         if (speakBtn) speakBtn.classList.remove('speaking');
         updateControlsUi(messageId);
-        // Controls stay visible -- user can replay or dismiss via speaker icon
     };
     utterance.onerror = () => {
+        if (ignoreSpeechEnd) { ignoreSpeechEnd = false; return; }
         speechState = 'idle';
         if (speakBtn) speakBtn.classList.remove('speaking');
         updateControlsUi(messageId);
