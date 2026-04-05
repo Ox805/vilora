@@ -1465,24 +1465,24 @@ def queue_pending_notifications(db, session_id, sender_user_id):
 
 
 def process_pending_notifications():
-    """Process pending notifications older than 15 minutes. Called by background worker."""
+    """Process pending notifications older than 60 minutes. Called by background worker."""
     import threading
     with app.app_context():
         try:
             db = get_db()
 
-            # Find pending notifications older than 15 minutes
+            # Find pending notifications older than 60 minutes
             if _is_postgres():
                 cur = _exec(db,
                     """SELECT pn.id, pn.session_id, pn.target_user_id, pn.triggered_at
                        FROM pending_notifications pn
-                       WHERE pn.triggered_at < CURRENT_TIMESTAMP - INTERVAL '15 minutes'"""
+                       WHERE pn.triggered_at < CURRENT_TIMESTAMP - INTERVAL '60 minutes'"""
                 )
             else:
                 cur = _exec(db,
                     """SELECT pn.id, pn.session_id, pn.target_user_id, pn.triggered_at
                        FROM pending_notifications pn
-                       WHERE pn.triggered_at < datetime('now', '-15 minutes')"""
+                       WHERE pn.triggered_at < datetime('now', '-60 minutes')"""
                 )
 
             pending = cur.fetchall()
@@ -1547,20 +1547,20 @@ def process_pending_notifications():
 
                 session_link = url_for('session_room', session_id=session_id, _external=True)
 
-                # Check email frequency caps: max 1 per 3 hours per session, 8/day total
+                # Check email frequency caps: max 1 per 4 hours per session, 8/day total
                 if email_enabled:
                     if _is_postgres():
                         cur5 = _exec(db,
                             """SELECT COUNT(*) as cnt FROM notification_log
                                WHERE user_id = ? AND session_id = ? AND channel = 'email'
-                               AND created_at > CURRENT_TIMESTAMP - INTERVAL '3 hours'""",
+                               AND created_at > CURRENT_TIMESTAMP - INTERVAL '4 hours'""",
                             (target_user_id, session_id)
                         )
                     else:
                         cur5 = _exec(db,
                             """SELECT COUNT(*) as cnt FROM notification_log
                                WHERE user_id = ? AND session_id = ? AND channel = 'email'
-                               AND created_at > datetime('now', '-3 hours')""",
+                               AND created_at > datetime('now', '-4 hours')""",
                             (target_user_id, session_id)
                         )
                     if cur5.fetchone()['cnt'] == 0:
@@ -1579,7 +1579,7 @@ def process_pending_notifications():
                                    AND created_at > datetime('now', '-24 hours')""",
                                 (target_user_id,)
                             )
-                        if cur6.fetchone()['cnt'] < 8:
+                        if cur6.fetchone()['cnt'] < 6:
                             success = send_activity_email(
                                 target_user.email,
                                 target_user.display_name,
