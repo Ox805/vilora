@@ -1545,7 +1545,8 @@ def process_pending_notifications():
                     if sender:
                         other_name = sender.display_name
 
-                session_link = url_for('session_room', session_id=session_id, _external=True)
+                base_url = os.environ.get('BASE_URL', 'https://www.vilora.io')
+                session_link = f"{base_url}/session/{session_id}"
 
                 # Check email frequency caps: max 1 per 4 hours per session, 8/day total
                 if email_enabled:
