@@ -500,37 +500,29 @@ function closeReactionPicker() {
 
 // --- Text-to-Speech ---
 const SPEAK_SPEEDS = [0.75, 1, 1.25, 1.5];
-let currentSpeedIndex = 1; // default 1x
-let playingSpeedIndex = 1; // speed of current utterance
+let currentSpeedIndex = 1;
 let currentSpeakText = '';
 let currentSpeakMsgId = null;
-// States: 'idle' | 'playing' | 'paused' | 'finished'
-let speechState = 'idle';
+let speechState = 'idle'; // 'idle' | 'playing' | 'paused' | 'finished'
+let activeUtterance = null;
 
 const ICON_PLAY = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>';
 const ICON_PAUSE = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="3" width="4" height="18" rx="1"/><rect x="15" y="3" width="4" height="18" rx="1"/></svg>';
 const ICON_STOP = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>';
 
 function speakMessage(messageId, btnEl) {
-    // If controls are already showing for this message, dismiss everything
     if (currentSpeakMsgId === messageId && document.querySelector('.speak-controls')) {
-        speechGeneration += 2;
-        window.speechSynthesis.cancel();
-        speechState = 'idle';
+        cancelSpeech();
         hideSpeakControls();
         btnEl.classList.remove('speaking');
         currentSpeakMsgId = null;
         return;
     }
 
-    // Stop any other speech and clean up
-    speechGeneration += 2;
-    window.speechSynthesis.cancel();
-    speechState = 'idle';
+    cancelSpeech();
     document.querySelectorAll('.btn-speak.speaking').forEach(b => b.classList.remove('speaking'));
     hideSpeakControls();
 
-    // Get the full message text
     const msgEl = document.querySelector(`[data-message-id="${messageId}"]`);
     if (!msgEl) return;
     const fullEl = msgEl.querySelector('.message-full') || msgEl.querySelector('.message-content');
@@ -542,9 +534,8 @@ function speakMessage(messageId, btnEl) {
     currentSpeakText = text;
     currentSpeakMsgId = messageId;
 
-    // Show controls and start playing
     showSpeakControls(messageId, btnEl);
-    startSpeech(text, messageId);
+    doSpeak(text, messageId);
 }
 
 function showSpeakControls(messageId, btnEl) {
@@ -553,33 +544,29 @@ function showSpeakControls(messageId, btnEl) {
     const controls = document.createElement('div');
     controls.className = 'speak-controls';
     controls.innerHTML = buildControlsHtml(messageId);
-
     const authorEl = msgEl.querySelector('.message-author');
     authorEl.after(controls);
 }
 
 function buildControlsHtml(messageId) {
     let pausePlayBtn, stopBtn;
-
     if (speechState === 'playing') {
         pausePlayBtn = `<button class="speak-ctrl-btn" onclick="pauseSpeech(${messageId})" title="Pause">${ICON_PAUSE}</button>`;
-        stopBtn = `<button class="speak-ctrl-btn speak-stop" onclick="stopSpeech(${messageId})" title="Stop (restart)">${ICON_STOP}</button>`;
+        stopBtn = `<button class="speak-ctrl-btn speak-stop" onclick="stopAndReset(${messageId})" title="Stop">${ICON_STOP}</button>`;
     } else if (speechState === 'paused') {
         pausePlayBtn = `<button class="speak-ctrl-btn" onclick="resumeSpeech(${messageId})" title="Resume">${ICON_PLAY}</button>`;
-        stopBtn = `<button class="speak-ctrl-btn speak-stop" onclick="stopSpeech(${messageId})" title="Stop (restart)">${ICON_STOP}</button>`;
+        stopBtn = `<button class="speak-ctrl-btn speak-stop" onclick="stopAndReset(${messageId})" title="Stop">${ICON_STOP}</button>`;
     } else {
-        // idle or finished
-        pausePlayBtn = `<button class="speak-ctrl-btn" onclick="replaySpeech(${messageId})" title="Play">${ICON_PLAY}</button>`;
+        pausePlayBtn = `<button class="speak-ctrl-btn" onclick="doSpeak(currentSpeakText, ${messageId})" title="Play">${ICON_PLAY}</button>`;
         stopBtn = '';
     }
-
     return pausePlayBtn + stopBtn +
         SPEAK_SPEEDS.map((s, i) =>
-            `<button class="speak-speed-btn${i === currentSpeedIndex ? ' active' : ''}" onclick="changeSpeed(${i}, ${messageId})">${s}x</button>`
+            `<button class="speak-speed-btn${i === currentSpeedIndex ? ' active' : ''}" onclick="pickSpeed(${i}, ${messageId})">${s}x</button>`
         ).join('');
 }
 
-function updateControlsUi(messageId) {
+function refreshControls(messageId) {
     const controls = document.querySelector('.speak-controls');
     if (controls) controls.innerHTML = buildControlsHtml(messageId);
 }
@@ -588,72 +575,70 @@ function hideSpeakControls() {
     document.querySelectorAll('.speak-controls').forEach(el => el.remove());
 }
 
+function cancelSpeech() {
+    if (activeUtterance) {
+        activeUtterance.onend = null;
+        activeUtterance.onerror = null;
+        activeUtterance = null;
+    }
+    window.speechSynthesis.cancel();
+    speechState = 'idle';
+}
+
 function pauseSpeech(messageId) {
     window.speechSynthesis.pause();
     speechState = 'paused';
-    updateControlsUi(messageId);
+    refreshControls(messageId);
 }
 
 function resumeSpeech(messageId) {
     window.speechSynthesis.resume();
     speechState = 'playing';
-    updateControlsUi(messageId);
+    refreshControls(messageId);
 }
 
-function stopSpeech(messageId) {
-    speechGeneration += 2;
-    window.speechSynthesis.cancel();
-    speechState = 'idle';
+function stopAndReset(messageId) {
+    cancelSpeech();
     const speakBtn = document.querySelector(`[data-message-id="${messageId}"] .btn-speak`);
     if (speakBtn) speakBtn.classList.remove('speaking');
-    updateControlsUi(messageId);
+    refreshControls(messageId);
 }
 
-function replaySpeech(messageId) {
-    startSpeech(currentSpeakText, messageId);
-}
-
-let speechGeneration = 0;
-
-function changeSpeed(speedIndex, messageId) {
+function pickSpeed(speedIndex, messageId) {
     currentSpeedIndex = speedIndex;
     if (speechState === 'playing') {
-        // Bump generation twice: once to invalidate the current utterance's callbacks,
-        // and startSpeech will bump again for the new utterance
-        speechGeneration += 2;
-        window.speechSynthesis.cancel();
-        // Small delay to let cancel() settle before starting new speech
-        setTimeout(() => startSpeech(currentSpeakText, messageId), 100);
+        cancelSpeech();
+        doSpeak(currentSpeakText, messageId);
     } else {
-        updateControlsUi(messageId);
+        refreshControls(messageId);
     }
 }
 
-function startSpeech(text, messageId) {
-    const thisGeneration = ++speechGeneration;
+function doSpeak(text, messageId) {
+    cancelSpeech();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = SPEAK_SPEEDS[currentSpeedIndex];
     utterance.pitch = 1;
+    activeUtterance = utterance;
 
-    speechState = 'playing';
-    playingSpeedIndex = currentSpeedIndex;
     const speakBtn = document.querySelector(`[data-message-id="${messageId}"] .btn-speak`);
-    if (speakBtn) speakBtn.classList.add('speaking');
-    updateControlsUi(messageId);
 
     utterance.onend = () => {
-        if (thisGeneration !== speechGeneration) return;
+        activeUtterance = null;
         speechState = 'finished';
         if (speakBtn) speakBtn.classList.remove('speaking');
-        updateControlsUi(messageId);
+        refreshControls(messageId);
     };
     utterance.onerror = () => {
-        if (thisGeneration !== speechGeneration) return;
+        activeUtterance = null;
         speechState = 'idle';
         if (speakBtn) speakBtn.classList.remove('speaking');
-        updateControlsUi(messageId);
+        refreshControls(messageId);
     };
 
+    speechState = 'playing';
+    if (speakBtn) speakBtn.classList.add('speaking');
+    refreshControls(messageId);
     window.speechSynthesis.speak(utterance);
 }
 
