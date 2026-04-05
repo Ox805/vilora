@@ -8,7 +8,8 @@ from flask import Flask, render_template, request, jsonify, redirect, url_for, s
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from models.database import db_init, get_db, _exec, _is_postgres, User, MediationSession, Message, MessageReaction
 from mediation.engine import MediationEngine
-from notifications import send_invite_email, send_password_reset_email, send_nudge_email, send_verification_email
+from notifications import send_invite_email, send_password_reset_email, send_nudge_email, send_verification_email, send_activity_email
+from sms import send_sms, send_verification_sms, send_activity_sms, generate_verification_code
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(32))
@@ -278,7 +279,32 @@ def dashboard():
 def list_sessions():
     db = get_db()
     sessions = MediationSession.get_by_user(db, current_user.id)
-    return jsonify({'sessions': [s.to_dict() for s in sessions]})
+    session_list = []
+    for s in sessions:
+        d = s.to_dict()
+        # Get unread count
+        cur = _exec(db,
+            "SELECT last_seen_at FROM session_last_seen WHERE session_id = ? AND user_id = ?",
+            (s.id, current_user.id)
+        )
+        last_seen = cur.fetchone()
+        if last_seen and last_seen['last_seen_at']:
+            cur2 = _exec(db,
+                "SELECT COUNT(*) as cnt FROM messages WHERE session_id = ? AND created_at > ?",
+                (s.id, last_seen['last_seen_at'])
+            )
+            unread = cur2.fetchone()['cnt']
+        else:
+            # Never visited -- count all messages as unread
+            cur2 = _exec(db,
+                "SELECT COUNT(*) as cnt FROM messages WHERE session_id = ?",
+                (s.id,)
+            )
+            unread = cur2.fetchone()['cnt']
+        d['unread_count'] = unread
+        d['has_unread'] = unread > 0
+        session_list.append(d)
+    return jsonify({'sessions': session_list})
 
 
 # --- Memory Helpers ---
@@ -327,6 +353,181 @@ def about_me():
 @login_required
 def settings():
     return render_template('settings.html')
+
+
+# --- Notification Preferences API ---
+
+@app.route('/api/user/notification-preferences', methods=['GET'])
+@login_required
+def get_notification_preferences():
+    db = get_db()
+    cur = _exec(db, "SELECT * FROM notification_preferences WHERE user_id = ?", (current_user.id,))
+    prefs = cur.fetchone()
+    if not prefs:
+        return jsonify({
+            'email_enabled': True,
+            'sms_enabled': False,
+            'phone_number': None,
+            'phone_verified': False
+        })
+    # Mask phone number for display
+    phone = prefs['phone_number']
+    masked_phone = None
+    if phone and len(phone) >= 4:
+        masked_phone = '***' + phone[-4:]
+    return jsonify({
+        'email_enabled': bool(prefs['email_enabled']),
+        'sms_enabled': bool(prefs['sms_enabled']),
+        'phone_number': masked_phone,
+        'phone_verified': bool(prefs['phone_verified'])
+    })
+
+
+@app.route('/api/user/notification-preferences', methods=['PUT'])
+@login_required
+def update_notification_preferences():
+    db = get_db()
+    data = request.get_json()
+
+    # Get or create preferences row
+    cur = _exec(db, "SELECT * FROM notification_preferences WHERE user_id = ?", (current_user.id,))
+    prefs = cur.fetchone()
+    if not prefs:
+        _exec(db,
+            "INSERT INTO notification_preferences (user_id) VALUES (?)",
+            (current_user.id,)
+        )
+        db.commit()
+        cur = _exec(db, "SELECT * FROM notification_preferences WHERE user_id = ?", (current_user.id,))
+        prefs = cur.fetchone()
+
+    # Update email preference
+    if 'email_enabled' in data:
+        _exec(db,
+            "UPDATE notification_preferences SET email_enabled = ?, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?",
+            (1 if data['email_enabled'] else 0, current_user.id)
+        )
+        db.commit()
+
+    # Update phone number (triggers verification)
+    if 'phone_number' in data and data['phone_number']:
+        import re
+        phone = data['phone_number'].strip()
+        # Basic E.164 validation
+        if not re.match(r'^\+[1-9]\d{6,14}$', phone):
+            return jsonify({'success': False, 'error': 'Invalid phone number format. Use E.164 (e.g., +15551234567)'}), 400
+
+        code = generate_verification_code()
+        _exec(db,
+            """UPDATE notification_preferences
+               SET phone_number = ?, phone_verified = 0, sms_enabled = 0,
+                   phone_verification_code = ?, phone_verification_sent_at = CURRENT_TIMESTAMP,
+                   phone_verification_attempts = 0, updated_at = CURRENT_TIMESTAMP
+               WHERE user_id = ?""",
+            (phone, code, current_user.id)
+        )
+        db.commit()
+
+        send_verification_sms(phone, code)
+        return jsonify({'success': True, 'verification_required': True})
+
+    # Update SMS preference (only if phone is verified)
+    if 'sms_enabled' in data:
+        if data['sms_enabled'] and not prefs['phone_verified']:
+            return jsonify({'success': False, 'error': 'Phone number must be verified before enabling SMS'}), 400
+        _exec(db,
+            "UPDATE notification_preferences SET sms_enabled = ?, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?",
+            (1 if data['sms_enabled'] else 0, current_user.id)
+        )
+        db.commit()
+
+    return jsonify({'success': True})
+
+
+@app.route('/api/user/verify-phone', methods=['POST'])
+@login_required
+def verify_phone():
+    db = get_db()
+    data = request.get_json()
+    code = data.get('code', '').strip()
+
+    cur = _exec(db, "SELECT * FROM notification_preferences WHERE user_id = ?", (current_user.id,))
+    prefs = cur.fetchone()
+    if not prefs or not prefs['phone_verification_code']:
+        return jsonify({'success': False, 'error': 'No verification pending'}), 400
+
+    # Check attempts
+    if prefs['phone_verification_attempts'] >= 5:
+        return jsonify({'success': False, 'error': 'Too many attempts. Please request a new code.'}), 400
+
+    # Increment attempts
+    _exec(db,
+        "UPDATE notification_preferences SET phone_verification_attempts = phone_verification_attempts + 1 WHERE user_id = ?",
+        (current_user.id,)
+    )
+    db.commit()
+
+    # Check expiry (10 minutes)
+    sent_at = prefs['phone_verification_sent_at']
+    if sent_at:
+        from datetime import datetime, timedelta
+        try:
+            if isinstance(sent_at, str):
+                sent_at = datetime.fromisoformat(sent_at.replace('Z', '+00:00'))
+            if datetime.utcnow() - sent_at.replace(tzinfo=None) > timedelta(minutes=10):
+                return jsonify({'success': False, 'error': 'Code expired. Please request a new one.'}), 400
+        except Exception:
+            pass  # If we can't parse the timestamp, allow the attempt
+
+    if code != prefs['phone_verification_code']:
+        remaining = 5 - (prefs['phone_verification_attempts'] + 1)
+        return jsonify({'success': False, 'error': f'Invalid code. {remaining} attempts remaining.'}), 400
+
+    # Success -- verify and enable SMS
+    _exec(db,
+        """UPDATE notification_preferences
+           SET phone_verified = 1, sms_enabled = 1,
+               phone_verification_code = NULL, phone_verification_attempts = 0,
+               updated_at = CURRENT_TIMESTAMP
+           WHERE user_id = ?""",
+        (current_user.id,)
+    )
+    db.commit()
+    return jsonify({'success': True})
+
+
+@app.route('/api/user/resend-phone-code', methods=['POST'])
+@login_required
+def resend_phone_code():
+    db = get_db()
+    cur = _exec(db, "SELECT * FROM notification_preferences WHERE user_id = ?", (current_user.id,))
+    prefs = cur.fetchone()
+    if not prefs or not prefs['phone_number']:
+        return jsonify({'success': False, 'error': 'No phone number on file'}), 400
+
+    # Rate limit: 1 per 60 seconds
+    sent_at = prefs['phone_verification_sent_at']
+    if sent_at:
+        from datetime import datetime, timedelta
+        try:
+            if isinstance(sent_at, str):
+                sent_at = datetime.fromisoformat(sent_at.replace('Z', '+00:00'))
+            if datetime.utcnow() - sent_at.replace(tzinfo=None) < timedelta(seconds=60):
+                return jsonify({'success': False, 'error': 'Please wait 60 seconds before requesting a new code.'}), 429
+        except Exception:
+            pass
+
+    code = generate_verification_code()
+    _exec(db,
+        """UPDATE notification_preferences
+           SET phone_verification_code = ?, phone_verification_sent_at = CURRENT_TIMESTAMP,
+               phone_verification_attempts = 0, updated_at = CURRENT_TIMESTAMP
+           WHERE user_id = ?""",
+        (code, current_user.id)
+    )
+    db.commit()
+    send_verification_sms(prefs['phone_number'], code)
+    return jsonify({'success': True})
 
 
 # --- Memory API ---
@@ -873,6 +1074,20 @@ def get_messages(session_id):
             }
         d['reactions'] = reactions_out
         msg_list.append(d)
+
+    # Update last_seen_at for this user in this session
+    try:
+        _exec(db,
+            """INSERT INTO session_last_seen (session_id, user_id, last_seen_at)
+               VALUES (?, ?, CURRENT_TIMESTAMP)
+               ON CONFLICT(session_id, user_id)
+               DO UPDATE SET last_seen_at = CURRENT_TIMESTAMP""",
+            (session_id, current_user.id)
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+
     return jsonify({'messages': msg_list})
 
 
@@ -918,6 +1133,9 @@ def send_message(session_id):
             ai_msg = create_mediator_message(db, session_id, ai_response)
     except Exception as e:
         sys.stderr.write(f"[Vilora] Mediation error: {e}\n")
+
+    # Queue activity notifications for other participants
+    queue_pending_notifications(db, session_id, current_user.id)
 
     result = {'success': True, 'user_message': user_msg.to_dict()}
     if ai_msg:
@@ -1098,6 +1316,8 @@ def ask_vilora(session_id):
             session_mode=med_session.session_mode
         )
         ai_msg = create_mediator_message(db, session_id, ai_response)
+        # Queue notifications -- Vilora's response means activity
+        queue_pending_notifications(db, session_id, current_user.id)
         return jsonify({'success': True, 'mediator_message': ai_msg.to_dict()})
     except Exception as e:
         sys.stderr.write(f"[Vilora] Ask Vilora error: {e}\n")
@@ -1212,10 +1432,244 @@ def get_summary(session_id):
     return jsonify({'success': True, 'summary': summary})
 
 
+# --- Notification Helpers ---
+
+def queue_pending_notifications(db, session_id, sender_user_id):
+    """Queue notifications for other participants who aren't currently active."""
+    try:
+        med_session = MediationSession.get_by_id(db, session_id)
+        if not med_session:
+            return
+        # Only for group sessions
+        if med_session.session_mode == 'personal':
+            return
+
+        participants = med_session.get_participants(db)
+        for p in participants:
+            if p.id == sender_user_id:
+                continue
+            # Insert or ignore (if already pending for this session+user)
+            try:
+                _exec(db,
+                    """INSERT INTO pending_notifications (session_id, target_user_id, triggered_at)
+                       VALUES (?, ?, CURRENT_TIMESTAMP)
+                       ON CONFLICT(session_id, target_user_id)
+                       DO UPDATE SET triggered_at = CURRENT_TIMESTAMP""",
+                    (session_id, p.id)
+                )
+                db.commit()
+            except Exception:
+                db.rollback()
+    except Exception as e:
+        sys.stderr.write(f"[Vilora] Error queuing notifications: {e}\n")
+
+
+def process_pending_notifications():
+    """Process pending notifications older than 15 minutes. Called by background worker."""
+    import threading
+    with app.app_context():
+        try:
+            db = get_db()
+
+            # Find pending notifications older than 15 minutes
+            if _is_postgres():
+                cur = _exec(db,
+                    """SELECT pn.id, pn.session_id, pn.target_user_id, pn.triggered_at
+                       FROM pending_notifications pn
+                       WHERE pn.triggered_at < CURRENT_TIMESTAMP - INTERVAL '15 minutes'"""
+                )
+            else:
+                cur = _exec(db,
+                    """SELECT pn.id, pn.session_id, pn.target_user_id, pn.triggered_at
+                       FROM pending_notifications pn
+                       WHERE pn.triggered_at < datetime('now', '-15 minutes')"""
+                )
+
+            pending = cur.fetchall()
+            if not pending:
+                return
+
+            for row in pending:
+                pn_id = row['id']
+                session_id = row['session_id']
+                target_user_id = row['target_user_id']
+
+                # Check if user has visited since the notification was triggered
+                cur2 = _exec(db,
+                    """SELECT last_seen_at FROM session_last_seen
+                       WHERE session_id = ? AND user_id = ?""",
+                    (session_id, target_user_id)
+                )
+                last_seen = cur2.fetchone()
+                if last_seen and str(last_seen['last_seen_at']) > str(row['triggered_at']):
+                    # User already saw it, delete pending
+                    _exec(db, "DELETE FROM pending_notifications WHERE id = ?", (pn_id,))
+                    db.commit()
+                    continue
+
+                # Get notification preferences
+                cur3 = _exec(db,
+                    "SELECT * FROM notification_preferences WHERE user_id = ?",
+                    (target_user_id,)
+                )
+                prefs = cur3.fetchone()
+                email_enabled = True  # default on
+                sms_enabled = False
+                phone_number = None
+                phone_verified = False
+                if prefs:
+                    email_enabled = bool(prefs['email_enabled'])
+                    sms_enabled = bool(prefs['sms_enabled'])
+                    phone_number = prefs['phone_number']
+                    phone_verified = bool(prefs['phone_verified'])
+
+                # Get session and user details
+                med_session = MediationSession.get_by_id(db, session_id)
+                target_user = User.get_by_id(db, target_user_id)
+                if not med_session or not target_user:
+                    _exec(db, "DELETE FROM pending_notifications WHERE id = ?", (pn_id,))
+                    db.commit()
+                    continue
+
+                # Find who sent the most recent message (for the email)
+                cur4 = _exec(db,
+                    """SELECT user_id FROM messages
+                       WHERE session_id = ? AND user_id IS NOT NULL AND user_id != ?
+                       ORDER BY created_at DESC LIMIT 1""",
+                    (session_id, target_user_id)
+                )
+                sender_row = cur4.fetchone()
+                other_name = 'Someone'
+                if sender_row:
+                    sender = User.get_by_id(db, sender_row['user_id'])
+                    if sender:
+                        other_name = sender.display_name
+
+                session_link = url_for('session_room', session_id=session_id, _external=True)
+
+                # Check email frequency caps: max 1 per 3 hours per session, 8/day total
+                if email_enabled:
+                    if _is_postgres():
+                        cur5 = _exec(db,
+                            """SELECT COUNT(*) as cnt FROM notification_log
+                               WHERE user_id = ? AND session_id = ? AND channel = 'email'
+                               AND created_at > CURRENT_TIMESTAMP - INTERVAL '3 hours'""",
+                            (target_user_id, session_id)
+                        )
+                    else:
+                        cur5 = _exec(db,
+                            """SELECT COUNT(*) as cnt FROM notification_log
+                               WHERE user_id = ? AND session_id = ? AND channel = 'email'
+                               AND created_at > datetime('now', '-3 hours')""",
+                            (target_user_id, session_id)
+                        )
+                    if cur5.fetchone()['cnt'] == 0:
+                        # Check daily cap
+                        if _is_postgres():
+                            cur6 = _exec(db,
+                                """SELECT COUNT(*) as cnt FROM notification_log
+                                   WHERE user_id = ? AND channel = 'email'
+                                   AND created_at > CURRENT_TIMESTAMP - INTERVAL '24 hours'""",
+                                (target_user_id,)
+                            )
+                        else:
+                            cur6 = _exec(db,
+                                """SELECT COUNT(*) as cnt FROM notification_log
+                                   WHERE user_id = ? AND channel = 'email'
+                                   AND created_at > datetime('now', '-24 hours')""",
+                                (target_user_id,)
+                            )
+                        if cur6.fetchone()['cnt'] < 8:
+                            success = send_activity_email(
+                                target_user.email,
+                                target_user.display_name,
+                                other_name,
+                                med_session.topic,
+                                session_link
+                            )
+                            if success:
+                                _exec(db,
+                                    "INSERT INTO notification_log (session_id, user_id, channel) VALUES (?, ?, 'email')",
+                                    (session_id, target_user_id)
+                                )
+                                db.commit()
+                                sys.stderr.write(f"[Vilora] Activity email sent to {target_user.email} for session {session_id}\n")
+
+                # Check SMS frequency caps: max 1 per 6 hours per session, 4/day total
+                if sms_enabled and phone_verified and phone_number:
+                    if _is_postgres():
+                        cur7 = _exec(db,
+                            """SELECT COUNT(*) as cnt FROM notification_log
+                               WHERE user_id = ? AND session_id = ? AND channel = 'sms'
+                               AND created_at > CURRENT_TIMESTAMP - INTERVAL '6 hours'""",
+                            (target_user_id, session_id)
+                        )
+                    else:
+                        cur7 = _exec(db,
+                            """SELECT COUNT(*) as cnt FROM notification_log
+                               WHERE user_id = ? AND session_id = ? AND channel = 'sms'
+                               AND created_at > datetime('now', '-6 hours')""",
+                            (target_user_id, session_id)
+                        )
+                    if cur7.fetchone()['cnt'] == 0:
+                        if _is_postgres():
+                            cur8 = _exec(db,
+                                """SELECT COUNT(*) as cnt FROM notification_log
+                                   WHERE user_id = ? AND channel = 'sms'
+                                   AND created_at > CURRENT_TIMESTAMP - INTERVAL '24 hours'""",
+                                (target_user_id,)
+                            )
+                        else:
+                            cur8 = _exec(db,
+                                """SELECT COUNT(*) as cnt FROM notification_log
+                                   WHERE user_id = ? AND channel = 'sms'
+                                   AND created_at > datetime('now', '-24 hours')""",
+                                (target_user_id,)
+                            )
+                        if cur8.fetchone()['cnt'] < 4:
+                            success = send_activity_sms(phone_number, med_session.topic, session_link)
+                            if success:
+                                _exec(db,
+                                    "INSERT INTO notification_log (session_id, user_id, channel) VALUES (?, ?, 'sms')",
+                                    (session_id, target_user_id)
+                                )
+                                db.commit()
+                                sys.stderr.write(f"[Vilora] Activity SMS sent to {phone_number} for session {session_id}\n")
+
+                # Delete the pending notification
+                _exec(db, "DELETE FROM pending_notifications WHERE id = ?", (pn_id,))
+                db.commit()
+
+        except Exception as e:
+            sys.stderr.write(f"[Vilora] Notification worker error: {e}\n")
+
+
+def start_notification_worker():
+    """Start background thread that processes pending notifications every 60 seconds."""
+    import threading
+    import time
+
+    def worker():
+        while True:
+            time.sleep(60)
+            try:
+                process_pending_notifications()
+            except Exception as e:
+                sys.stderr.write(f"[Vilora] Notification worker crash: {e}\n")
+
+    t = threading.Thread(target=worker, daemon=True)
+    t.start()
+    sys.stderr.write("[Vilora] Notification worker started.\n")
+
+
 # --- Init ---
 
 with app.app_context():
     db_init()
+
+# Start notification worker (avoid double-start in Flask debug reloader)
+if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN'):
+    start_notification_worker()
 
 if __name__ == '__main__':
     if len(sys.argv) > 1 and sys.argv[1] == 'fix-titles':

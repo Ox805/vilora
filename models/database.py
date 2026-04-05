@@ -153,6 +153,40 @@ def db_init():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE(message_id, user_id, reaction)
             )""",
+            """CREATE TABLE IF NOT EXISTS notification_preferences (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL UNIQUE REFERENCES users(id),
+                email_enabled BOOLEAN DEFAULT TRUE,
+                sms_enabled BOOLEAN DEFAULT FALSE,
+                phone_number TEXT,
+                phone_verified BOOLEAN DEFAULT FALSE,
+                phone_verification_code TEXT,
+                phone_verification_sent_at TIMESTAMP,
+                phone_verification_attempts INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )""",
+            """CREATE TABLE IF NOT EXISTS session_last_seen (
+                id SERIAL PRIMARY KEY,
+                session_id INTEGER NOT NULL REFERENCES mediation_sessions(id),
+                user_id INTEGER NOT NULL REFERENCES users(id),
+                last_seen_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(session_id, user_id)
+            )""",
+            """CREATE TABLE IF NOT EXISTS notification_log (
+                id SERIAL PRIMARY KEY,
+                session_id INTEGER NOT NULL REFERENCES mediation_sessions(id),
+                user_id INTEGER NOT NULL REFERENCES users(id),
+                channel TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )""",
+            """CREATE TABLE IF NOT EXISTS pending_notifications (
+                id SERIAL PRIMARY KEY,
+                session_id INTEGER NOT NULL REFERENCES mediation_sessions(id),
+                target_user_id INTEGER NOT NULL REFERENCES users(id),
+                triggered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(session_id, target_user_id)
+            )""",
         ]
         for stmt in statements:
             try:
@@ -306,6 +340,51 @@ def db_init():
                 FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE,
                 FOREIGN KEY (user_id) REFERENCES users(id),
                 UNIQUE(message_id, user_id, reaction)
+            );
+
+            CREATE TABLE IF NOT EXISTS notification_preferences (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL UNIQUE,
+                email_enabled INTEGER DEFAULT 1,
+                sms_enabled INTEGER DEFAULT 0,
+                phone_number TEXT,
+                phone_verified INTEGER DEFAULT 0,
+                phone_verification_code TEXT,
+                phone_verification_sent_at TIMESTAMP,
+                phone_verification_attempts INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            );
+
+            CREATE TABLE IF NOT EXISTS session_last_seen (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id INTEGER NOT NULL,
+                user_id INTEGER NOT NULL,
+                last_seen_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (session_id) REFERENCES mediation_sessions(id),
+                FOREIGN KEY (user_id) REFERENCES users(id),
+                UNIQUE(session_id, user_id)
+            );
+
+            CREATE TABLE IF NOT EXISTS notification_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id INTEGER NOT NULL,
+                user_id INTEGER NOT NULL,
+                channel TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (session_id) REFERENCES mediation_sessions(id),
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            );
+
+            CREATE TABLE IF NOT EXISTS pending_notifications (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id INTEGER NOT NULL,
+                target_user_id INTEGER NOT NULL,
+                triggered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (session_id) REFERENCES mediation_sessions(id),
+                FOREIGN KEY (target_user_id) REFERENCES users(id),
+                UNIQUE(session_id, target_user_id)
             );
         """)
         db.commit()

@@ -271,3 +271,51 @@ def send_password_reset_email(to_email, display_name, reset_link):
     )
 
     return send_email(to_email, subject, html_body, text_body)
+
+
+def send_activity_email(to_email, recipient_name, other_name, topic, session_link):
+    """Send a notification that there's new activity in a session."""
+    subject = "New activity in your Vilora session"
+
+    html_body = f"""
+    <!DOCTYPE html>
+    <html>
+    <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+    <body style="margin:0;padding:0;background:#F7F8F7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background:#F7F8F7;padding:40px 20px;">
+            <tr><td align="center">
+                <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#FFFFFF;border-radius:8px;overflow:hidden;">
+                    <tr><td style="padding:32px 32px 24px;text-align:center;">
+                        <img src="https://www.vilora.ai/static/img/email-logo.png" alt="Vilora" width="320" style="display:block;margin:0 auto;">
+                    </td></tr>
+                    <tr><td style="padding:0 32px 32px;">
+                        <p style="color:#555550;font-size:15px;line-height:1.6;">Hi {recipient_name},</p>
+                        <p style="color:#555550;font-size:15px;line-height:1.6;">There's been new activity in your session about <strong>"{topic}"</strong>.</p>
+                        <p style="color:#555550;font-size:15px;line-height:1.6;">{other_name} has shared some thoughts, and the conversation is ready for your input whenever you are.</p>
+                        <p style="color:#555550;font-size:15px;line-height:1.6;">No rush. Take your time and respond when you're ready.</p>
+                        <div style="text-align:center;margin:28px 0;">
+                            <a href="{session_link}" style="display:inline-block;padding:14px 32px;background:#1D9E75;color:#ffffff;text-decoration:none;border-radius:8px;font-size:16px;font-weight:500;">View Session</a>
+                        </div>
+                    </td></tr>
+                    <tr><td style="padding:20px 32px;background:#F7F8F7;border-top:1px solid #E2E0D8;text-align:center;">
+                        <p style="margin:0;color:#888780;font-size:12px;">Vilora | Strength through dialogue</p>
+                        <p style="margin:4px 0 0;color:#888780;font-size:10px;">AI-powered mediation, collaboration, brainstorming, and decision-making</p>
+                    </td></tr>
+                </table>
+            </td></tr>
+        </table>
+    </body>
+    </html>
+    """
+
+    text_body = (
+        f"Hi {recipient_name},\n\n"
+        f"There's been new activity in your session about \"{topic}\".\n\n"
+        f"{other_name} has shared some thoughts, and the conversation is "
+        f"ready for your input whenever you are.\n\n"
+        f"No rush. Take your time and respond when you're ready.\n\n"
+        f"View the session: {session_link}\n\n"
+        f"Vilora | Strength through dialogue"
+    )
+
+    return send_email(to_email, subject, html_body, text_body)

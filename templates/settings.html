@@ -14,6 +14,62 @@
 
     <div class="settings-sections">
         <div class="settings-section">
+            <h3>Notifications</h3>
+            <p class="settings-desc">How would you like to know when there's new activity in your sessions?</p>
+
+            <div class="notification-toggle-row">
+                <label class="notification-toggle">
+                    <input type="checkbox" id="email-notifications" onchange="toggleEmailNotifications(this.checked)">
+                    <span class="toggle-slider"></span>
+                </label>
+                <div class="notification-toggle-label">
+                    <strong>Email notifications</strong>
+                    <span class="settings-desc">Get an email when there's new activity. We won't send more than a few per day.</span>
+                    <span class="settings-desc" style="font-size: 0.75rem; color: var(--text-muted);">Sent to: {{ current_user.email }}</span>
+                </div>
+            </div>
+
+            <div class="notification-toggle-row" style="margin-top: 1rem;">
+                <label class="notification-toggle">
+                    <input type="checkbox" id="sms-notifications" onchange="toggleSmsNotifications(this.checked)">
+                    <span class="toggle-slider"></span>
+                </label>
+                <div class="notification-toggle-label">
+                    <strong>Text message notifications</strong>
+                    <span class="settings-desc">Get a text when there's new activity. Standard messaging rates apply.</span>
+                </div>
+            </div>
+
+            <div id="phone-setup" style="display:none; margin-top: 0.75rem; margin-left: 3.5rem;">
+                <div id="phone-input-section">
+                    <div class="form-group" style="margin-bottom: 0.5rem;">
+                        <label for="phone-number" style="font-size: 0.85rem;">Phone number</label>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <input type="tel" id="phone-number" placeholder="+15551234567" style="flex: 1;">
+                            <button onclick="submitPhoneNumber()" class="btn btn-primary btn-sm" id="send-code-btn">Send Code</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="verify-section" style="display:none;">
+                    <div class="form-group" style="margin-bottom: 0.5rem;">
+                        <label for="verify-code" style="font-size: 0.85rem;">Enter verification code</label>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <input type="text" id="verify-code" placeholder="123456" maxlength="6" style="flex: 1;">
+                            <button onclick="verifyPhone()" class="btn btn-primary btn-sm" id="verify-btn">Verify</button>
+                        </div>
+                        <button onclick="resendCode()" class="btn btn-sm" style="margin-top: 0.25rem; font-size: 0.75rem;" id="resend-btn">Resend code</button>
+                    </div>
+                </div>
+                <div id="phone-verified-section" style="display:none;">
+                    <p style="font-size: 0.85rem; color: var(--primary);">Verified: <span id="verified-phone-display"></span></p>
+                    <button onclick="changePhoneNumber()" class="btn btn-sm" style="font-size: 0.75rem;">Change number</button>
+                </div>
+            </div>
+
+            <div id="phone-status" style="display:none; margin-left: 3.5rem; margin-top: 0.25rem;"></div>
+        </div>
+
+        <div class="settings-section">
             <h3>What I'm usually looking for</h3>
             <p class="settings-desc">When you share a problem, what kind of help do you usually want?</p>
             <div class="settings-options" data-key="goal">
@@ -173,5 +229,149 @@ async function saveCustomPreference() {
 }
 
 loadPreferences();
+
+// --- Notification Preferences ---
+async function loadNotificationPrefs() {
+    const res = await fetch('/api/user/notification-preferences');
+    const data = await res.json();
+
+    document.getElementById('email-notifications').checked = data.email_enabled;
+    document.getElementById('sms-notifications').checked = data.sms_enabled;
+
+    if (data.phone_verified) {
+        document.getElementById('phone-setup').style.display = 'block';
+        document.getElementById('phone-input-section').style.display = 'none';
+        document.getElementById('verify-section').style.display = 'none';
+        document.getElementById('phone-verified-section').style.display = 'block';
+        document.getElementById('verified-phone-display').textContent = data.phone_number;
+    } else if (data.sms_enabled || document.getElementById('phone-setup').style.display === 'block') {
+        document.getElementById('phone-setup').style.display = 'block';
+    }
+}
+
+async function toggleEmailNotifications(enabled) {
+    await fetch('/api/user/notification-preferences', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email_enabled: enabled })
+    });
+    showSaved();
+}
+
+async function toggleSmsNotifications(enabled) {
+    if (enabled) {
+        // Check if phone is already verified
+        const res = await fetch('/api/user/notification-preferences');
+        const data = await res.json();
+        if (data.phone_verified) {
+            await fetch('/api/user/notification-preferences', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sms_enabled: true })
+            });
+            showSaved();
+        } else {
+            // Show phone input
+            document.getElementById('phone-setup').style.display = 'block';
+            document.getElementById('phone-input-section').style.display = 'block';
+            document.getElementById('verify-section').style.display = 'none';
+            document.getElementById('phone-verified-section').style.display = 'none';
+            document.getElementById('sms-notifications').checked = false;
+        }
+    } else {
+        await fetch('/api/user/notification-preferences', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sms_enabled: false })
+        });
+        showSaved();
+    }
+}
+
+async function submitPhoneNumber() {
+    const phone = document.getElementById('phone-number').value.trim();
+    const btn = document.getElementById('send-code-btn');
+    const statusEl = document.getElementById('phone-status');
+    if (!phone) return;
+
+    btn.disabled = true;
+    btn.textContent = 'Sending...';
+    statusEl.style.display = 'none';
+
+    const res = await fetch('/api/user/notification-preferences', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone_number: phone })
+    });
+    const data = await res.json();
+    btn.disabled = false;
+    btn.textContent = 'Send Code';
+
+    if (data.success && data.verification_required) {
+        document.getElementById('phone-input-section').style.display = 'none';
+        document.getElementById('verify-section').style.display = 'block';
+    } else {
+        statusEl.innerHTML = `<p class="error-msg">${data.error || 'Failed to send code.'}</p>`;
+        statusEl.style.display = 'block';
+    }
+}
+
+async function verifyPhone() {
+    const code = document.getElementById('verify-code').value.trim();
+    const btn = document.getElementById('verify-btn');
+    const statusEl = document.getElementById('phone-status');
+    if (!code) return;
+
+    btn.disabled = true;
+    btn.textContent = 'Verifying...';
+    statusEl.style.display = 'none';
+
+    const res = await fetch('/api/user/verify-phone', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code })
+    });
+    const data = await res.json();
+    btn.disabled = false;
+    btn.textContent = 'Verify';
+
+    if (data.success) {
+        document.getElementById('sms-notifications').checked = true;
+        await loadNotificationPrefs();
+        showSaved();
+    } else {
+        statusEl.innerHTML = `<p class="error-msg">${data.error || 'Verification failed.'}</p>`;
+        statusEl.style.display = 'block';
+    }
+}
+
+async function resendCode() {
+    const btn = document.getElementById('resend-btn');
+    const statusEl = document.getElementById('phone-status');
+    btn.disabled = true;
+    btn.textContent = 'Sending...';
+
+    const res = await fetch('/api/user/resend-phone-code', { method: 'POST' });
+    const data = await res.json();
+    btn.disabled = false;
+    btn.textContent = 'Resend code';
+
+    if (data.success) {
+        statusEl.innerHTML = '<p style="color: var(--primary); font-size: 0.8rem;">New code sent!</p>';
+        statusEl.style.display = 'block';
+    } else {
+        statusEl.innerHTML = `<p class="error-msg">${data.error || 'Failed to resend.'}</p>`;
+        statusEl.style.display = 'block';
+    }
+}
+
+function changePhoneNumber() {
+    document.getElementById('phone-verified-section').style.display = 'none';
+    document.getElementById('phone-input-section').style.display = 'block';
+    document.getElementById('verify-section').style.display = 'none';
+    document.getElementById('phone-number').value = '';
+}
+
+loadNotificationPrefs();
 </script>
 {% endblock %}
