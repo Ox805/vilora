@@ -512,14 +512,14 @@ const ICON_STOP = '<svg width="12" height="12" viewBox="0 0 24 24" fill="current
 
 function speakMessage(messageId, btnEl) {
     if (currentSpeakMsgId === messageId && document.querySelector('.speak-controls')) {
-        cancelSpeech();
+        killSpeech();
         hideSpeakControls();
         btnEl.classList.remove('speaking');
         currentSpeakMsgId = null;
         return;
     }
 
-    cancelSpeech();
+    killSpeech();
     document.querySelectorAll('.btn-speak.speaking').forEach(b => b.classList.remove('speaking'));
     hideSpeakControls();
 
@@ -575,7 +575,8 @@ function hideSpeakControls() {
     document.querySelectorAll('.speak-controls').forEach(el => el.remove());
 }
 
-function cancelSpeech() {
+function killSpeech() {
+    // Detach callbacks so they can't fire after cancel
     if (activeUtterance) {
         activeUtterance.onend = null;
         activeUtterance.onerror = null;
@@ -598,7 +599,7 @@ function resumeSpeech(messageId) {
 }
 
 function stopAndReset(messageId) {
-    cancelSpeech();
+    killSpeech();
     const speakBtn = document.querySelector(`[data-message-id="${messageId}"] .btn-speak`);
     if (speakBtn) speakBtn.classList.remove('speaking');
     refreshControls(messageId);
@@ -606,16 +607,31 @@ function stopAndReset(messageId) {
 
 function pickSpeed(speedIndex, messageId) {
     currentSpeedIndex = speedIndex;
-    if (speechState === 'playing') {
-        cancelSpeech();
-        doSpeak(currentSpeakText, messageId);
+    if (speechState === 'playing' || speechState === 'paused') {
+        killSpeech();
+        // Chrome needs a delay after cancel() before speak() will work
+        setTimeout(() => {
+            createAndSpeak(currentSpeakText, messageId);
+        }, 300);
     } else {
         refreshControls(messageId);
     }
 }
 
 function doSpeak(text, messageId) {
-    cancelSpeech();
+    killSpeech();
+    // When called from a button click (not from pickSpeed), also needs delay
+    // if there was something playing before
+    setTimeout(() => {
+        createAndSpeak(text, messageId);
+    }, 100);
+}
+
+function createAndSpeak(text, messageId) {
+    // This is the only function that calls speechSynthesis.speak()
+    // Ensure clean state first
+    window.speechSynthesis.cancel();
+
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = SPEAK_SPEEDS[currentSpeedIndex];
     utterance.pitch = 1;
@@ -624,12 +640,14 @@ function doSpeak(text, messageId) {
     const speakBtn = document.querySelector(`[data-message-id="${messageId}"] .btn-speak`);
 
     utterance.onend = () => {
+        if (utterance !== activeUtterance) return; // stale callback
         activeUtterance = null;
         speechState = 'finished';
         if (speakBtn) speakBtn.classList.remove('speaking');
         refreshControls(messageId);
     };
     utterance.onerror = () => {
+        if (utterance !== activeUtterance) return; // stale callback
         activeUtterance = null;
         speechState = 'idle';
         if (speakBtn) speakBtn.classList.remove('speaking');
@@ -639,6 +657,8 @@ function doSpeak(text, messageId) {
     speechState = 'playing';
     if (speakBtn) speakBtn.classList.add('speaking');
     refreshControls(messageId);
+
+    // Final safety: small delay then speak
     window.speechSynthesis.speak(utterance);
 }
 
