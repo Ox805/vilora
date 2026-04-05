@@ -540,8 +540,8 @@ function closeReactionPicker() {
 }
 
 // --- Text-to-Speech ---
-const SPEAK_SPEEDS = [0.75, 1, 1.25, 1.5];
-let currentSpeedIndex = 1;
+const SPEAK_SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
+let currentSpeedIndex = 2; // default 1x
 let currentSpeakText = '';
 let currentSpeakMsgId = null;
 let speechState = 'idle'; // 'idle' | 'playing' | 'paused' | 'finished'
