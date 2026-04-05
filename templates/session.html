@@ -571,12 +571,10 @@ function buildControlsHtml(messageId) {
         stopBtn = '';
     }
 
-    const speedPending = (speechState === 'playing' || speechState === 'paused') && currentSpeedIndex !== playingSpeedIndex;
     return pausePlayBtn + stopBtn +
         SPEAK_SPEEDS.map((s, i) =>
-            `<button class="speak-speed-btn${i === currentSpeedIndex ? ' active' : ''}${i === playingSpeedIndex && speechState === 'playing' ? ' current' : ''}" onclick="changeSpeed(${i}, ${messageId})" title="${i === currentSpeedIndex && speedPending ? 'Will apply on next play' : ''}">${s}x</button>`
-        ).join('') +
-        (speedPending ? '<span class="speak-speed-pending">on next play</span>' : '');
+            `<button class="speak-speed-btn${i === currentSpeedIndex ? ' active' : ''}" onclick="changeSpeed(${i}, ${messageId})">${s}x</button>`
+        ).join('');
 }
 
 function updateControlsUi(messageId) {
@@ -617,8 +615,15 @@ let speechGeneration = 0;
 
 function changeSpeed(speedIndex, messageId) {
     currentSpeedIndex = speedIndex;
-    // Speed change takes effect on next play/replay -- can't change mid-utterance
-    updateControlsUi(messageId);
+    if (speechState === 'playing') {
+        // Restart at new speed
+        speechGeneration++;
+        window.speechSynthesis.cancel();
+        // Small delay to let cancel() settle before starting new speech
+        setTimeout(() => startSpeech(currentSpeakText, messageId), 50);
+    } else {
+        updateControlsUi(messageId);
+    }
 }
 
 function startSpeech(text, messageId) {
