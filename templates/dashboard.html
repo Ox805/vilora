@@ -603,10 +603,10 @@ async function loadSessions() {
         <div class="session-card-wrapper">
             <a href="/session/${s.id}" class="session-card${s.has_unread ? ' has-unread' : ''}">
                 <div class="session-card-header">
-                    <span class="session-type-badge">${s.session_mode === 'personal' ? 'one-on-one' : s.session_type}</span>
+                    <span class="session-type-badge">${s.session_mode === 'personal' ? 'one-on-one' : s.session_type}${unreadDot}</span>
                     <span class="session-status ${s.status}">${s.status}</span>
                 </div>
-                <h3>${escapeHtml(s.topic)}${unreadDot}</h3>
+                <h3>${escapeHtml(s.topic)}</h3>
                 ${unreadText}
                 <p class="session-date">${localTime(s.created_at)}</p>
             </a>
