@@ -627,17 +627,6 @@ function killSpeech() {
     speechState = 'idle';
 }
 
-// Pre-load voices (Chrome loads them async)
-let preferredVoice = null;
-function loadVoices() {
-    const voices = window.speechSynthesis.getVoices();
-    if (voices.length > 0) {
-        preferredVoice = voices.find(v => v.lang.startsWith('en') && v.localService) || voices[0];
-    }
-}
-window.speechSynthesis.onvoiceschanged = loadVoices;
-loadVoices();
-
 function pauseSpeech(messageId) {
     window.speechSynthesis.pause();
     speechState = 'paused';
@@ -664,21 +653,20 @@ function pickSpeed(speedIndex, messageId) {
 }
 
 function doSpeak(text, messageId) {
-    // Called directly from user click -- must be synchronous from user gesture
-    killSpeech();
-
-    // Force Chrome to fully reset by speaking and canceling an empty utterance
-    window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
+    // Match exactly what works in the console: cancel, create, set rate, speak
+    if (activeUtterance) {
+        activeUtterance.onend = null;
+        activeUtterance.onerror = null;
+        activeUtterance = null;
+    }
     window.speechSynthesis.cancel();
 
-    const utterance = new SpeechSynthesisUtterance(text);
-    // Explicitly set voice to prevent Chrome from caching previous utterance settings
-    if (preferredVoice) utterance.voice = preferredVoice;
-    utterance.rate = SPEAK_SPEEDS[currentSpeedIndex];
-    utterance.pitch = 1;
-    activeUtterance = utterance;
-
     const speakBtn = document.querySelector(`[data-message-id="${messageId}"] .btn-speak`);
+
+    // Minimal utterance creation -- no voice override, no pitch, no extras
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = SPEAK_SPEEDS[currentSpeedIndex];
+    activeUtterance = utterance;
 
     utterance.onend = () => {
         if (utterance !== activeUtterance) return;
