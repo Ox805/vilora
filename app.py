@@ -627,6 +627,7 @@ def _run_council_background(job_id, question, context, user_memories, session_id
             if session_id:
                 council_msg_content = json.dumps({'council_result_id': council_result_id, 'question': question})
                 Message.create(db, session_id, user_id, council_msg_content, msg_type='council')
+                queue_pending_notifications(db, session_id, user_id)
 
         result['council_result_id'] = council_result_id
         _council_jobs[job_id] = {'status': 'done', 'result': result}
