@@ -598,7 +598,7 @@ function resumeSpeech(messageId) {
 }
 
 function stopSpeech(messageId) {
-    ignoreSpeechEnd = true;
+    speechGeneration++;
     window.speechSynthesis.cancel();
     speechState = 'idle';
     const speakBtn = document.querySelector(`[data-message-id="${messageId}"] .btn-speak`);
@@ -610,13 +610,12 @@ function replaySpeech(messageId) {
     startSpeech(currentSpeakText, messageId);
 }
 
-let ignoreSpeechEnd = false;
+let speechGeneration = 0;
 
 function changeSpeed(speedIndex, messageId) {
     currentSpeedIndex = speedIndex;
     if (speechState === 'playing') {
-        // Ignore the onend/onerror from cancel() since we're restarting immediately
-        ignoreSpeechEnd = true;
+        speechGeneration++;
         window.speechSynthesis.cancel();
         startSpeech(currentSpeakText, messageId);
     } else {
@@ -625,24 +624,24 @@ function changeSpeed(speedIndex, messageId) {
 }
 
 function startSpeech(text, messageId) {
+    const thisGeneration = ++speechGeneration;
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = SPEAK_SPEEDS[currentSpeedIndex];
     utterance.pitch = 1;
 
     speechState = 'playing';
-    ignoreSpeechEnd = false;
     const speakBtn = document.querySelector(`[data-message-id="${messageId}"] .btn-speak`);
     if (speakBtn) speakBtn.classList.add('speaking');
     updateControlsUi(messageId);
 
     utterance.onend = () => {
-        if (ignoreSpeechEnd) { ignoreSpeechEnd = false; return; }
+        if (thisGeneration !== speechGeneration) return;
         speechState = 'finished';
         if (speakBtn) speakBtn.classList.remove('speaking');
         updateControlsUi(messageId);
     };
     utterance.onerror = () => {
-        if (ignoreSpeechEnd) { ignoreSpeechEnd = false; return; }
+        if (thisGeneration !== speechGeneration) return;
         speechState = 'idle';
         if (speakBtn) speakBtn.classList.remove('speaking');
         updateControlsUi(messageId);
