@@ -618,10 +618,17 @@ function buildControlsHtml(messageId) {
         pausePlayBtn = `<button class="speak-ctrl-btn" onclick="doSpeak(currentSpeakText, ${messageId})" title="Play">${ICON_PLAY}</button>`;
         stopBtn = '';
     }
+    // Desktop: hide 0.5x and 2x. Mobile: hide 0.5x, 1.75x, and 2x.
+    const isMobile = window.matchMedia('(max-width: 480px)').matches;
+    const hiddenSpeeds = isMobile
+        ? new Set([0.5, 1.75, 2])
+        : new Set([0.5, 2]);
+
     return pausePlayBtn + stopBtn +
-        SPEAK_SPEEDS.map((s, i) =>
-            `<button class="speak-speed-btn${i === currentSpeedIndex ? ' active' : ''}" onclick="pickSpeed(${i}, ${messageId})">${s}x</button>`
-        ).join('');
+        SPEAK_SPEEDS.map((s, i) => {
+            if (hiddenSpeeds.has(s)) return '';
+            return `<button class="speak-speed-btn${i === currentSpeedIndex ? ' active' : ''}" onclick="pickSpeed(${i}, ${messageId})">${s}x</button>`;
+        }).join('');
 }
 
 function refreshControls(messageId) {
