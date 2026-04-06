@@ -401,6 +401,69 @@ See the prompts directory for detailed specs:
 - **Email & SMS Notifications** (`EMAIL_AND_SMS_NOTIFICATIONS_PROMPT.md`) — Activity digests, join notifications, Twilio SMS (Phase 2-3)
 - **User Memory & Personalization** (`USER_MEMORY_AND_PERSONALIZATION_PROMPT.md`) — Cross-session pattern detection, relationship memory, proactive insights (Phase 3-5)
 
+## Text-to-Speech (Read Aloud)
+
+### Overview
+
+Every message in the session chat has a speaker icon that reads the message aloud using the browser's Web Speech API (`window.speechSynthesis`). Users can control playback (play, pause, stop) and change speed. Speed changes mid-playback resume from the current position rather than restarting from the beginning.
+
+### Architecture
+
+All TTS code lives in `templates/session.html` in the `// --- Text-to-Speech ---` section. No backend involvement -- it's entirely client-side.
+
+**Key variables:**
+- `SPEAK_SPEEDS` -- array of available rate values (0.5 to 2.0)
+- `currentSpeedIndex` -- index into SPEAK_SPEEDS for the selected rate
+- `currentSpeakText` -- full text of the message being read
+- `currentSpeakMsgId` -- message ID (also used by polling guard to prevent re-render during playback)
+- `speechState` -- one of: `'idle'`, `'playing'`, `'paused'`, `'finished'`
+- `activeUtterance` -- reference to the current `SpeechSynthesisUtterance` object
+- `spokenCharIndex` -- character position tracked via `onboundary` event, used for mid-playback speed changes
+
+**Key functions:**
+- `speakMessage(messageId, btnEl)` -- entry point when speaker icon is clicked. Toggles controls on/off.
+- `doSpeak(text, messageId, isResume)` -- creates and speaks an utterance. The ONLY function that calls `speechSynthesis.speak()`.
+- `pickSpeed(speedIndex, messageId)` -- called when a speed button is clicked. If playing, resumes from current position at new speed.
+- `killSpeech()` -- nulls callbacks on active utterance, calls `cancel()`, sets state to idle.
+- `buildControlsHtml(messageId)` -- generates the play/pause/stop + speed button HTML.
+
+### Critical Implementation Rules (Lessons Learned)
+
+These rules were discovered through extensive debugging on April 5, 2026. Violating any of them will break speed controls in Chrome.
+
+1. **`speechSynthesis.speak()` must be called synchronously from a user gesture (click handler).** Chrome silently ignores `speak()` calls from inside `setTimeout`, `requestAnimationFrame`, or Promises. Never wrap the speak call in any async mechanism.
+
+2. **`doSpeak()` must be the ONLY function that calls `speechSynthesis.speak()`.** Having multiple code paths that call `speak()` makes it impossible to reason about the engine state.
+
+3. **Do NOT call `speechSynthesis.cancel()` unless there is an active utterance.** Calling `cancel()` on an idle engine can put Chrome's speech synthesis into a broken state where subsequent `speak()` calls ignore the `rate` property. The `killSpeech()` function guards this: it only calls `cancel()` when `activeUtterance` is not null.
+
+4. **Do NOT use dummy utterances to "reset" the engine.** Patterns like `speak(new SpeechSynthesisUtterance(''))` followed by `cancel()` make the rate-ignoring bug worse, not better.
+
+5. **Do NOT set `utterance.voice` explicitly.** On some systems, setting the voice can interfere with rate handling. Let the browser use its default voice.
+
+6. **Null out `onend`/`onerror` callbacks before calling `cancel()`.** Chrome fires `onend` asynchronously after `cancel()`. If the callback is still attached, it will overwrite `speechState` and corrupt the UI. `killSpeech()` nulls callbacks first: `activeUtterance.onend = null; activeUtterance.onerror = null;`
+
+7. **Use the `onboundary` event to track spoken position.** `utterance.onboundary` fires for each word with `e.charIndex`. Store this in `spokenCharIndex`. When changing speed mid-playback, use `currentSpeakText.substring(spokenCharIndex)` to resume from the current position.
+
+8. **Speed button visibility is filtered by screen size.** Desktop shows 0.75x through 1.75x. Mobile (480px and below) shows 0.75x through 1.5x. The full speed array still exists for internal use.
+
+### The Chrome `cancel()` + `rate` Bug
+
+Chrome has a long-standing bug where calling `speechSynthesis.cancel()` can cause subsequent utterances to ignore the `rate` property. The utterance plays at the default rate (1.0) regardless of what `rate` is set to, even though inspecting the object shows the correct value.
+
+**What triggers it:** Calling `cancel()` when nothing is playing, calling `cancel()` multiple times, or calling `speak()` too quickly after `cancel()`.
+
+**What fixes it:** Only calling `cancel()` when there's an active utterance (rule #3 above), and calling `speak()` synchronously in the same call stack (rule #1).
+
+**How to verify rate works:** Open the browser console on any page and paste:
+```javascript
+speechSynthesis.cancel();
+const u = new SpeechSynthesisUtterance("Testing at two times speed");
+u.rate = 2;
+speechSynthesis.speak(u);
+```
+If this plays at 2x speed, the browser supports rate changes. If Vilora's speed controls don't work but this console test does, one of the rules above is being violated.
+
 ## Changelog
 
 | Date | Change |
