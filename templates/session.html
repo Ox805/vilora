@@ -561,6 +561,7 @@ let currentSpeakText = '';
 let currentSpeakMsgId = null;
 let speechState = 'idle'; // 'idle' | 'playing' | 'paused' | 'finished'
 let activeUtterance = null;
+let spokenCharIndex = 0; // tracks position in text for speed changes
 
 const ICON_PLAY = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>';
 const ICON_PAUSE = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="3" width="4" height="18" rx="1"/><rect x="15" y="3" width="4" height="18" rx="1"/></svg>';
@@ -656,6 +657,7 @@ function resumeSpeech(messageId) {
 
 function stopAndReset(messageId) {
     killSpeech();
+    spokenCharIndex = 0;
     const speakBtn = document.querySelector(`[data-message-id="${messageId}"] .btn-speak`);
     if (speakBtn) speakBtn.classList.remove('speaking');
     refreshControls(messageId);
@@ -664,32 +666,44 @@ function stopAndReset(messageId) {
 function pickSpeed(speedIndex, messageId) {
     currentSpeedIndex = speedIndex;
     if (speechState === 'playing' || speechState === 'paused') {
-        doSpeak(currentSpeakText, messageId);
+        // Resume from where we are, not from the beginning
+        const remainingText = currentSpeakText.substring(spokenCharIndex);
+        doSpeak(remainingText, messageId, true);
     } else {
         refreshControls(messageId);
     }
 }
 
-function doSpeak(text, messageId) {
-    // Match exactly what works in the console: cancel, create, set rate, speak
+function doSpeak(text, messageId, isResume) {
     if (activeUtterance) {
         activeUtterance.onend = null;
         activeUtterance.onerror = null;
+        activeUtterance.onboundary = null;
         activeUtterance = null;
     }
     window.speechSynthesis.cancel();
 
+    if (!isResume) spokenCharIndex = 0;
+    const textOffset = isResume ? spokenCharIndex : 0;
+
     const speakBtn = document.querySelector(`[data-message-id="${messageId}"] .btn-speak`);
 
-    // Minimal utterance creation -- no voice override, no pitch, no extras
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = SPEAK_SPEEDS[currentSpeedIndex];
     activeUtterance = utterance;
+
+    // Track position so speed changes can resume from here
+    utterance.onboundary = (e) => {
+        if (e.name === 'word') {
+            spokenCharIndex = textOffset + e.charIndex;
+        }
+    };
 
     utterance.onend = () => {
         if (utterance !== activeUtterance) return;
         activeUtterance = null;
         speechState = 'finished';
+        spokenCharIndex = 0;
         if (speakBtn) speakBtn.classList.remove('speaking');
         refreshControls(messageId);
     };
