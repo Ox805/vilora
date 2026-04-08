@@ -187,6 +187,17 @@ def db_init():
                 triggered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE(session_id, target_user_id)
             )""",
+            """CREATE TABLE IF NOT EXISTS file_attachments (
+                id SERIAL PRIMARY KEY,
+                message_id INTEGER NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
+                session_id INTEGER NOT NULL REFERENCES mediation_sessions(id),
+                user_id INTEGER NOT NULL REFERENCES users(id),
+                filename TEXT NOT NULL,
+                content_type TEXT NOT NULL,
+                file_size INTEGER NOT NULL,
+                blob_path TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )""",
         ]
         for stmt in statements:
             try:
@@ -385,6 +396,21 @@ def db_init():
                 FOREIGN KEY (session_id) REFERENCES mediation_sessions(id),
                 FOREIGN KEY (target_user_id) REFERENCES users(id),
                 UNIQUE(session_id, target_user_id)
+            );
+
+            CREATE TABLE IF NOT EXISTS file_attachments (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                message_id INTEGER NOT NULL,
+                session_id INTEGER NOT NULL,
+                user_id INTEGER NOT NULL,
+                filename TEXT NOT NULL,
+                content_type TEXT NOT NULL,
+                file_size INTEGER NOT NULL,
+                blob_path TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE,
+                FOREIGN KEY (session_id) REFERENCES mediation_sessions(id),
+                FOREIGN KEY (user_id) REFERENCES users(id)
             );
         """)
         db.commit()

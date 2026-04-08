@@ -7,3 +7,5 @@ anthropic>=0.40.0
 python-dotenv>=1.0.0
 sendgrid>=6.10.0
 twilio>=9.0.0
+google-cloud-storage>=2.14.0
+requests>=2.31.0

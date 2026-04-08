@@ -10,6 +10,7 @@ from models.database import db_init, get_db, _exec, _is_postgres, User, Mediatio
 from mediation.engine import MediationEngine
 from notifications import send_invite_email, send_password_reset_email, send_nudge_email, send_verification_email, send_activity_email
 from sms import send_sms, send_verification_sms, send_activity_sms, generate_verification_code
+import storage
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(32))
@@ -353,6 +354,23 @@ def about_me():
 @login_required
 def settings():
     return render_template('settings.html')
+
+
+@app.route('/api/profile/display-name', methods=['POST'])
+@login_required
+def update_display_name():
+    data = request.get_json()
+    new_name = data.get('display_name', '').strip()
+    if not new_name:
+        return jsonify({'success': False, 'error': 'Display name cannot be empty'}), 400
+    if len(new_name) > 50:
+        return jsonify({'success': False, 'error': 'Display name must be 50 characters or fewer'}), 400
+
+    db = get_db()
+    _exec(db, "UPDATE users SET display_name = ? WHERE id = ?", (new_name, current_user.id))
+    db.commit()
+    current_user.display_name = new_name
+    return jsonify({'success': True})
 
 
 # --- Notification Preferences API ---
@@ -1263,6 +1281,13 @@ def delete_message(session_id, message_id):
     else:
         return jsonify({'success': False, 'error': 'You can only delete your own messages'}), 403
 
+    # If this is a file message, clean up the GCS blob
+    if msg['msg_type'] == 'file':
+        cur_att = _exec(db, "SELECT blob_path FROM file_attachments WHERE message_id = ?", (message_id,))
+        att_row = cur_att.fetchone()
+        if att_row:
+            storage.delete_file(att_row['blob_path'])
+
     _exec(db, "DELETE FROM messages WHERE id = ?", (message_id,))
     db.commit()
     return jsonify({'success': True})
@@ -1300,6 +1325,177 @@ def toggle_reaction(session_id, message_id):
         }
 
     return jsonify({'success': True, 'action': action, 'reactions': reactions_out})
+
+
+# --- File Sharing ---
+
+ALLOWED_CONTENT_TYPES = {
+    'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    'text/plain', 'text/csv',
+    'application/zip'
+}
+
+BLOCKED_EXTENSIONS = {'.exe', '.bat', '.sh', '.cmd', '.msi', '.dmg', '.js', '.py', '.rb', '.php'}
+
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
+
+
+@app.route('/api/sessions/<int:session_id>/files', methods=['POST'])
+@login_required
+def upload_file(session_id):
+    logger.info(f"[FileUpload] session={session_id} user={current_user.id}")
+    db = get_db()
+    med_session = MediationSession.get_by_id(db, session_id)
+    if not med_session or not med_session.is_participant(db, current_user.id):
+        return jsonify({'success': False, 'error': 'Access denied'}), 403
+
+    if 'file' not in request.files:
+        return jsonify({'success': False, 'error': 'No file provided'}), 400
+
+    file = request.files['file']
+    if not file.filename:
+        return jsonify({'success': False, 'error': 'No file selected'}), 400
+
+    filename = file.filename
+    content_type = file.content_type or 'application/octet-stream'
+
+    # Validate extension
+    ext = os.path.splitext(filename)[1].lower()
+    if ext in BLOCKED_EXTENSIONS:
+        return jsonify({'success': False, 'error': 'This file type is not allowed'}), 400
+
+    # Validate MIME type
+    if content_type not in ALLOWED_CONTENT_TYPES:
+        return jsonify({'success': False, 'error': 'This file type is not allowed'}), 400
+
+    # Check file size
+    file.seek(0, os.SEEK_END)
+    file_size = file.tell()
+    file.seek(0)
+    if file_size > MAX_FILE_SIZE:
+        return jsonify({'success': False, 'error': 'File must be under 10MB'}), 400
+    if file_size == 0:
+        return jsonify({'success': False, 'error': 'File is empty'}), 400
+
+    # Upload to GCS
+    blob_path = storage.upload_file(session_id, file, filename, content_type)
+    if not blob_path:
+        return jsonify({'success': False, 'error': 'File storage is not configured'}), 500
+
+    # Create message
+    import json as json_mod
+    msg = Message.create(db, session_id, current_user.id, '', msg_type='file')
+
+    # Create file_attachments row
+    if _is_postgres():
+        cur = _exec(db,
+            "INSERT INTO file_attachments (message_id, session_id, user_id, filename, content_type, file_size, blob_path) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id",
+            (msg.id, session_id, current_user.id, filename, content_type, file_size, blob_path)
+        )
+        attachment_id = cur.fetchone()['id']
+    else:
+        cur = _exec(db,
+            "INSERT INTO file_attachments (message_id, session_id, user_id, filename, content_type, file_size, blob_path) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (msg.id, session_id, current_user.id, filename, content_type, file_size, blob_path)
+        )
+        attachment_id = cur.lastrowid
+
+    # Update message content with file metadata
+    file_content = json_mod.dumps({
+        'filename': filename,
+        'content_type': content_type,
+        'file_size': file_size,
+        'attachment_id': attachment_id
+    })
+    _exec(db, "UPDATE messages SET content = ? WHERE id = ?", (file_content, msg.id))
+    db.commit()
+
+    participants = med_session.get_participants(db)
+    name_map = {p.id: p.display_name for p in participants}
+
+    return jsonify({
+        'success': True,
+        'message': {
+            'id': msg.id,
+            'session_id': session_id,
+            'user_id': current_user.id,
+            'content': file_content,
+            'msg_type': 'file',
+            'display_name': name_map.get(current_user.id),
+            'is_self': True,
+            'reactions': {}
+        }
+    })
+
+
+@app.route('/api/sessions/<int:session_id>/files/<int:attachment_id>', methods=['GET'])
+@login_required
+def download_file(session_id, attachment_id):
+    from flask import Response
+    import requests as http_requests
+
+    logger.info(f"[FileServe] session={session_id} attachment={attachment_id} user={current_user.id}")
+
+    db = get_db()
+    med_session = MediationSession.get_by_id(db, session_id)
+    if not med_session:
+        logger.warning(f"[FileServe] session {session_id} not found")
+        return jsonify({'success': False, 'error': 'Access denied'}), 403
+    if not med_session.is_participant(db, current_user.id):
+        logger.warning(f"[FileServe] user {current_user.id} not participant in session {session_id}")
+        return jsonify({'success': False, 'error': 'Access denied'}), 403
+
+    try:
+        cur = _exec(db, "SELECT * FROM file_attachments WHERE id = ? AND session_id = ?", (attachment_id, session_id))
+        att = cur.fetchone()
+    except Exception as e:
+        logger.error(f"[FileServe] DB query failed: {e}")
+        db.rollback()
+        return jsonify({'success': False, 'error': 'Database error'}), 500
+
+    if not att:
+        logger.warning(f"[FileServe] attachment {attachment_id} not found in session {session_id}")
+        return jsonify({'success': False, 'error': 'File not found'}), 404
+
+    logger.info(f"[FileServe] found attachment: {att['filename']} blob={att['blob_path']}")
+
+    url = storage.get_download_url(att['blob_path'])
+    if not url:
+        logger.error(f"[FileServe] GCS signed URL generation failed for {att['blob_path']}")
+        return jsonify({'success': False, 'error': 'Could not generate download URL'}), 500
+
+    logger.info(f"[FileServe] fetching from GCS...")
+
+    # Proxy all files through Flask -- no redirects to signed URLs
+    try:
+        gcs_resp = http_requests.get(url, stream=True, timeout=30)
+        logger.info(f"[FileServe] GCS response: {gcs_resp.status_code} content-type={gcs_resp.headers.get('Content-Type')}")
+        if gcs_resp.status_code != 200:
+            logger.error(f"[FileServe] GCS returned {gcs_resp.status_code}: {gcs_resp.text[:200]}")
+            return jsonify({'success': False, 'error': 'File not available'}), 502
+
+        inline = request.args.get('view') == '1'
+        if inline:
+            disposition = f'inline; filename="{att["filename"]}"'
+        else:
+            disposition = f'attachment; filename="{att["filename"]}"'
+        return Response(
+            gcs_resp.iter_content(chunk_size=8192),
+            content_type=att['content_type'],
+            headers={
+                'Content-Disposition': disposition,
+                'Cache-Control': 'private, max-age=300',
+            }
+        )
+    except Exception as e:
+        logger.error(f"[FileServe] proxy error: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': 'Could not load file'}), 500
 
 
 @app.route('/api/sessions/<int:session_id>/ask-vilora', methods=['POST'])

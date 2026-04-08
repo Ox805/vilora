@@ -1,7 +1,7 @@
 # File Sharing in Sessions
 
 **Created:** April 5, 2026
-**Status:** Planning
+**Status:** Implemented
 **Dependencies:** Session/messages system (implemented), GCP account (existing)
 **Priority:** Medium. Enables richer collaboration in brainstorming and mediation sessions where participants need to share supporting documents, images, or reference materials.
 **References:** `templates/session.html` (message rendering, input bar), `models/database.py` (Message model), `app.py` (message endpoints), `static/css/style.css`

@@ -2160,6 +2160,175 @@ body.summary-open .container {
 .error-page h1 { font-size: 2rem; margin-bottom: 1rem; }
 .error-page p { color: var(--text-light); margin-bottom: 2rem; }
 
+/* === File Messages === */
+.file-preview-img {
+    max-width: 100%;
+    max-height: 300px;
+    border-radius: var(--radius);
+    margin-top: 0.5rem;
+    cursor: pointer;
+}
+
+.file-preview-link {
+    display: block;
+}
+
+.file-download-link {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    margin-top: 0.5rem;
+    background: rgba(0, 0, 0, 0.04);
+    border-radius: var(--radius);
+    text-decoration: none;
+    color: var(--text);
+    transition: background 0.15s;
+}
+
+.file-download-link:hover {
+    background: rgba(0, 0, 0, 0.08);
+}
+
+.message-self .file-download-link {
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+}
+
+.message-self .file-download-link:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.file-icon {
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+
+.file-info {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.file-name {
+    font-weight: 500;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.file-size {
+    font-size: 0.75rem;
+    opacity: 0.7;
+}
+
+.file-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.35rem;
+    font-size: 0.8rem;
+}
+
+.file-actions .file-size {
+    opacity: 0.6;
+    margin-left: auto;
+}
+
+.file-actions-inline {
+    display: flex;
+    gap: 0.35rem;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+.file-action-btn {
+    display: inline-block;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-decoration: none;
+    color: var(--primary);
+    background: rgba(0, 0, 0, 0.05);
+    transition: background 0.15s;
+}
+
+.file-action-btn:hover {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.message-self .file-action-btn {
+    color: white;
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.message-self .file-action-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.attach-icon-btn {
+    cursor: pointer;
+}
+
+/* Lightbox */
+.file-lightbox {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: rgba(0, 0, 0, 0.85);
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+}
+
+.file-lightbox img {
+    max-width: 90vw;
+    max-height: 85vh;
+    object-fit: contain;
+    border-radius: var(--radius);
+}
+
+.lightbox-controls {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    display: flex;
+    gap: 0.5rem;
+    z-index: 10000;
+}
+
+.lightbox-btn {
+    padding: 0.4rem 0.75rem;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+    text-decoration: none;
+    font-size: 0.85rem;
+    border: none;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.lightbox-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.lightbox-close {
+    font-size: 1.3rem;
+    line-height: 1;
+    padding: 0.25rem 0.6rem;
+}
+
+.upload-progress {
+    font-size: 0.8rem;
+    color: var(--primary);
+    padding: 0.25rem 0;
+    text-align: center;
+}
+
 /* === Responsive: Tablet (768px) === */
 @media (max-width: 768px) {
     .container { padding: 1rem; }
