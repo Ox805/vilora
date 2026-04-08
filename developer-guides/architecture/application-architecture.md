@@ -1,7 +1,7 @@
 # Vilora Application Architecture
 
 **Date Created:** 2026-04-02
-**Date Updated:** 2026-04-02
+**Date Updated:** 2026-04-08
 
 ## Overview
 
@@ -23,6 +23,8 @@ Vilora is an AI-powered mediation and counseling platform that helps people work
 | Frontend | Vanilla JavaScript, HTML5 (Jinja2 templates), CSS3 |
 | AI | Anthropic Claude API (`claude-sonnet-4-20250514`) |
 | Email | SendGrid API (branded HTML emails) |
+| SMS | Twilio (verification codes, activity alerts) |
+| File Storage | Google Cloud Storage (session file uploads) |
 | Hosting | Railway (auto-deploys from GitHub on push to main) |
 | WSGI Server | Gunicorn |
 | Font | Jost (Google Fonts, weights 300/400/500) |
@@ -64,12 +66,17 @@ Vilora is an AI-powered mediation and counseling platform that helps people work
 │  │ (Claude API)     │  │  (SendGrid)      │  │ (SQLite/PG)    │ │
 │  │ - mediate()      │  │  - invite email  │  │ - users        │ │
 │  │ - welcome()      │  │  - pw reset      │  │ - sessions     │ │
-│  │ - frame()        │  │                  │  │ - messages     │ │
+│  │ - frame()        │  │  - activity      │  │ - messages     │ │
 │  │ - summarize()    │  │                  │  │ - memories     │ │
-│  │ - extract_mem()  │  │                  │  │ - summaries    │ │
-│  │ - should_resp()  │  │                  │  │ - pw_resets    │ │
-│  │ - generate_title │  │                  │  │                │ │
-│  └──────────────────┘  └──────────────────┘  └────────────────┘ │
+│  │ - extract_mem()  │  ├──────────────────┤  │ - summaries    │ │
+│  │ - should_resp()  │  │  SMS (Twilio)    │  │ - pw_resets    │ │
+│  │ - generate_title │  │  - verification  │  │ - reactions    │ │
+│  │ - council()      │  │  - activity      │  │ - file_attach  │ │
+│  └──────────────────┘  ├──────────────────┤  │ - notif_log    │ │
+│                        │  Storage (GCS)   │  │ - notif_prefs  │ │
+│                        │  - upload/dl     │  │ - nudge_log    │ │
+│                        │  - signed URLs   │  │ - council      │ │
+│                        └──────────────────┘  └────────────────┘ │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -80,7 +87,9 @@ vilora/
 ├── app.py                          # Flask server, all routes, session management
 ├── Procfile                        # Gunicorn entry point for Railway
 ├── requirements.txt                # Python dependencies
-├── notifications.py                # SendGrid email wrapper (invite, password reset)
+├── notifications.py                # SendGrid email (invite, password reset, activity alerts)
+├── sms.py                          # Twilio SMS (verification codes, activity alerts)
+├── storage.py                      # Google Cloud Storage (file uploads, signed URLs)
 ├── mediation/                      # AI mediation engine
 │   ├── __init__.py
 │   ├── engine.py                   # MediationEngine class (Claude API integration)
@@ -93,6 +102,7 @@ vilora/
 │   │   └── style.css               # All application styles
 │   ├── js/
 │   │   ├── api.js                  # Shared API utilities (logout)
+│   │   ├── polish.js               # AI text polish component
 │   │   └── voice.js                # Web Speech API voice input
 │   └── img/
 │       ├── favicon.svg             # Vilora icon mark (SVG)
@@ -119,6 +129,8 @@ vilora/
 │   │   └── railway-app-deployment-guide.md # Deployment & auth system setup guide
 │   └── prompts/
 │       ├── EMAIL_AND_SMS_NOTIFICATIONS_PROMPT.md  # Email/SMS notification system spec
+│       ├── FILE_SHARING_PROMPT.md                 # File sharing implementation spec
+│       ├── METRICS_TRACKING_PROMPT.md             # Metrics and analytics spec
 │       └── USER_MEMORY_AND_PERSONALIZATION_PROMPT.md # User memory & personalization spec
 ├── CLAUDE.md                       # Claude Code permissions
 ├── .env                            # Local env vars (gitignored)
@@ -180,10 +192,38 @@ SendGrid-based email system with branded HTML templates.
 | `send_email(to, subject, html, text)` | Low-level SendGrid wrapper. Falls back to logging when `SENDGRID_API_KEY` is not set. |
 | `send_invite_email(to, creator, topic, link, message)` | Branded session invite with topic preview, personal note, "Join the conversation" CTA, and "What to expect" section. |
 | `send_password_reset_email(to, name, link)` | Branded password reset with "Reset Password" CTA. |
+| `send_verification_email(to, name, link)` | Email verification for new accounts (24h token expiry). |
+| `send_nudge_email(to, nudger_name, topic, link)` | Nudge email when a participant asks another to return. |
+| `send_activity_email(to, name, topic, link)` | Session activity alert ("New activity in your Vilora session"). |
 
 **Email templates** use inline CSS for compatibility, include the Vilora logo as a hosted PNG (`/static/img/email-logo.png`), and have plain text fallbacks.
 
 **Sender:** `support@maiatech.ai` (domain authenticated in SendGrid via GCP Marketplace). See `EMAIL_AND_SMS_NOTIFICATIONS_PROMPT.md` for setup notes.
+
+### SMS (`sms.py`)
+
+Twilio-based SMS for verification and activity alerts. Gracefully degrades if Twilio is not configured.
+
+| Function | Purpose |
+|----------|---------|
+| `send_sms(to, body)` | Low-level Twilio wrapper. |
+| `send_verification_sms(to, code)` | 6-digit phone verification code. |
+| `send_activity_sms(to, topic)` | Session activity alert (kept under 160 chars). |
+| `generate_verification_code()` | Returns a random 6-digit string. |
+
+### File Storage (`storage.py`)
+
+Google Cloud Storage module for session file uploads. Files are stored as `sessions/{session_id}/{uuid}_{filename}`.
+
+| Function | Purpose |
+|----------|---------|
+| `upload_file(session_id, file_obj, filename, content_type)` | Upload to GCS, returns blob path. |
+| `get_download_url(blob_path, expiry_minutes, inline)` | Generate a signed URL for download/view. |
+| `delete_file(blob_path)` | Delete a blob from GCS. |
+
+Files are proxied through Flask (not redirected to signed URLs) to keep GCS credentials server-side and avoid CORS issues.
+
+**Allowed types:** Images (JPEG, PNG, GIF, WebP), PDF, Office documents, CSV, text, ZIP. Max 10MB. Executable extensions are blocked.
 
 ### Database (`models/database.py`)
 
@@ -207,6 +247,15 @@ Dual-mode database supporting both SQLite (local dev) and PostgreSQL (Railway pr
 | `password_resets` | Token-based password reset (1-hour expiry, single use) |
 | `session_summaries` | Cached AI summaries (keyed by session_id + message_count) |
 | `user_memories` | AI-extracted and user-provided personal context (category, content, confidence, active) |
+| `message_reactions` | Emoji reactions on messages (like, love, laugh, fire, etc.) |
+| `session_invites` | Invite tracking (inviter, status, created_at) |
+| `session_last_seen` | Per-user last-seen timestamp per session (for unread tracking) |
+| `nudge_log` | Nudge history (rate-limited: 4 per person per session, 24hr cooldown) |
+| `notification_preferences` | Per-user email/SMS toggle, phone verification state |
+| `notification_log` | Notification delivery log (channel, timestamp, frequency capping) |
+| `pending_notifications` | Queue for background notification worker |
+| `council_results` | Vilora Council responses (advisors, peer reviews, synthesis) |
+| `file_attachments` | Uploaded file metadata (filename, content_type, size, GCS blob path) |
 
 **Models:**
 - `User(UserMixin)` — Flask-Login compatible user model with password hashing
@@ -289,10 +338,25 @@ Vilora learns about users over time to provide personalized mediation and counse
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/session/:id` | Session room page |
-| GET | `/api/sessions/:id/messages` | Get messages (includes display_name and is_self flag) |
-| POST | `/api/sessions/:id/messages` | Send message (triggers `should_respond` → `mediate` if appropriate) |
-| GET | `/api/sessions/:id/participants` | Get participant list |
+| GET | `/api/sessions/:id/messages` | Get messages (includes display_name, is_self, reactions; updates last_seen_at) |
+| POST | `/api/sessions/:id/messages` | Send message (triggers `should_respond` -> `mediate` if appropriate) |
+| DELETE | `/api/sessions/:id/messages/:mid` | Delete own message (also cleans up GCS blob for file messages) |
+| GET | `/api/sessions/:id/participants` | Get participant list and nudge history |
+| POST | `/api/sessions/:id/nudge` | Nudge a participant (rate-limited) |
 | GET | `/api/sessions/:id/summary` | Get/generate summary (cached by message count) |
+| POST | `/api/sessions/:id/ask-vilora` | Ask Vilora a direct question mid-session |
+| POST | `/api/sessions/:id/reactions/:mid` | Toggle emoji reaction on a message |
+
+### File Sharing
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/sessions/:id/files` | Upload a file (max 10MB, validated type/extension) |
+| GET | `/api/sessions/:id/files/:aid` | Download/view a file (proxied through Flask from GCS) |
+
+### Vilora Council
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/sessions/:id/council` | Request Council analysis (5 advisors + peer review + synthesis) |
 
 ### Framing & Memory
 | Method | Path | Description |
@@ -303,12 +367,22 @@ Vilora learns about users over time to provide personalized mediation and counse
 | PUT | `/api/user/memories/:id` | Edit a memory |
 | DELETE | `/api/user/memories/:id` | Deactivate a memory |
 
+### Notifications & Profile
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/user/notification-preferences` | Get email/SMS notification settings |
+| PUT | `/api/user/notification-preferences` | Toggle notifications, initiate phone verification |
+| POST | `/api/user/verify-phone` | Submit 6-digit phone verification code |
+| POST | `/api/user/resend-phone-code` | Resend verification SMS (rate-limited: 1 per 60s) |
+| POST | `/api/profile/display-name` | Update display name |
+| POST | `/api/feedback` | Submit feedback (emailed to support) |
+
 ### Pages
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/` | Landing page (redirects to dashboard if logged in) |
 | GET | `/about-me` | Memory viewer and onboarding |
-| GET | `/settings` | User preferences |
+| GET | `/settings` | User preferences (notifications, display name) |
 
 ## Frontend Architecture
 
@@ -322,7 +396,10 @@ The frontend uses server-rendered Jinja2 templates with inline JavaScript for in
 - Polling: session room polls messages and participants every 5 seconds
 - Voice input: Web Speech API via `voice.js` (continuous recognition, mic toggle button)
 - Auto-scroll: only scrolls to bottom if user is near bottom (within 150px)
-- Timestamps: server stores UTC, browser converts to local time via `localTime()` helper
+- Timestamps: server stores UTC, browser converts to local time via `localTime()` helper (shows time only for today, "Yesterday" prefix for yesterday, "Mon DD" for older)
+- Text-to-speech: Web Speech API for read-aloud with speed controls (see TTS section below)
+- Polish: AI text cleanup via `polish.js` (attached to all textareas)
+- File uploads: drag-and-drop or attach button, images show inline preview with lightbox
 
 **CSS architecture:** Single `style.css` file with CSS custom properties for the brand palette. See `design-reference.md` for color values and typography.
 
@@ -340,8 +417,14 @@ The frontend uses server-rendered Jinja2 templates with inline JavaScript for in
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `PORT` | Server port | `5001` |
+| `BASE_URL` | Public URL for generated links | `https://www.vilora.io` |
 | `NOTIFICATION_FROM_EMAIL` | Sender email address | `support@maiatech.ai` |
 | `NOTIFICATION_FROM_NAME` | Sender display name | `Vilora` |
+| `TWILIO_ACCOUNT_SID` | Twilio account SID for SMS | None (SMS disabled) |
+| `TWILIO_AUTH_TOKEN` | Twilio auth token | None |
+| `TWILIO_PHONE_NUMBER` | Twilio sender phone number | None |
+| `GCS_CREDENTIALS_JSON` | Google Cloud Storage credentials JSON | None (file uploads disabled) |
+| `GCS_BUCKET_NAME` | GCS bucket for file uploads | `vilora-uploads` |
 
 ### Local Development
 Create a `.env` file (gitignored) with:
@@ -349,7 +432,7 @@ Create a `.env` file (gitignored) with:
 ANTHROPIC_API_KEY=sk-ant-...
 SECRET_KEY=dev-secret
 ```
-SendGrid and DATABASE_URL are optional locally — emails log to console, SQLite is used for data.
+SendGrid, Twilio, GCS, and DATABASE_URL are optional locally. Emails log to console, SMS is skipped, file uploads are disabled, and SQLite is used for data.
 
 ## Deployment
 
@@ -394,12 +477,23 @@ Brand source file: `C:\Users\grayt\My Drive\projects\vilora\vilora-brand.svg`
 | Cached summaries | Summaries are cached by `(session_id, message_count)`. Re-requesting with no new messages returns the cache. |
 | SendGrid over SMTP | More reliable delivery, branded templates, no SMTP configuration complexity. Migrated from Flask-Mail/Gmail SMTP. |
 | Session mode field | `session_mode` column distinguishes mediation vs personal sessions, allowing different system prompts, UI, and response behavior. |
+| File proxy over redirect | Files are proxied through Flask rather than redirecting to GCS signed URLs. Keeps credentials server-side, avoids CORS, and provides consistent access control. |
+| Client-side TTS | Web Speech API runs entirely in the browser. No backend audio generation needed. See TTS section for Chrome-specific constraints. |
+| Background notification worker | Daemon thread in app.py, not a separate service. Simple for Railway single-dyno deployment. Uses generation counters to prevent race conditions. |
+
+## Background Worker
+
+A daemon thread runs in `app.py` that processes pending notifications every 60 seconds:
+- Checks `pending_notifications` table for queued alerts
+- Sends email and/or SMS based on user preferences
+- Enforces frequency caps: 60min quiet window per session, 4hr/session cap, 6/day cap
+- Uses a generation counter to prevent race conditions with concurrent requests
 
 ## Planned Features
 
 See the prompts directory for detailed specs:
-- **Email & SMS Notifications** (`EMAIL_AND_SMS_NOTIFICATIONS_PROMPT.md`) — Activity digests, join notifications, Twilio SMS (Phase 2-3)
-- **User Memory & Personalization** (`USER_MEMORY_AND_PERSONALIZATION_PROMPT.md`) — Cross-session pattern detection, relationship memory, proactive insights (Phase 3-5)
+- **Metrics Tracking** (`METRICS_TRACKING_PROMPT.md`) -- Session outcomes, participation balance, engagement analytics
+- **User Memory & Personalization** (`USER_MEMORY_AND_PERSONALIZATION_PROMPT.md`) -- Cross-session pattern detection, relationship memory, proactive insights (Phase 3-5)
 
 ## Text-to-Speech (Read Aloud)
 
@@ -477,3 +571,11 @@ If this plays at 2x speed, the browser supports rate changes. If Vilora's speed 
 | 2026-04-01 | Tone chips, voice input, session title generation |
 | 2026-04-01 | vilora.ai domain setup, SendGrid email integration |
 | 2026-04-02 | Architecture documentation |
+| 2026-04-03 | Message reactions, nudge system, session activity notifications (email/SMS) |
+| 2026-04-03 | Unread message tracking with dashboard indicators |
+| 2026-04-04 | Vilora Council (5-advisor analysis with peer review and synthesis) |
+| 2026-04-05 | Read-aloud TTS with speed controls, pause/resume, mid-playback speed changes |
+| 2026-04-05 | Mobile optimization (emoji picker bottom sheet, compact header, edge-to-edge messages) |
+| 2026-04-05 | File sharing (GCS upload, inline image preview, lightbox, proxied downloads) |
+| 2026-04-06 | Display name editing in settings |
+| 2026-04-07 | Date display on message timestamps (today/yesterday/older) |
