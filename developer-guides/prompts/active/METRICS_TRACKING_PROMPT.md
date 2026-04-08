@@ -1,5 +1,9 @@
 # Vilora Metrics Tracking Implementation Prompt
 
+*Created: April 7, 2026*
+*Last Updated: April 8, 2026*
+*Status: Planning*
+
 ## Context
 
 Vilora is an AI-powered mediation and collaboration platform. We need automated tracking of key metrics to measure whether the product is delivering value. Metrics must be **behavioral and objective** -- derived from user actions, not self-reported feelings.
