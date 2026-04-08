@@ -1,7 +1,8 @@
 # Email & SMS Notifications — Session Invites, Updates & Alerts
 
 **Created:** March 30, 2026
-**Status:** Planning
+**Last Updated:** April 8, 2026
+**Status:** Implemented
 **Dependencies:** SendGrid account, Twilio account (for SMS)
 **Priority:** High — Enables invite delivery, engagement, and re-engagement without copy-paste
 **Design Reference:** `developer-guides/architecture/design-reference.md`
@@ -295,3 +296,10 @@ CREATE TABLE notification_log (
 | 2026-03-30 | Initial creation — email invites, activity notifications, SMS (phased) |
 | 2026-04-01 | Phase 1 implemented — SendGrid integration, branded invite emails, password reset migrated from Flask-Mail |
 | 2026-04-02 | SendGrid account set up via GCP Marketplace, maiatech.ai domain authentication in progress |
+| 2026-04-08 | Status updated to Implemented |
+
+---
+
+## Implementation Summary
+
+Full email notification system implemented via SendGrid: session invites, password reset (migrated from Flask-Mail), activity alerts, email verification, and nudges. Full SMS notification system implemented via Twilio: phone verification with 6-digit codes (10-minute expiry), activity alerts. Background notification worker runs as a daemon thread with 60-second polling interval. Frequency capping enforced: 60-minute quiet window per session, 4-hour per-session cap, 6 notifications per day. Notification preferences UI added to settings page with independent email/SMS toggles.

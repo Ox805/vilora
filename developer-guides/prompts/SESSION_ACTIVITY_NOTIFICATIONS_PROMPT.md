@@ -1,7 +1,8 @@
 # Session Activity Notifications
 
 **Created:** April 4, 2026
-**Status:** Planning
+**Last Updated:** April 8, 2026
+**Status:** Implemented
 **Dependencies:** SendGrid email infrastructure (implemented), user settings page (implemented), session/messages system (implemented)
 **Priority:** High. Group sessions lose momentum when participants don't know there's new activity. This is the #1 engagement gap.
 **References:** `notifications.py` (email sending), `templates/settings.html` (user preferences), `models/database.py` (schema), `app.py` (API routes)
@@ -575,3 +576,9 @@ This requires no app store submission, no new codebase, and no React Native/Flut
 | `TWILIO_PHONE_NUMBER` | SMS sender number | Only if SMS enabled |
 
 SMS functionality should degrade gracefully if Twilio is not configured (log to stderr like SendGrid does, disable SMS toggle in Settings UI).
+
+---
+
+## Implementation Summary
+
+Background notification worker implemented as a daemon thread in app.py, polling every 60 seconds. Email activity alerts sent via SendGrid ("New activity in your Vilora session") with branded template, no message content included. SMS activity alerts sent via Twilio (kept under 160 chars). Frequency capping enforced: 60-minute quiet window per session, 4-hour per-session cap, 6 notifications per day. Generation counter used to prevent race conditions in the notification worker. Notification preferences added to settings page with independent email/SMS toggles. Dashboard unread indicators implemented: green dot and "X new messages" count on session cards. last_seen_at tracking updated per user per session on every message fetch.

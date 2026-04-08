@@ -1,7 +1,8 @@
 # Council UX, Persistence, and Shared Access
 
 **Created:** April 2, 2026
-**Status:** Planning
+**Last Updated:** April 8, 2026
+**Status:** Partially Implemented
 **Dependencies:** Council engine (implemented), session infrastructure
 **Priority:** High. Council is a key differentiator but currently hard to understand and results are ephemeral.
 **References:** `VILORA_COUNCIL_PROMPT.md` (original Council spec), `application-architecture.md`
@@ -334,3 +335,12 @@ Recommended: Build phases 1-4 together as they're interconnected. Phase 5-6 can 
 | Date | Change |
 |------|--------|
 | 2026-04-02 | Initial creation. Explainer, persistence, shared access, actions, and settings. |
+| 2026-04-08 | Status updated to Partially Implemented |
+
+---
+
+## Implementation Summary
+
+**Built:** Council results persisted in database via council_results table (with advisors JSON, review text, and synthesis text fields). Results displayed in session chat timeline as a council message type (msg_type = 'council'). Shared access - all session participants can see council results and who requested them.
+
+**Not yet built:** Council explainer modal ("How does this work?" section), follow-up actions (share with group, ask a follow-up, copy to clipboard), and council settings/preferences (advisor toggles, intensity, custom advisors, pre-built configurations).

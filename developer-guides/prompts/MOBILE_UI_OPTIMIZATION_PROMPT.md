@@ -1,8 +1,8 @@
 # Mobile UI Optimization
 
 **Created:** April 2, 2026
-**Last Updated:** April 4, 2026
-**Status:** In Progress (audit findings partially fixed, Phase 2 redesign pending implementation)
+**Last Updated:** April 8, 2026
+**Status:** Largely Complete (Phase 2 major session room redesign pending)
 **Dependencies:** None (can begin independently)
 **Priority:** High. Majority of consumer app usage happens on mobile. Current UI is desktop-first.
 **Design Reference:** `developer-guides/architecture/design-reference.md`
@@ -497,3 +497,12 @@ Available width: 375px
 | 2026-04-04 | Added real-device screenshots (iPhone 12): Vilora session, ChatGPT chat, Claude home. Saved to `developer-guides/references/mobile-screenshots/`. Added competitor design principles reference table. Discovered footer visible in session chat (~60px wasted), added as HIGH issue. Updated space budget: 128px of savings identified |
 | 2026-04-04 | Major rewrite of Phase 2 (Session Room): new "maximize chat space" direction. Single-row header with ellipsis title + text-link actions. Edge-to-edge message list (no border/padding). "Ask Vilora" as text link not button. Space budget analysis. Reference table of ChatGPT/iMessage/WhatsApp mobile patterns. Updated all audit findings with fix status and dates. Added new HIGH issues for header/button/message-list space waste |
 | 2026-04-04 | Audit run: **Fixed** inline max-width styles on modals overriding mobile CSS (added `!important` to `.modal-content` max-width at both 768px and 480px breakpoints — inline styles like `max-width: 460px/480px/500px` on session.html, dashboard.html, about_me.html, base.html modals were defeating responsive overrides). **Fixed** iOS Safari scroll lock — added `html.modal-open { overflow: hidden }` in CSS and `document.documentElement.classList` toggle in api.js (iOS Safari requires overflow hidden on both html and body). Added `left: 0; right: 0` to `body.modal-open` for full iOS position anchoring. Added `.council-modal-content { max-width: 100% !important }` at 480px. **Puppeteer visual verification (375px + 1280px):** All 6 pages pass — landing, login, dashboard, session, about-me, settings. No horizontal overflow, no cut-off content, no overlapping elements, text readable on all pages. Screenshots saved to `/tmp/mobile-screenshots/`. **Remaining:** real-device testing on iOS Safari (scroll lock, keyboard behavior with dvh) and Android Chrome recommended. |
+| 2026-04-08 | Status updated to Largely Complete |
+
+---
+
+## Implementation Summary
+
+**Built:** Chat space maximization - footer hidden on session page on mobile, compact single-row header, edge-to-edge messages on mobile with reduced padding. Emoji picker renders as bottom sheet on mobile. Safe-area inset padding for iPhone notch/home indicator. Speed button filtering by viewport (0.5x/2x hidden on desktop, 1.75x hidden on mobile). 44px touch targets on input icons, buttons, and chips at 480px breakpoint. Modal overflow fixes with !important overrides. iOS Safari scroll lock fix. Word-break on messages. 480px breakpoint added alongside existing 768px. Summary and council panels at 100% width on mobile. Puppeteer visual verification passing on all pages.
+
+**Pending:** Phase 2 major session room redesign - single-row header with ellipsis title and text-link actions, border/padding removal on message list, "Ask Vilora" as text link instead of button. Several MEDIUM polish issues remain open (hero text sizing, onboarding button spacing, delete button touch target, invite banner stacking, settings toast positioning, mobile font scaling).

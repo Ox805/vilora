@@ -1,7 +1,8 @@
 # Email Verification on Registration
 
 **Created:** April 3, 2026
-**Status:** Planning
+**Last Updated:** April 8, 2026
+**Status:** Implemented
 **Dependencies:** SendGrid (implemented), user authentication (implemented)
 **Priority:** High. Prevents fake accounts, spam, and ensures nudge/invite emails reach real inboxes.
 **References:** `application-architecture.md`, `EMAIL_AND_SMS_NOTIFICATIONS_PROMPT.md`
@@ -289,3 +290,10 @@ Simple centered page:
 | Date | Change |
 |------|--------|
 | 2026-04-03 | Initial creation. Full email verification spec with invite auto-verify. |
+| 2026-04-08 | Status updated to Implemented |
+
+---
+
+## Implementation Summary
+
+Token-based email verification implemented on registration. Verification tokens generated via secrets.token_urlsafe with 24-hour expiry (checked against verification_sent_at). Verification pending page (verify_pending.html) shown after registration with resend button. Expired token page (verify_expired.html) with resend link. Branded verification email sent via SendGrid with Vilora logo, CTA button, and plain text fallback. Existing users marked as verified during migration. Unverified users blocked from login until email is confirmed.

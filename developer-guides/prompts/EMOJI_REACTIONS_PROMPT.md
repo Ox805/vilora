@@ -1,7 +1,8 @@
 # Emoji Reactions on Chat Messages
 
 **Created:** April 3, 2026
-**Status:** Planning
+**Last Updated:** April 8, 2026
+**Status:** Implemented
 **Dependencies:** Messages system (implemented), session infrastructure
 **Priority:** Medium. Adds lightweight engagement and expression without requiring users to compose a full reply.
 **References:** `models/database.py` (Message model), `templates/session.html` (message rendering), `static/css/style.css`
@@ -433,3 +434,9 @@ Add to `static/css/style.css`:
 | `static/css/style.css` | Add reaction bar, pill, picker, and mobile styles |
 
 No new files needed. No new dependencies.
+
+---
+
+## Implementation Summary
+
+10 reaction types implemented: like, dislike, love, laugh, surprised, sad, haha, emphasis, question, and fire. Reactions toggle on/off per user per message. Reaction bar displayed below messages showing emoji pills with counts. Emoji picker renders as a bottom sheet on mobile and inline on desktop. message_reactions database table with unique constraint on (message_id, user_id, reaction). Real-time reaction counts included in message rendering via bulk fetch (get_for_messages). Reactions update in-place without full message re-render.
