@@ -265,7 +265,17 @@ function localTime(ts) {
     if (!ts) return '';
     // Ensure the server timestamp is treated as UTC
     const d = new Date(ts.endsWith('Z') ? ts : ts + 'Z');
-    return d.toLocaleTimeString();
+    const today = new Date();
+    const isToday = d.toDateString() === today.toDateString();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const isYesterday = d.toDateString() === yesterday.toDateString();
+
+    const time = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    if (isToday) return time;
+    if (isYesterday) return 'Yesterday ' + time;
+    const date = d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    return date + ' ' + time;
 }
 
 const SUMMARY_DELIMITER = '<!--SUMMARY-->';
