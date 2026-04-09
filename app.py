@@ -1337,7 +1337,7 @@ ALLOWED_CONTENT_TYPES = {
     'application/vnd.ms-excel',
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-    'text/plain', 'text/csv',
+    'text/plain', 'text/csv', 'text/markdown',
     'application/zip'
 }
 
