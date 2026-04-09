@@ -901,10 +901,6 @@ async function showParticipantsPanel() {
         html = '<p style="color: var(--text-muted);">No participants or invites yet.</p>';
     }
 
-    html += '<div style="margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid var(--border);">';
-    html += '<button class="btn btn-primary btn-sm" onclick="closeParticipantsPanel(); showInviteModal();" style="width: 100%;">Invite someone</button>';
-    html += '</div>';
-
     list.innerHTML = html;
 }
 
@@ -1434,6 +1430,7 @@ async function checkParticipants() {
 
         if (count >= 2) {
             statusEl.textContent = `${count} participants`;
+            if (banner) banner.style.display = 'none';
         } else {
             statusEl.textContent = 'Waiting for other party...';
         }
