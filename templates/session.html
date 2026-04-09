@@ -901,6 +901,12 @@ async function showParticipantsPanel() {
         html = '<p style="color: var(--text-muted);">No participants or invites yet.</p>';
     }
 
+    if (IS_CREATOR) {
+        html += '<div style="margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid var(--border);">';
+        html += '<button class="btn btn-primary btn-sm" onclick="closeParticipantsPanel(); showInviteModal();" style="width: 100%;">Invite someone</button>';
+        html += '</div>';
+    }
+
     list.innerHTML = html;
 }
 
