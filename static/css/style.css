@@ -1401,6 +1401,34 @@ body.summary-open .container {
     color: white;
 }
 
+.purpose-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.purpose-chip {
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: 2rem;
+    background: white;
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: var(--text);
+    transition: all 0.15s ease;
+}
+
+.purpose-chip:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.purpose-chip.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: white;
+}
+
 .tone-hint {
     font-size: 0.8rem;
     color: var(--text-muted);

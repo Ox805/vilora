@@ -14,13 +14,9 @@
             <h2>What would you like to do?</h2>
             <p class="chooser-subtitle">Choose how you'd like to work with Vilora.</p>
             <div class="chooser-options">
-                <button onclick="showFramingAssist()" class="chooser-option" title="Write freely about your situation. Vilora will organize it into a clear topic, category, and perspective, then let you review and edit before creating the session.">
-                    <div class="chooser-option-title">Start a group session: help me frame it</div>
+                <button onclick="showFramingAssist()" class="chooser-option" title="Describe what you want to discuss. Vilora will help organize your thoughts and you can invite others.">
+                    <div class="chooser-option-title">Start a group session</div>
                     <p>Describe what you want to discuss and Vilora will help you organize your thoughts before inviting others. Great for mediations, brainstorms, or group decisions.</p>
-                </button>
-                <button onclick="showDirectForm()" class="chooser-option" title="Skip the framing step and fill in the topic, type, and your perspective yourself. You can invite others via email or link after creating the session.">
-                    <div class="chooser-option-title">Start a group session: I know what I want to say</div>
-                    <p>Go straight to the session form. You'll be able to invite others after creating it.</p>
                 </button>
                 <button onclick="showPersonalSession()" class="chooser-option chooser-option-personal" title="A private conversation with just you and Vilora. No other participants. Vilora responds to every message as a personal advisor, counselor, or sounding board.">
                     <div class="chooser-option-title">Talk to Vilora one-on-one</div>
@@ -40,36 +36,45 @@
     <!-- Step 2a: Framing assist -->
     <div id="framing-modal" class="modal" style="display:none">
         <div class="modal-content">
-            <h2>Tell Vilora what's going on</h2>
-            <p style="color: var(--text-light); margin-bottom: 1rem; font-size: 0.9rem;">
-                Just write freely. Describe the situation, how you feel, what happened.
-                Vilora will help organize this into a clear mediation request.
-            </p>
+            <h2>Start a group session</h2>
             <div class="form-group">
-                <label for="raw-input">Your perspective (shared with Vilora, your AI mediator, and session participants)</label>
+                <label for="framing-purpose">What kind of session is this?</label>
+                <div class="purpose-chips" id="purpose-chips">
+                    <button type="button" class="purpose-chip" data-purpose="mediation">Mediation</button>
+                    <button type="button" class="purpose-chip" data-purpose="brainstorm">Brainstorming</button>
+                    <button type="button" class="purpose-chip" data-purpose="decision">Decision-making</button>
+                    <button type="button" class="purpose-chip" data-purpose="planning">Planning</button>
+                    <button type="button" class="purpose-chip" data-purpose="general">General discussion</button>
+                </div>
+            </div>
+            <div id="framing-mediation-type" class="form-group" style="display:none">
+                <label for="framing-med-type">What type of mediation?</label>
+                <select id="framing-med-type">
+                    <option value="general">General</option>
+                    <option value="relationship">Relationship</option>
+                    <option value="family">Family</option>
+                    <option value="workplace">Workplace</option>
+                    <option value="roommate">Roommate / Housemate</option>
+                    <option value="political">Political / Social Issues</option>
+                    <option value="neighbor">Neighbor Dispute</option>
+                    <option value="business">Business Partnership</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="raw-input" id="raw-input-label">Describe what you'd like to discuss</label>
                 <textarea id="raw-input" rows="8"
-                    placeholder="Write whatever comes to mind about the situation. For example: 'My roommate keeps leaving dishes in the sink and it's driving me crazy. I've asked them to clean up but nothing changes. I don't want to fight about it but I need things to be more fair around here.'"></textarea>
+                    placeholder="Write freely about what you'd like to discuss. Vilora will help organize your thoughts."></textarea>
             </div>
             <div class="session-tone">
                 <label>How should Vilora approach this?</label>
-                <div class="tone-chips framing-tone-chips">
-                    <button type="button" class="med-tone-chip" data-tone="Focus on finding common ground and shared interests" title="Vilora will actively look for areas of agreement and shared values, using them as a foundation to work through differences.">Find common ground</button>
-                    <button type="button" class="med-tone-chip" data-tone="Help us communicate more clearly and understand each other" title="Vilora will slow the conversation down, clarify what each person means, and make sure everyone understands each other before moving on.">Improve communication</button>
-                    <button type="button" class="med-tone-chip" data-tone="Be direct and help us get to a resolution quickly" title="Vilora will be more direct, cut through tangents, and push toward concrete decisions and agreements faster.">Get to resolution</button>
-                    <button type="button" class="med-tone-chip" data-tone="Make sure both sides feel fully heard before moving forward" title="Vilora will make sure each participant's perspective is fully acknowledged before suggesting next steps.">Make sure we're heard</button>
-                    <button type="button" class="med-tone-chip" data-tone="Help us establish fair boundaries and agreements" title="Vilora will guide the conversation toward clear agreements, ground rules, and boundaries that everyone can commit to.">Set boundaries</button>
-                    <button type="button" class="med-tone-chip" data-tone="Help de-escalate emotions and keep things calm and productive" title="Vilora will prioritize keeping the tone calm, acknowledge emotions without escalating, and redirect heated moments constructively.">Keep things calm</button>
-                    <button type="button" class="med-tone-chip" data-tone="Proactively bring in relevant research, data, and expert context to inform the discussion" title="Vilora will act as an expert resource, proactively sharing relevant facts, data, and context to inform the discussion.">Bring in research and facts</button>
-                    <button type="button" class="med-tone-chip" data-tone="Encourage creative, outside-the-box thinking and help us build on each other's ideas" title="Vilora will push for novel ideas, encourage 'what if' thinking, and help participants build on each other's suggestions.">Encourage creative thinking</button>
-                    <button type="button" class="med-tone-chip" data-tone="Help us weigh options, evaluate tradeoffs, and prioritize what matters most" title="Vilora will help structure the discussion around evaluating options, weighing pros and cons, and deciding what matters most.">Help us prioritize</button>
-                    <button type="button" class="med-tone-chip" data-tone="Constructively challenge our assumptions and ask 'have you considered...' questions" title="Vilora will play constructive skeptic, questioning assumptions and raising considerations the group may have overlooked.">Challenge our assumptions</button>
+                <div class="tone-chips framing-tone-chips" id="framing-tone-container">
                 </div>
-                <p class="tone-hint">Select any that apply. You can also adjust how Vilora works for you in <a href="/settings">Settings</a>.</p>
+                <p class="tone-hint">Select any that apply.</p>
             </div>
             <div class="form-actions">
                 <button type="button" onclick="backToChooser()" class="btn">Back</button>
                 <button type="button" onclick="submitFraming()" class="btn btn-primary" id="frame-btn">
-                    Help me frame this
+                    Continue
                 </button>
             </div>
         </div>
@@ -152,19 +157,9 @@
                 </div>
                 <div class="session-tone">
                     <label>How should Vilora approach this?</label>
-                    <div class="tone-chips mediation-tone-chips">
-                        <button type="button" class="med-tone-chip" data-tone="Focus on finding common ground and shared interests" title="Vilora will actively look for areas of agreement and shared values, using them as a foundation to work through differences.">Find common ground</button>
-                        <button type="button" class="med-tone-chip" data-tone="Help us communicate more clearly and understand each other" title="Vilora will slow the conversation down, clarify what each person means, and make sure everyone understands each other before moving on.">Improve communication</button>
-                        <button type="button" class="med-tone-chip" data-tone="Be direct and help us get to a resolution quickly" title="Vilora will be more direct, cut through tangents, and push toward concrete decisions and agreements faster.">Get to resolution</button>
-                        <button type="button" class="med-tone-chip" data-tone="Make sure both sides feel fully heard before moving forward" title="Vilora will make sure each participant's perspective is fully acknowledged before suggesting next steps.">Make sure we're heard</button>
-                        <button type="button" class="med-tone-chip" data-tone="Help us establish fair boundaries and agreements" title="Vilora will guide the conversation toward clear agreements, ground rules, and boundaries that everyone can commit to.">Set boundaries</button>
-                        <button type="button" class="med-tone-chip" data-tone="Help de-escalate emotions and keep things calm and productive" title="Vilora will prioritize keeping the tone calm, acknowledge emotions without escalating, and redirect heated moments constructively.">Keep things calm</button>
-                        <button type="button" class="med-tone-chip" data-tone="Proactively bring in relevant research, data, and expert context to inform the discussion" title="Vilora will act as an expert resource, proactively sharing relevant facts, data, and context to inform the discussion.">Bring in research and facts</button>
-                        <button type="button" class="med-tone-chip" data-tone="Encourage creative, outside-the-box thinking and help us build on each other's ideas" title="Vilora will push for novel ideas, encourage 'what if' thinking, and help participants build on each other's suggestions.">Encourage creative thinking</button>
-                        <button type="button" class="med-tone-chip" data-tone="Help us weigh options, evaluate tradeoffs, and prioritize what matters most" title="Vilora will help structure the discussion around evaluating options, weighing pros and cons, and deciding what matters most.">Help us prioritize</button>
-                        <button type="button" class="med-tone-chip" data-tone="Constructively challenge our assumptions and ask 'have you considered...' questions" title="Vilora will play constructive skeptic, questioning assumptions and raising considerations the group may have overlooked.">Challenge our assumptions</button>
+                    <div class="tone-chips mediation-tone-chips" id="review-tone-container">
                     </div>
-                    <p class="tone-hint">Select any that apply. You can also adjust how Vilora works for you in <a href="/settings">Settings</a>.</p>
+                    <p class="tone-hint">Select any that apply.</p>
                 </div>
                 <div class="form-actions">
                     <button type="button" onclick="hideAllModals()" class="btn">Cancel</button>
@@ -382,14 +377,111 @@ function resetForm() {
     document.querySelectorAll('.tone-chip, .med-tone-chip').forEach(c => c.classList.remove('active'));
     document.getElementById('frame-tips').style.display = 'none';
     document.getElementById('other-type-group').style.display = 'none';
-    document.getElementById('form-title').textContent = 'Start a New Mediation';
+    document.getElementById('form-title').textContent = 'Review & Edit';
+    selectedPurpose = null;
+    document.querySelectorAll('.purpose-chip').forEach(c => c.classList.remove('active'));
+    document.getElementById('framing-tone-container').innerHTML = '';
 }
 
-// Tone chip selection (multi-select toggle)
-document.querySelectorAll('.tone-chip, .med-tone-chip').forEach(chip => {
-    chip.addEventListener('click', () => {
-        chip.classList.toggle('active');
-    });
+// Tone chip selection (multi-select toggle) - use event delegation for dynamic chips
+document.addEventListener('click', function(e) {
+    if (e.target.matches('.tone-chip, .med-tone-chip')) {
+        e.target.classList.toggle('active');
+    }
+});
+
+// --- Session Purpose & Dynamic Tone Chips ---
+const PURPOSE_CONFIG = {
+    mediation: {
+        label: 'Your perspective (shared with Vilora and session participants)',
+        placeholder: 'Write freely about the situation, how you feel, what happened, and your goals for the session. Vilora will help organize this into a clear mediation request.',
+        chips: [
+            { label: 'Find common ground', tone: 'Focus on finding common ground and shared interests' },
+            { label: 'Improve communication', tone: 'Help us communicate more clearly and understand each other' },
+            { label: 'Get to resolution', tone: 'Be direct and help us get to a resolution quickly' },
+            { label: 'Make sure we\'re heard', tone: 'Make sure both sides feel fully heard before moving forward' },
+            { label: 'Set boundaries', tone: 'Help us establish fair boundaries and agreements' },
+            { label: 'Keep things calm', tone: 'Help de-escalate emotions and keep things calm and productive' },
+        ]
+    },
+    brainstorm: {
+        label: 'Describe what you\'d like to brainstorm',
+        placeholder: 'What do you want to brainstorm? Share any context, goals, or constraints to help Vilora guide the session.',
+        chips: [
+            { label: 'Share ideas', tone: 'Help everyone share their ideas openly and build on them' },
+            { label: 'Explore possibilities', tone: 'Push for wide exploration of possibilities before narrowing down' },
+            { label: 'Challenge assumptions', tone: 'Constructively challenge assumptions and ask "have you considered..." questions' },
+            { label: 'Stay focused', tone: 'Keep the discussion focused and on track toward the goal' },
+            { label: 'Encourage creativity', tone: 'Encourage creative, outside-the-box thinking and wild ideas' },
+            { label: 'Help refine ideas', tone: 'Help refine rough ideas into actionable, well-formed concepts' },
+            { label: 'Add new perspectives', tone: 'Bring in new angles and perspectives the group may not have considered' },
+        ]
+    },
+    decision: {
+        label: 'Describe the decision you need to make',
+        placeholder: 'What decision do you need to make? Share the options you\'re considering and any factors that matter.',
+        chips: [
+            { label: 'Help us prioritize', tone: 'Help us weigh options, evaluate tradeoffs, and prioritize what matters most' },
+            { label: 'Bring in research and facts', tone: 'Proactively bring in relevant research, data, and expert context to inform the discussion' },
+            { label: 'Challenge our assumptions', tone: 'Constructively challenge our assumptions and ask "have you considered..." questions' },
+            { label: 'Play devil\'s advocate', tone: 'Play devil\'s advocate and surface counterarguments for each option' },
+            { label: 'Keep it practical', tone: 'Keep the discussion grounded in practical, actionable outcomes' },
+            { label: 'Get to resolution', tone: 'Be direct and help us get to a decision quickly' },
+        ]
+    },
+    planning: {
+        label: 'Describe what you\'re planning',
+        placeholder: 'What are you planning? Share your goals, timeline, or constraints.',
+        chips: [
+            { label: 'Stay focused on the goal', tone: 'Keep the discussion focused and aligned with the primary goal' },
+            { label: 'Help us prioritize', tone: 'Help us weigh options, evaluate tradeoffs, and prioritize what matters most' },
+            { label: 'Keep it practical', tone: 'Keep the discussion grounded in practical, actionable outcomes' },
+            { label: 'Bring in research and facts', tone: 'Proactively bring in relevant research, data, and expert context to inform the discussion' },
+            { label: 'Think big', tone: 'Encourage ambitious, big-picture thinking before getting into details' },
+            { label: 'Challenge our assumptions', tone: 'Constructively challenge our assumptions and ask "have you considered..." questions' },
+        ]
+    },
+    general: {
+        label: 'Describe what you\'d like to discuss',
+        placeholder: 'What do you want to discuss? Share any context that would help Vilora facilitate.',
+        chips: [
+            { label: 'Improve communication', tone: 'Help us communicate more clearly and understand each other' },
+            { label: 'Bring in research and facts', tone: 'Proactively bring in relevant research, data, and expert context to inform the discussion' },
+            { label: 'Encourage creative thinking', tone: 'Encourage creative, outside-the-box thinking and help us build on each other\'s ideas' },
+            { label: 'Help us prioritize', tone: 'Help us weigh options, evaluate tradeoffs, and prioritize what matters most' },
+            { label: 'Challenge our assumptions', tone: 'Constructively challenge our assumptions and ask "have you considered..." questions' },
+            { label: 'Keep it practical', tone: 'Keep the discussion grounded in practical, actionable outcomes' },
+        ]
+    }
+};
+
+let selectedPurpose = null;
+
+function selectPurpose(purpose) {
+    selectedPurpose = purpose;
+    // Highlight selected chip
+    document.querySelectorAll('.purpose-chip').forEach(c => c.classList.remove('active'));
+    document.querySelector(`.purpose-chip[data-purpose="${purpose}"]`).classList.add('active');
+
+    const config = PURPOSE_CONFIG[purpose];
+
+    // Update label and placeholder
+    document.getElementById('raw-input-label').textContent = config.label;
+    document.getElementById('raw-input').placeholder = config.placeholder;
+
+    // Show/hide mediation sub-type
+    document.getElementById('framing-mediation-type').style.display = purpose === 'mediation' ? 'block' : 'none';
+
+    // Render tone chips
+    const container = document.getElementById('framing-tone-container');
+    container.innerHTML = config.chips.map(c =>
+        `<button type="button" class="med-tone-chip" data-tone="${c.tone}">${c.label}</button>`
+    ).join('');
+}
+
+// Purpose chip click handlers
+document.querySelectorAll('.purpose-chip').forEach(chip => {
+    chip.addEventListener('click', () => selectPurpose(chip.dataset.purpose));
 });
 
 function backToChooser() {
@@ -449,26 +541,40 @@ async function createPersonalSession() {
 function showFramingAssist() {
     document.getElementById('new-session-chooser').style.display = 'none';
     document.getElementById('framing-modal').style.display = 'flex';
-    document.getElementById('raw-input').focus();
-}
-
-function showDirectForm() {
-    document.getElementById('new-session-chooser').style.display = 'none';
-    document.getElementById('form-title').textContent = 'Start a New Mediation';
-    document.getElementById('frame-tips').style.display = 'none';
-    document.getElementById('new-session-modal').style.display = 'flex';
+    // Reset purpose selection
+    selectedPurpose = null;
+    document.querySelectorAll('.purpose-chip').forEach(c => c.classList.remove('active'));
+    document.getElementById('framing-mediation-type').style.display = 'none';
+    document.getElementById('framing-tone-container').innerHTML = '';
+    document.getElementById('raw-input-label').textContent = 'Describe what you\'d like to discuss';
+    document.getElementById('raw-input').placeholder = 'Write freely about what you\'d like to discuss. Vilora will help organize your thoughts.';
 }
 
 async function submitFraming() {
+    if (!selectedPurpose) {
+        alert('Please select what kind of session this is.');
+        return;
+    }
     const rawText = document.getElementById('raw-input').value.trim();
     if (!rawText) {
-        alert('Please describe the situation first.');
+        alert('Please describe what you\'d like to discuss.');
         return;
     }
 
     const btn = document.getElementById('frame-btn');
     btn.disabled = true;
     btn.textContent = 'Vilora is thinking...';
+
+    // Collect tone selections
+    const framingTones = document.querySelectorAll('.framing-tone-chips .med-tone-chip.active');
+    const tones = Array.from(framingTones).map(c => c.dataset.tone);
+    const tone = tones.length > 0 ? tones.join('; ') : null;
+
+    // Determine session type
+    let sessionType = selectedPurpose;
+    if (selectedPurpose === 'mediation') {
+        sessionType = document.getElementById('framing-med-type').value;
+    }
 
     try {
         const res = await fetch('/api/frame', {
@@ -480,35 +586,36 @@ async function submitFraming() {
         if (data.success && data.framed) {
             const f = data.framed;
 
-            // Fill in the form
+            // Fill in the review form
             document.getElementById('topic').value = f.topic || '';
             document.getElementById('perspective').value = f.perspective || rawText;
 
-            // Set the mediation type
+            // Set the session type from purpose selection (not AI guess)
             const typeSelect = document.getElementById('session-type');
             const validTypes = [...typeSelect.options].map(o => o.value);
-            if (f.type && validTypes.includes(f.type)) {
-                typeSelect.value = f.type;
-            } else if (f.type) {
+            if (validTypes.includes(sessionType)) {
+                typeSelect.value = sessionType;
+            } else {
                 typeSelect.value = 'other';
                 document.getElementById('other-type-group').style.display = 'block';
-                document.getElementById('other-type').value = f.type;
+                document.getElementById('other-type').value = sessionType;
             }
 
             // Show tips if provided
             if (f.tips) {
                 const tipsEl = document.getElementById('frame-tips');
-                tipsEl.innerHTML = '<strong>Vilora\'s tips for this mediation:</strong><p>' +
+                tipsEl.innerHTML = '<strong>Vilora\'s tips for this session:</strong><p>' +
                     escapeHtml(f.tips) + '</p>';
                 tipsEl.style.display = 'block';
             }
 
-            // Carry tone selections from framing modal to mediation form
-            const framingTones = document.querySelectorAll('.framing-tone-chips .med-tone-chip.active');
-            const selectedTones = new Set(Array.from(framingTones).map(c => c.dataset.tone));
-            document.querySelectorAll('.mediation-tone-chips .med-tone-chip').forEach(c => {
-                c.classList.toggle('active', selectedTones.has(c.dataset.tone));
-            });
+            // Populate review form tone chips based on purpose, carry selections
+            const reviewContainer = document.getElementById('review-tone-container');
+            const config = PURPOSE_CONFIG[selectedPurpose] || PURPOSE_CONFIG.general;
+            const selectedToneSet = new Set(tones);
+            reviewContainer.innerHTML = config.chips.map(c =>
+                `<button type="button" class="med-tone-chip${selectedToneSet.has(c.tone) ? ' active' : ''}" data-tone="${c.tone}">${c.label}</button>`
+            ).join('');
 
             // Switch to the form for review
             document.getElementById('framing-modal').style.display = 'none';
@@ -521,7 +628,7 @@ async function submitFraming() {
         alert('Error: ' + err.message);
     } finally {
         btn.disabled = false;
-        btn.textContent = 'Help me frame this';
+        btn.textContent = 'Continue';
     }
 }
 
@@ -540,7 +647,7 @@ async function createSession(e) {
     }
     const perspective = document.getElementById('perspective').value;
 
-    const activeMedChips = document.querySelectorAll('.med-tone-chip.active');
+    const activeMedChips = document.querySelectorAll('#review-tone-container .med-tone-chip.active');
     const medTones = Array.from(activeMedChips).map(c => c.dataset.tone);
     const tone = medTones.length > 0 ? medTones.join('; ') : null;
 
