@@ -97,6 +97,8 @@
                     onkeydown="if(event.key==='Enter' && event.ctrlKey){event.preventDefault();sendMessage(event)}"
                     oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"></textarea>
                 <div class="message-input-icons">
+                    <button type="button" class="input-icon-btn format-btn" onclick="wrapSelection('**')" title="Bold (wrap with **)"><strong>B</strong></button>
+                    <button type="button" class="input-icon-btn format-btn" onclick="wrapSelection('__')" title="Underline (wrap with __)"><u>U</u></button>
                     <label class="input-icon-btn attach-icon-btn" title="Attach a file">
                         <input type="file" id="file-input" style="display:none"
                             accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.pptx,.txt,.csv,.zip"
@@ -367,7 +369,7 @@ function renderMessages(messages) {
             let intakeContent = m.content.replace(/\[Session tone:[^\]]*\]\s*/g, '');
             return `<div class="message message-intake" data-message-id="${m.id}">
                 <div class="message-author">${escapeHtml(m.display_name || 'Participant')}'s Initial Perspective${speakBtn}</div>
-                <div class="message-content">${escapeHtml(intakeContent)}</div>
+                <div class="message-content">${formatText(intakeContent)}</div>
                 ${reactionBar}
             </div>`;
         } else if (m.msg_type === 'file') {
@@ -420,14 +422,14 @@ function renderMessages(messages) {
         } else if (m.is_self) {
             return `<div class="message message-self" data-message-id="${m.id}">
                 <div class="message-author">You${speakBtn}${deleteBtn}</div>
-                <div class="message-content">${escapeHtml(m.content)}</div>
+                <div class="message-content">${formatText(m.content)}</div>
                 ${reactionBar}
                 <div class="message-time">${localTime(m.created_at)}</div>
             </div>`;
         } else {
             return `<div class="message message-other" data-message-id="${m.id}">
                 <div class="message-author">${escapeHtml(m.display_name || 'Participant')}${speakBtn}</div>
-                <div class="message-content">${escapeHtml(m.content)}</div>
+                <div class="message-content">${formatText(m.content)}</div>
                 ${reactionBar}
                 <div class="message-time">${localTime(m.created_at)}</div>
             </div>`;
@@ -1333,6 +1335,28 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+function wrapSelection(marker) {
+    const ta = document.getElementById('message-input');
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const text = ta.value;
+    if (start === end) return; // nothing selected
+    const selected = text.substring(start, end);
+    ta.value = text.substring(0, start) + marker + selected + marker + text.substring(end);
+    ta.selectionStart = start + marker.length;
+    ta.selectionEnd = end + marker.length;
+    ta.focus();
+}
+
+function formatText(text) {
+    let html = escapeHtml(text);
+    // **bold** -> <strong>bold</strong>
+    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    // __underline__ -> <u>underline</u>
+    html = html.replace(/__(.+?)__/g, '<u>$1</u>');
+    return html;
 }
 
 function dismissWelcome() {

@@ -2148,6 +2148,16 @@ body.summary-open .container {
 }
 .btn-polish:hover { background: var(--pale); }
 
+.format-btn {
+    font-size: 0.85rem !important;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
 .polish-preview {
     background: var(--pale);
     border: 1px solid var(--primary-light);
