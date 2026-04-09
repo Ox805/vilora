@@ -114,11 +114,16 @@ function showPolishPreview(textareaId, original, polished) {
         </div>
         <div class="polish-preview-text">${escapePolishHtml(polished)}</div>
         <div class="polish-preview-actions">
-            <button type="button" class="btn btn-primary btn-sm" onclick="acceptPolish('${textareaId}')">Accept</button>
-            <button type="button" class="btn btn-sm" onclick="editPolish('${textareaId}')">Edit</button>
-            <button type="button" class="btn btn-sm" onclick="revertPolish('${textareaId}')">Revert</button>
+            <button type="button" class="btn btn-primary btn-sm polish-accept-btn">Accept</button>
+            <button type="button" class="btn btn-sm polish-edit-btn">Edit</button>
+            <button type="button" class="btn btn-sm polish-revert-btn">Revert</button>
         </div>
     `;
+
+    // Attach event listeners directly (more reliable than onclick attributes)
+    preview.querySelector('.polish-accept-btn').addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); acceptPolish(textareaId); });
+    preview.querySelector('.polish-edit-btn').addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); editPolish(textareaId); });
+    preview.querySelector('.polish-revert-btn').addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); revertPolish(textareaId); });
 
     // Store original and polished on the preview element
     preview.dataset.original = original;
