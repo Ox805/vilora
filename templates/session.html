@@ -1430,7 +1430,6 @@ async function checkParticipants() {
 
         if (count >= 2) {
             statusEl.textContent = `${count} participants`;
-            if (banner) banner.style.display = 'none';
         } else {
             statusEl.textContent = 'Waiting for other party...';
         }
