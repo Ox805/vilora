@@ -1,5 +1,7 @@
 # Vilora — Strength Through Dialogue
 
+**Last Updated:** 2026-04-10
+
 An AI-powered mediation platform that helps people work through disagreements, conflicts, and misunderstandings with an impartial, expert mediator.
 
 ## Features

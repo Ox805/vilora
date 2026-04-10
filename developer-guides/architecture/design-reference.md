@@ -1,5 +1,7 @@
 # Vilora Design Reference
 
+**Last Updated:** 2026-04-10
+
 ## Brand Identity
 
 **Tagline:** Strength through dialogue

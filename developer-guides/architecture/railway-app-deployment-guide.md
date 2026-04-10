@@ -1,5 +1,7 @@
 # Railway App Deployment & Auth System Guide
 
+**Last Updated:** 2026-04-10
+
 A systematic roadmap for setting up a new Flask web app on Railway with PostgreSQL, user registration, login, password reset (email), optional 2FA, and password visibility toggles.
 
 ---
