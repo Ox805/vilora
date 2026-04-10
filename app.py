@@ -1056,10 +1056,20 @@ def session_room(session_id):
     creator = User.get_by_id(db, med_session.creator_id)
     creator_name = creator.display_name if creator else 'Someone'
 
+    # Show welcome modal only if non-creator has never sent a message in this session
+    show_welcome = False
+    if not is_creator:
+        cur = _exec(db,
+            "SELECT 1 FROM messages WHERE session_id = ? AND user_id = ? LIMIT 1",
+            (session_id, current_user.id)
+        )
+        show_welcome = cur.fetchone() is None
+
     return render_template('session.html', session=med_session,
                            participants=participants, is_creator=is_creator,
                            invite_link=invite_link, creator_name=creator_name,
-                           is_personal=(med_session.session_mode == 'personal'))
+                           is_personal=(med_session.session_mode == 'personal'),
+                           show_welcome=show_welcome)
 
 
 @app.route('/api/sessions/<int:session_id>/messages', methods=['GET'])

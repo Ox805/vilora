@@ -58,8 +58,8 @@
             </div>
         </div>
     </div>
-    {% else %}
-    <!-- Welcome modal for invited participants (shown only once) -->
+    {% elif show_welcome %}
+    <!-- Welcome modal for invited participants (shown only on first visit) -->
     <div id="welcome-modal" class="modal" style="display:none">
         <div class="modal-content welcome-modal-content">
             <h2>Welcome to Vilora</h2>
@@ -1361,14 +1361,13 @@ function formatText(text) {
 
 function dismissWelcome() {
     document.getElementById('welcome-modal').style.display = 'none';
-    localStorage.setItem('vilora-welcome-seen-' + SESSION_ID, 'true');
     document.getElementById('message-input').focus();
 }
 
-// Show welcome modal only if not previously dismissed
+// Show welcome modal if server determined this is a first visit
 (function() {
     const welcomeModal = document.getElementById('welcome-modal');
-    if (welcomeModal && !localStorage.getItem('vilora-welcome-seen-' + SESSION_ID)) {
+    if (welcomeModal) {
         welcomeModal.style.display = 'flex';
     }
 })();
