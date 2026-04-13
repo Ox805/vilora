@@ -1690,7 +1690,9 @@ def process_pending_notifications():
     """Process pending notifications older than 60 minutes. Called by background worker."""
     db = None
     try:
+        logger.info("[Notify] Connecting to database...")
         db = get_worker_db()
+        logger.info("[Notify] Connected, querying pending notifications...")
 
         # Find pending notifications older than 60 minutes
         if _is_postgres():
@@ -1901,14 +1903,16 @@ def start_notification_worker():
             time.sleep(60)
             cycle += 1
             try:
+                # Log first 3 cycles and then every 10th to confirm thread is alive
+                if cycle <= 3:
+                    logger.info(f"[Notify] Worker alive cycle={cycle}, calling process_pending_notifications")
                 result = process_pending_notifications()
-                # Log heartbeat every 10 minutes (every 10th cycle) or when work was done
                 if result and result > 0:
                     logger.info(f"[Notify] Heartbeat cycle={cycle}: processed {result} notification(s)")
-                elif cycle % 10 == 0:
-                    logger.info(f"[Notify] Heartbeat cycle={cycle}: no pending notifications")
+                elif cycle <= 3 or cycle % 10 == 0:
+                    logger.info(f"[Notify] Heartbeat cycle={cycle}: no pending notifications (result={result})")
             except Exception as e:
-                logger.error(f"[Notify] Worker crash cycle={cycle}: {e}")
+                logger.error(f"[Notify] Worker crash cycle={cycle}: {e}", exc_info=True)
 
     t = threading.Thread(target=worker, daemon=True)
     t.start()
