@@ -1659,8 +1659,7 @@ def queue_pending_notifications(db, session_id, sender_user_id):
     try:
         med_session = MediationSession.get_by_id(db, session_id)
         if not med_session:
-            sys.stderr.write(f"[Vilora-Notify] Queue skipped: session {session_id} not found\n")
-            sys.stderr.flush()
+            logger.warning(f"[Notify] Queue skipped: session {session_id} not found")
             return
         # Only for group sessions
         if med_session.session_mode == 'personal':
@@ -1679,15 +1678,12 @@ def queue_pending_notifications(db, session_id, sender_user_id):
                     (session_id, p.id)
                 )
                 db.commit()
-                sys.stderr.write(f"[Vilora-Notify] Queued notification: session={session_id} target_user={p.id} sender={sender_user_id}\n")
-                sys.stderr.flush()
+                logger.info(f"[Notify] Queued: session={session_id} target_user={p.id} sender={sender_user_id}")
             except Exception as e:
                 db.rollback()
-                sys.stderr.write(f"[Vilora-Notify] FAILED to queue notification: session={session_id} target_user={p.id} error={e}\n")
-                sys.stderr.flush()
+                logger.error(f"[Notify] FAILED to queue: session={session_id} target_user={p.id} error={e}")
     except Exception as e:
-        sys.stderr.write(f"[Vilora-Notify] Error queuing notifications: {e}\n")
-        sys.stderr.flush()
+        logger.error(f"[Notify] Error queuing notifications: {e}")
 
 
 def process_pending_notifications():
@@ -1714,8 +1710,7 @@ def process_pending_notifications():
         if not pending:
             return 0
 
-        sys.stderr.write(f"[Vilora-Notify] Processing {len(pending)} pending notification(s)\n")
-        sys.stderr.flush()
+        logger.info(f"[Notify] Processing {len(pending)} pending notification(s)")
 
         for row in pending:
             pn_id = row['id']
@@ -1731,8 +1726,7 @@ def process_pending_notifications():
             )
             last_seen = cur2.fetchone()
             if last_seen and str(last_seen['last_seen_at']) > str(triggered_at):
-                sys.stderr.write(f"[Vilora-Notify] Skipped session={session_id} user={target_user_id}: visited since trigger (last_seen={last_seen['last_seen_at']} > triggered={triggered_at})\n")
-                sys.stderr.flush()
+                logger.info(f"[Notify] Skipped session={session_id} user={target_user_id}: visited since trigger (last_seen={last_seen['last_seen_at']} > triggered={triggered_at})")
                 _exec(db, "DELETE FROM pending_notifications WHERE id = ?", (pn_id,))
                 db.commit()
                 continue
@@ -1757,8 +1751,7 @@ def process_pending_notifications():
             med_session = MediationSession.get_by_id(db, session_id)
             target_user = User.get_by_id(db, target_user_id)
             if not med_session or not target_user:
-                sys.stderr.write(f"[Vilora-Notify] Skipped session={session_id} user={target_user_id}: session or user not found\n")
-                sys.stderr.flush()
+                logger.warning(f"[Notify] Skipped session={session_id} user={target_user_id}: session or user not found")
                 _exec(db, "DELETE FROM pending_notifications WHERE id = ?", (pn_id,))
                 db.commit()
                 continue
@@ -1815,8 +1808,7 @@ def process_pending_notifications():
                         )
                     daily_count = cur6.fetchone()['cnt']
                     if daily_count < 6:
-                        sys.stderr.write(f"[Vilora-Notify] Sending email: session={session_id} to={target_user.email} from={other_name}\n")
-                        sys.stderr.flush()
+                        logger.info(f"[Notify] Sending email: session={session_id} to={target_user.email} from={other_name}")
                         success = send_activity_email(
                             target_user.email,
                             target_user.display_name,
@@ -1830,20 +1822,15 @@ def process_pending_notifications():
                                 (session_id, target_user_id)
                             )
                             db.commit()
-                            sys.stderr.write(f"[Vilora-Notify] Email sent successfully: session={session_id} to={target_user.email}\n")
-                            sys.stderr.flush()
+                            logger.info(f"[Notify] Email sent successfully: session={session_id} to={target_user.email}")
                         else:
-                            sys.stderr.write(f"[Vilora-Notify] Email send FAILED: session={session_id} to={target_user.email}\n")
-                            sys.stderr.flush()
+                            logger.error(f"[Notify] Email send FAILED: session={session_id} to={target_user.email}")
                     else:
-                        sys.stderr.write(f"[Vilora-Notify] Skipped email: session={session_id} user={target_user_id} daily cap reached ({daily_count}/6)\n")
-                        sys.stderr.flush()
+                        logger.info(f"[Notify] Skipped email: session={session_id} user={target_user_id} daily cap reached ({daily_count}/6)")
                 else:
-                    sys.stderr.write(f"[Vilora-Notify] Skipped email: session={session_id} user={target_user_id} already emailed this session in past 4h ({session_email_count})\n")
-                    sys.stderr.flush()
+                    logger.info(f"[Notify] Skipped email: session={session_id} user={target_user_id} already emailed this session in past 4h ({session_email_count})")
             else:
-                sys.stderr.write(f"[Vilora-Notify] Skipped email: session={session_id} user={target_user_id} email_enabled=False\n")
-                sys.stderr.flush()
+                logger.info(f"[Notify] Skipped email: session={session_id} user={target_user_id} email_enabled=False")
 
             # Check SMS frequency caps: max 1 per 6 hours per session, 4/day total
             if sms_enabled and phone_verified and phone_number:
@@ -1884,8 +1871,7 @@ def process_pending_notifications():
                                 (session_id, target_user_id)
                             )
                             db.commit()
-                            sys.stderr.write(f"[Vilora-Notify] SMS sent: session={session_id} to={phone_number}\n")
-                            sys.stderr.flush()
+                            logger.info(f"[Notify] SMS sent: session={session_id} to={phone_number}")
 
             # Delete the pending notification
             _exec(db, "DELETE FROM pending_notifications WHERE id = ?", (pn_id,))
@@ -1894,8 +1880,7 @@ def process_pending_notifications():
         return len(pending)
 
     except Exception as e:
-        sys.stderr.write(f"[Vilora-Notify] Worker error: {e}\n")
-        sys.stderr.flush()
+        logger.error(f"[Notify] Worker error: {e}")
         return -1
     finally:
         if db:
@@ -1919,19 +1904,15 @@ def start_notification_worker():
                 result = process_pending_notifications()
                 # Log heartbeat every 10 minutes (every 10th cycle) or when work was done
                 if result and result > 0:
-                    sys.stderr.write(f"[Vilora-Notify] Heartbeat cycle={cycle}: processed {result} notification(s)\n")
-                    sys.stderr.flush()
+                    logger.info(f"[Notify] Heartbeat cycle={cycle}: processed {result} notification(s)")
                 elif cycle % 10 == 0:
-                    sys.stderr.write(f"[Vilora-Notify] Heartbeat cycle={cycle}: no pending notifications\n")
-                    sys.stderr.flush()
+                    logger.info(f"[Notify] Heartbeat cycle={cycle}: no pending notifications")
             except Exception as e:
-                sys.stderr.write(f"[Vilora-Notify] Worker crash cycle={cycle}: {e}\n")
-                sys.stderr.flush()
+                logger.error(f"[Notify] Worker crash cycle={cycle}: {e}")
 
     t = threading.Thread(target=worker, daemon=True)
     t.start()
-    sys.stderr.write("[Vilora-Notify] Notification worker started.\n")
-    sys.stderr.flush()
+    logger.info("[Notify] Notification worker started.")
 
 
 # --- Init ---
