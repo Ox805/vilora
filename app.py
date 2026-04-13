@@ -1903,9 +1903,9 @@ def start_notification_worker():
             time.sleep(60)
             cycle += 1
             try:
-                # Log first 3 cycles and then every 10th to confirm thread is alive
-                if cycle <= 3:
-                    logger.info(f"[Notify] Worker alive cycle={cycle}, calling process_pending_notifications")
+                # Use both print and logger to diagnose which output channel works from threads
+                print(f"[Notify] Worker alive cycle={cycle}", flush=True)
+                logger.info(f"[Notify] Worker alive cycle={cycle}, calling process_pending_notifications")
                 result = process_pending_notifications()
                 if result and result > 0:
                     logger.info(f"[Notify] Heartbeat cycle={cycle}: processed {result} notification(s)")
@@ -1913,6 +1913,7 @@ def start_notification_worker():
                     logger.info(f"[Notify] Heartbeat cycle={cycle}: no pending notifications (result={result})")
             except Exception as e:
                 logger.error(f"[Notify] Worker crash cycle={cycle}: {e}", exc_info=True)
+                print(f"[Notify] Worker crash cycle={cycle}: {e}", flush=True)
 
     t = threading.Thread(target=worker, daemon=True)
     t.start()
