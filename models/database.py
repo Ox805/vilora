@@ -27,6 +27,23 @@ def get_db():
     return g.db
 
 
+def get_worker_db():
+    """Create a standalone DB connection for background threads (not tied to Flask's g)."""
+    if _is_postgres():
+        import psycopg2
+        db_url = os.environ.get('DATABASE_URL')
+        conn = psycopg2.connect(db_url)
+        conn.autocommit = False
+        return conn
+    else:
+        root_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        db_path = os.path.join(root_path, 'vilora.db')
+        conn = sqlite3.connect(db_path)
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA foreign_keys = ON")
+        return conn
+
+
 def _cursor(db):
     """Get a cursor that returns dict-like rows for both SQLite and PostgreSQL."""
     if _is_postgres():

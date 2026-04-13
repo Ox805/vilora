@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime, timedelta
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
-from models.database import db_init, get_db, _exec, _is_postgres, User, MediationSession, Message, MessageReaction
+from models.database import db_init, get_db, get_worker_db, _exec, _is_postgres, User, MediationSession, Message, MessageReaction
 from mediation.engine import MediationEngine
 from notifications import send_invite_email, send_password_reset_email, send_nudge_email, send_verification_email, send_activity_email
 from sms import send_sms, send_verification_sms, send_activity_sms, generate_verification_code
@@ -1659,6 +1659,8 @@ def queue_pending_notifications(db, session_id, sender_user_id):
     try:
         med_session = MediationSession.get_by_id(db, session_id)
         if not med_session:
+            sys.stderr.write(f"[Vilora-Notify] Queue skipped: session {session_id} not found\n")
+            sys.stderr.flush()
             return
         # Only for group sessions
         if med_session.session_mode == 'personal':
@@ -1668,7 +1670,6 @@ def queue_pending_notifications(db, session_id, sender_user_id):
         for p in participants:
             if p.id == sender_user_id:
                 continue
-            # Insert or ignore (if already pending for this session+user)
             try:
                 _exec(db,
                     """INSERT INTO pending_notifications (session_id, target_user_id, triggered_at)
@@ -1678,191 +1679,230 @@ def queue_pending_notifications(db, session_id, sender_user_id):
                     (session_id, p.id)
                 )
                 db.commit()
-            except Exception:
+                sys.stderr.write(f"[Vilora-Notify] Queued notification: session={session_id} target_user={p.id} sender={sender_user_id}\n")
+                sys.stderr.flush()
+            except Exception as e:
                 db.rollback()
+                sys.stderr.write(f"[Vilora-Notify] FAILED to queue notification: session={session_id} target_user={p.id} error={e}\n")
+                sys.stderr.flush()
     except Exception as e:
-        sys.stderr.write(f"[Vilora] Error queuing notifications: {e}\n")
+        sys.stderr.write(f"[Vilora-Notify] Error queuing notifications: {e}\n")
+        sys.stderr.flush()
 
 
 def process_pending_notifications():
     """Process pending notifications older than 60 minutes. Called by background worker."""
-    import threading
-    with app.app_context():
-        try:
-            db = get_db()
+    db = None
+    try:
+        db = get_worker_db()
 
-            # Find pending notifications older than 60 minutes
-            if _is_postgres():
-                cur = _exec(db,
-                    """SELECT pn.id, pn.session_id, pn.target_user_id, pn.triggered_at
-                       FROM pending_notifications pn
-                       WHERE pn.triggered_at < CURRENT_TIMESTAMP - INTERVAL '60 minutes'"""
-                )
-            else:
-                cur = _exec(db,
-                    """SELECT pn.id, pn.session_id, pn.target_user_id, pn.triggered_at
-                       FROM pending_notifications pn
-                       WHERE pn.triggered_at < datetime('now', '-60 minutes')"""
-                )
+        # Find pending notifications older than 60 minutes
+        if _is_postgres():
+            cur = _exec(db,
+                """SELECT pn.id, pn.session_id, pn.target_user_id, pn.triggered_at
+                   FROM pending_notifications pn
+                   WHERE pn.triggered_at < CURRENT_TIMESTAMP - INTERVAL '60 minutes'"""
+            )
+        else:
+            cur = _exec(db,
+                """SELECT pn.id, pn.session_id, pn.target_user_id, pn.triggered_at
+                   FROM pending_notifications pn
+                   WHERE pn.triggered_at < datetime('now', '-60 minutes')"""
+            )
 
-            pending = cur.fetchall()
-            if not pending:
-                return
+        pending = cur.fetchall()
+        if not pending:
+            return 0
 
-            for row in pending:
-                pn_id = row['id']
-                session_id = row['session_id']
-                target_user_id = row['target_user_id']
+        sys.stderr.write(f"[Vilora-Notify] Processing {len(pending)} pending notification(s)\n")
+        sys.stderr.flush()
 
-                # Check if user has visited since the notification was triggered
-                cur2 = _exec(db,
-                    """SELECT last_seen_at FROM session_last_seen
-                       WHERE session_id = ? AND user_id = ?""",
-                    (session_id, target_user_id)
-                )
-                last_seen = cur2.fetchone()
-                if last_seen and str(last_seen['last_seen_at']) > str(row['triggered_at']):
-                    # User already saw it, delete pending
-                    _exec(db, "DELETE FROM pending_notifications WHERE id = ?", (pn_id,))
-                    db.commit()
-                    continue
+        for row in pending:
+            pn_id = row['id']
+            session_id = row['session_id']
+            target_user_id = row['target_user_id']
+            triggered_at = row['triggered_at']
 
-                # Get notification preferences
-                cur3 = _exec(db,
-                    "SELECT * FROM notification_preferences WHERE user_id = ?",
-                    (target_user_id,)
-                )
-                prefs = cur3.fetchone()
-                email_enabled = True  # default on
-                sms_enabled = False
-                phone_number = None
-                phone_verified = False
-                if prefs:
-                    email_enabled = bool(prefs['email_enabled'])
-                    sms_enabled = bool(prefs['sms_enabled'])
-                    phone_number = prefs['phone_number']
-                    phone_verified = bool(prefs['phone_verified'])
-
-                # Get session and user details
-                med_session = MediationSession.get_by_id(db, session_id)
-                target_user = User.get_by_id(db, target_user_id)
-                if not med_session or not target_user:
-                    _exec(db, "DELETE FROM pending_notifications WHERE id = ?", (pn_id,))
-                    db.commit()
-                    continue
-
-                # Find who sent the most recent message (for the email)
-                cur4 = _exec(db,
-                    """SELECT user_id FROM messages
-                       WHERE session_id = ? AND user_id IS NOT NULL AND user_id != ?
-                       ORDER BY created_at DESC LIMIT 1""",
-                    (session_id, target_user_id)
-                )
-                sender_row = cur4.fetchone()
-                other_name = 'Someone'
-                if sender_row:
-                    sender = User.get_by_id(db, sender_row['user_id'])
-                    if sender:
-                        other_name = sender.display_name
-
-                base_url = os.environ.get('BASE_URL', 'https://www.vilora.io')
-                session_link = f"{base_url}/session/{session_id}"
-
-                # Check email frequency caps: max 1 per 4 hours per session, 8/day total
-                if email_enabled:
-                    if _is_postgres():
-                        cur5 = _exec(db,
-                            """SELECT COUNT(*) as cnt FROM notification_log
-                               WHERE user_id = ? AND session_id = ? AND channel = 'email'
-                               AND created_at > CURRENT_TIMESTAMP - INTERVAL '4 hours'""",
-                            (target_user_id, session_id)
-                        )
-                    else:
-                        cur5 = _exec(db,
-                            """SELECT COUNT(*) as cnt FROM notification_log
-                               WHERE user_id = ? AND session_id = ? AND channel = 'email'
-                               AND created_at > datetime('now', '-4 hours')""",
-                            (target_user_id, session_id)
-                        )
-                    if cur5.fetchone()['cnt'] == 0:
-                        # Check daily cap
-                        if _is_postgres():
-                            cur6 = _exec(db,
-                                """SELECT COUNT(*) as cnt FROM notification_log
-                                   WHERE user_id = ? AND channel = 'email'
-                                   AND created_at > CURRENT_TIMESTAMP - INTERVAL '24 hours'""",
-                                (target_user_id,)
-                            )
-                        else:
-                            cur6 = _exec(db,
-                                """SELECT COUNT(*) as cnt FROM notification_log
-                                   WHERE user_id = ? AND channel = 'email'
-                                   AND created_at > datetime('now', '-24 hours')""",
-                                (target_user_id,)
-                            )
-                        if cur6.fetchone()['cnt'] < 6:
-                            success = send_activity_email(
-                                target_user.email,
-                                target_user.display_name,
-                                other_name,
-                                med_session.topic,
-                                session_link
-                            )
-                            if success:
-                                _exec(db,
-                                    "INSERT INTO notification_log (session_id, user_id, channel) VALUES (?, ?, 'email')",
-                                    (session_id, target_user_id)
-                                )
-                                db.commit()
-                                sys.stderr.write(f"[Vilora] Activity email sent to {target_user.email} for session {session_id}\n")
-
-                # Check SMS frequency caps: max 1 per 6 hours per session, 4/day total
-                if sms_enabled and phone_verified and phone_number:
-                    if _is_postgres():
-                        cur7 = _exec(db,
-                            """SELECT COUNT(*) as cnt FROM notification_log
-                               WHERE user_id = ? AND session_id = ? AND channel = 'sms'
-                               AND created_at > CURRENT_TIMESTAMP - INTERVAL '6 hours'""",
-                            (target_user_id, session_id)
-                        )
-                    else:
-                        cur7 = _exec(db,
-                            """SELECT COUNT(*) as cnt FROM notification_log
-                               WHERE user_id = ? AND session_id = ? AND channel = 'sms'
-                               AND created_at > datetime('now', '-6 hours')""",
-                            (target_user_id, session_id)
-                        )
-                    if cur7.fetchone()['cnt'] == 0:
-                        if _is_postgres():
-                            cur8 = _exec(db,
-                                """SELECT COUNT(*) as cnt FROM notification_log
-                                   WHERE user_id = ? AND channel = 'sms'
-                                   AND created_at > CURRENT_TIMESTAMP - INTERVAL '24 hours'""",
-                                (target_user_id,)
-                            )
-                        else:
-                            cur8 = _exec(db,
-                                """SELECT COUNT(*) as cnt FROM notification_log
-                                   WHERE user_id = ? AND channel = 'sms'
-                                   AND created_at > datetime('now', '-24 hours')""",
-                                (target_user_id,)
-                            )
-                        if cur8.fetchone()['cnt'] < 4:
-                            success = send_activity_sms(phone_number, med_session.topic, session_link)
-                            if success:
-                                _exec(db,
-                                    "INSERT INTO notification_log (session_id, user_id, channel) VALUES (?, ?, 'sms')",
-                                    (session_id, target_user_id)
-                                )
-                                db.commit()
-                                sys.stderr.write(f"[Vilora] Activity SMS sent to {phone_number} for session {session_id}\n")
-
-                # Delete the pending notification
+            # Check if user has visited since the notification was triggered
+            cur2 = _exec(db,
+                """SELECT last_seen_at FROM session_last_seen
+                   WHERE session_id = ? AND user_id = ?""",
+                (session_id, target_user_id)
+            )
+            last_seen = cur2.fetchone()
+            if last_seen and str(last_seen['last_seen_at']) > str(triggered_at):
+                sys.stderr.write(f"[Vilora-Notify] Skipped session={session_id} user={target_user_id}: visited since trigger (last_seen={last_seen['last_seen_at']} > triggered={triggered_at})\n")
+                sys.stderr.flush()
                 _exec(db, "DELETE FROM pending_notifications WHERE id = ?", (pn_id,))
                 db.commit()
+                continue
 
-        except Exception as e:
-            sys.stderr.write(f"[Vilora] Notification worker error: {e}\n")
+            # Get notification preferences
+            cur3 = _exec(db,
+                "SELECT * FROM notification_preferences WHERE user_id = ?",
+                (target_user_id,)
+            )
+            prefs = cur3.fetchone()
+            email_enabled = True  # default on
+            sms_enabled = False
+            phone_number = None
+            phone_verified = False
+            if prefs:
+                email_enabled = bool(prefs['email_enabled'])
+                sms_enabled = bool(prefs['sms_enabled'])
+                phone_number = prefs['phone_number']
+                phone_verified = bool(prefs['phone_verified'])
+
+            # Get session and user details
+            med_session = MediationSession.get_by_id(db, session_id)
+            target_user = User.get_by_id(db, target_user_id)
+            if not med_session or not target_user:
+                sys.stderr.write(f"[Vilora-Notify] Skipped session={session_id} user={target_user_id}: session or user not found\n")
+                sys.stderr.flush()
+                _exec(db, "DELETE FROM pending_notifications WHERE id = ?", (pn_id,))
+                db.commit()
+                continue
+
+            # Find who sent the most recent message (for the email)
+            cur4 = _exec(db,
+                """SELECT user_id FROM messages
+                   WHERE session_id = ? AND user_id IS NOT NULL AND user_id != ?
+                   ORDER BY created_at DESC LIMIT 1""",
+                (session_id, target_user_id)
+            )
+            sender_row = cur4.fetchone()
+            other_name = 'Someone'
+            if sender_row:
+                sender = User.get_by_id(db, sender_row['user_id'])
+                if sender:
+                    other_name = sender.display_name
+
+            base_url = os.environ.get('BASE_URL', 'https://www.vilora.io')
+            session_link = f"{base_url}/session/{session_id}"
+
+            # Check email frequency caps: max 1 per 4 hours per session, 6/day total
+            if email_enabled:
+                if _is_postgres():
+                    cur5 = _exec(db,
+                        """SELECT COUNT(*) as cnt FROM notification_log
+                           WHERE user_id = ? AND session_id = ? AND channel = 'email'
+                           AND created_at > CURRENT_TIMESTAMP - INTERVAL '4 hours'""",
+                        (target_user_id, session_id)
+                    )
+                else:
+                    cur5 = _exec(db,
+                        """SELECT COUNT(*) as cnt FROM notification_log
+                           WHERE user_id = ? AND session_id = ? AND channel = 'email'
+                           AND created_at > datetime('now', '-4 hours')""",
+                        (target_user_id, session_id)
+                    )
+                session_email_count = cur5.fetchone()['cnt']
+                if session_email_count == 0:
+                    # Check daily cap
+                    if _is_postgres():
+                        cur6 = _exec(db,
+                            """SELECT COUNT(*) as cnt FROM notification_log
+                               WHERE user_id = ? AND channel = 'email'
+                               AND created_at > CURRENT_TIMESTAMP - INTERVAL '24 hours'""",
+                            (target_user_id,)
+                        )
+                    else:
+                        cur6 = _exec(db,
+                            """SELECT COUNT(*) as cnt FROM notification_log
+                               WHERE user_id = ? AND channel = 'email'
+                               AND created_at > datetime('now', '-24 hours')""",
+                            (target_user_id,)
+                        )
+                    daily_count = cur6.fetchone()['cnt']
+                    if daily_count < 6:
+                        sys.stderr.write(f"[Vilora-Notify] Sending email: session={session_id} to={target_user.email} from={other_name}\n")
+                        sys.stderr.flush()
+                        success = send_activity_email(
+                            target_user.email,
+                            target_user.display_name,
+                            other_name,
+                            med_session.topic,
+                            session_link
+                        )
+                        if success:
+                            _exec(db,
+                                "INSERT INTO notification_log (session_id, user_id, channel) VALUES (?, ?, 'email')",
+                                (session_id, target_user_id)
+                            )
+                            db.commit()
+                            sys.stderr.write(f"[Vilora-Notify] Email sent successfully: session={session_id} to={target_user.email}\n")
+                            sys.stderr.flush()
+                        else:
+                            sys.stderr.write(f"[Vilora-Notify] Email send FAILED: session={session_id} to={target_user.email}\n")
+                            sys.stderr.flush()
+                    else:
+                        sys.stderr.write(f"[Vilora-Notify] Skipped email: session={session_id} user={target_user_id} daily cap reached ({daily_count}/6)\n")
+                        sys.stderr.flush()
+                else:
+                    sys.stderr.write(f"[Vilora-Notify] Skipped email: session={session_id} user={target_user_id} already emailed this session in past 4h ({session_email_count})\n")
+                    sys.stderr.flush()
+            else:
+                sys.stderr.write(f"[Vilora-Notify] Skipped email: session={session_id} user={target_user_id} email_enabled=False\n")
+                sys.stderr.flush()
+
+            # Check SMS frequency caps: max 1 per 6 hours per session, 4/day total
+            if sms_enabled and phone_verified and phone_number:
+                if _is_postgres():
+                    cur7 = _exec(db,
+                        """SELECT COUNT(*) as cnt FROM notification_log
+                           WHERE user_id = ? AND session_id = ? AND channel = 'sms'
+                           AND created_at > CURRENT_TIMESTAMP - INTERVAL '6 hours'""",
+                        (target_user_id, session_id)
+                    )
+                else:
+                    cur7 = _exec(db,
+                        """SELECT COUNT(*) as cnt FROM notification_log
+                           WHERE user_id = ? AND session_id = ? AND channel = 'sms'
+                           AND created_at > datetime('now', '-6 hours')""",
+                        (target_user_id, session_id)
+                    )
+                if cur7.fetchone()['cnt'] == 0:
+                    if _is_postgres():
+                        cur8 = _exec(db,
+                            """SELECT COUNT(*) as cnt FROM notification_log
+                               WHERE user_id = ? AND channel = 'sms'
+                               AND created_at > CURRENT_TIMESTAMP - INTERVAL '24 hours'""",
+                            (target_user_id,)
+                        )
+                    else:
+                        cur8 = _exec(db,
+                            """SELECT COUNT(*) as cnt FROM notification_log
+                               WHERE user_id = ? AND channel = 'sms'
+                               AND created_at > datetime('now', '-24 hours')""",
+                            (target_user_id,)
+                        )
+                    if cur8.fetchone()['cnt'] < 4:
+                        success = send_activity_sms(phone_number, med_session.topic, session_link)
+                        if success:
+                            _exec(db,
+                                "INSERT INTO notification_log (session_id, user_id, channel) VALUES (?, ?, 'sms')",
+                                (session_id, target_user_id)
+                            )
+                            db.commit()
+                            sys.stderr.write(f"[Vilora-Notify] SMS sent: session={session_id} to={phone_number}\n")
+                            sys.stderr.flush()
+
+            # Delete the pending notification
+            _exec(db, "DELETE FROM pending_notifications WHERE id = ?", (pn_id,))
+            db.commit()
+
+        return len(pending)
+
+    except Exception as e:
+        sys.stderr.write(f"[Vilora-Notify] Worker error: {e}\n")
+        sys.stderr.flush()
+        return -1
+    finally:
+        if db:
+            try:
+                db.close()
+            except Exception:
+                pass
 
 
 def start_notification_worker():
@@ -1871,16 +1911,27 @@ def start_notification_worker():
     import time
 
     def worker():
+        cycle = 0
         while True:
             time.sleep(60)
+            cycle += 1
             try:
-                process_pending_notifications()
+                result = process_pending_notifications()
+                # Log heartbeat every 10 minutes (every 10th cycle) or when work was done
+                if result and result > 0:
+                    sys.stderr.write(f"[Vilora-Notify] Heartbeat cycle={cycle}: processed {result} notification(s)\n")
+                    sys.stderr.flush()
+                elif cycle % 10 == 0:
+                    sys.stderr.write(f"[Vilora-Notify] Heartbeat cycle={cycle}: no pending notifications\n")
+                    sys.stderr.flush()
             except Exception as e:
-                sys.stderr.write(f"[Vilora] Notification worker crash: {e}\n")
+                sys.stderr.write(f"[Vilora-Notify] Worker crash cycle={cycle}: {e}\n")
+                sys.stderr.flush()
 
     t = threading.Thread(target=worker, daemon=True)
     t.start()
-    sys.stderr.write("[Vilora] Notification worker started.\n")
+    sys.stderr.write("[Vilora-Notify] Notification worker started.\n")
+    sys.stderr.flush()
 
 
 # --- Init ---
