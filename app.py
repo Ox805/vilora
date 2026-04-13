@@ -1652,6 +1652,54 @@ def get_summary(session_id):
     return jsonify({'success': True, 'summary': summary})
 
 
+# --- Notification Diagnostics ---
+
+# Track worker health from the daemon thread
+_notification_worker_state = {'cycle': 0, 'last_run': None, 'last_error': None, 'last_result': None}
+
+
+@app.route('/api/admin/notification-diagnostics')
+@login_required
+def notification_diagnostics():
+    """Diagnostic endpoint to check notification system health."""
+    db = get_db()
+
+    # Check pending notifications
+    cur = _exec(db, "SELECT * FROM pending_notifications ORDER BY triggered_at DESC")
+    pending = [dict(r) for r in cur.fetchall()]
+    for p in pending:
+        for k, v in p.items():
+            if not isinstance(v, (str, int, float, bool, type(None))):
+                p[k] = str(v)
+
+    # Check recent notification log
+    if _is_postgres():
+        cur2 = _exec(db,
+            """SELECT nl.*, u.email, u.display_name
+               FROM notification_log nl
+               JOIN users u ON nl.user_id = u.id
+               ORDER BY nl.created_at DESC LIMIT 20"""
+        )
+    else:
+        cur2 = _exec(db,
+            """SELECT nl.*, u.email, u.display_name
+               FROM notification_log nl
+               JOIN users u ON nl.user_id = u.id
+               ORDER BY nl.created_at DESC LIMIT 20"""
+        )
+    recent_logs = [dict(r) for r in cur2.fetchall()]
+    for r in recent_logs:
+        for k, v in r.items():
+            if not isinstance(v, (str, int, float, bool, type(None))):
+                r[k] = str(v)
+
+    return jsonify({
+        'worker_state': _notification_worker_state,
+        'pending_notifications': pending,
+        'recent_notification_log': recent_logs,
+    })
+
+
 # --- Notification Helpers ---
 
 def queue_pending_notifications(db, session_id, sender_user_id):
@@ -1903,17 +1951,15 @@ def start_notification_worker():
             time.sleep(60)
             cycle += 1
             try:
-                # Use both print and logger to diagnose which output channel works from threads
-                print(f"[Notify] Worker alive cycle={cycle}", flush=True)
-                logger.info(f"[Notify] Worker alive cycle={cycle}, calling process_pending_notifications")
+                from datetime import datetime
+                _notification_worker_state['cycle'] = cycle
+                _notification_worker_state['last_run'] = datetime.utcnow().isoformat()
                 result = process_pending_notifications()
-                if result and result > 0:
-                    logger.info(f"[Notify] Heartbeat cycle={cycle}: processed {result} notification(s)")
-                elif cycle <= 3 or cycle % 10 == 0:
-                    logger.info(f"[Notify] Heartbeat cycle={cycle}: no pending notifications (result={result})")
+                _notification_worker_state['last_result'] = result
+                _notification_worker_state['last_error'] = None
             except Exception as e:
+                _notification_worker_state['last_error'] = str(e)
                 logger.error(f"[Notify] Worker crash cycle={cycle}: {e}", exc_info=True)
-                print(f"[Notify] Worker crash cycle={cycle}: {e}", flush=True)
 
     t = threading.Thread(target=worker, daemon=True)
     t.start()
