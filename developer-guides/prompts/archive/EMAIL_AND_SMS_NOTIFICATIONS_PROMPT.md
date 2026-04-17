@@ -1,7 +1,7 @@
 # Email & SMS Notifications — Session Invites, Updates & Alerts
 
 **Created:** March 30, 2026
-**Last Updated:** April 8, 2026
+**Last Updated:** April 17, 2026
 **Status:** Implemented
 **Dependencies:** SendGrid account, Twilio account (for SMS)
 **Priority:** High — Enables invite delivery, engagement, and re-engagement without copy-paste
@@ -297,9 +297,124 @@ CREATE TABLE notification_log (
 | 2026-04-01 | Phase 1 implemented — SendGrid integration, branded invite emails, password reset migrated from Flask-Mail |
 | 2026-04-02 | SendGrid account set up via GCP Marketplace, maiatech.ai domain authentication in progress |
 | 2026-04-08 | Status updated to Implemented |
+| 2026-04-13 | Notification outage investigation began -- emails stopped being delivered |
+| 2026-04-13 | Added `get_worker_db()` to fix DB connection leak in background thread |
+| 2026-04-13 | Added `PYTHONUNBUFFERED=1` to Railway env vars (required for daemon thread log visibility) |
+| 2026-04-13 | Added diagnostic logging throughout notification pipeline |
+| 2026-04-13 | Added `/api/admin/notification-diagnostics` endpoint |
+| 2026-04-17 | Confirmed notifications working end-to-end after full diagnosis |
+| 2026-04-17 | Dashboard now polls every 30s for unread updates (was load-once only) |
+| 2026-04-17 | Replaced 8px green dot with numbered unread badge |
 
 ---
 
 ## Implementation Summary
 
 Full email notification system implemented via SendGrid: session invites, password reset (migrated from Flask-Mail), activity alerts, email verification, and nudges. Full SMS notification system implemented via Twilio: phone verification with 6-digit codes (10-minute expiry), activity alerts. Background notification worker runs as a daemon thread with 60-second polling interval. Frequency capping enforced: 60-minute quiet window per session, 4-hour per-session cap, 6 notifications per day. Notification preferences UI added to settings page with independent email/SMS toggles.
+
+---
+
+## Notification Outage: April 8-17, 2026
+
+### Timeline
+
+- **April 5-8:** Notifications working normally. Emails delivered for sessions 16, 18, 20.
+- **April 8:** Last successful email notification (session 16 to user 9).
+- **April 9:** Railway deployment restarted. Worker started, sent one queued email (session 21), then produced no further visible output.
+- **April 12-13:** User reported not receiving email for session 21 despite 10+ hours of inactivity. Investigation began.
+- **April 13:** Initial fixes deployed (DB connection, logging). Worker appeared healthy but found 0 pending notifications. Issue declared "instrumented" but not confirmed fixed.
+- **April 16:** Message posted to session 16 (POST returned 200). No email sent. No queue log visible.
+- **April 17:** Full diagnosis via `/api/admin/notification-diagnostics`. Confirmed session 16 is mediation mode with 2 participants. Deployed fix, user posted test message, notification queued, email delivered at 17:58 UTC.
+
+### Root Causes
+
+**1. `PYTHONUNBUFFERED=1` missing from Railway environment**
+
+This was the primary issue blocking diagnosis. Without this env var, Python buffers stdout/stderr in non-interactive mode (containers). The gunicorn master process flushes output during startup, so boot-time messages appeared. But the daemon thread's `sys.stderr.write()` and `logging` output sat in an unflushed buffer indefinitely. This made the notification worker completely invisible in Railway deploy logs -- no heartbeats, no errors, no success messages. The worker could have been running fine, crashing every cycle, or dead, and there was no way to tell.
+
+**Key lesson:** Always set `PYTHONUNBUFFERED=1` in Railway (or any containerized Python deployment) when using background threads.
+
+**2. DB connection leak via Flask's `g` object**
+
+The original `process_pending_notifications()` used `get_db()` inside `with app.app_context()`. `get_db()` stores connections in Flask's request-scoped `g` object. In a background thread:
+- Each call created a new `app_context()` and a new DB connection
+- When the context exited, `g` was torn down but the connection was NOT closed (no `teardown_appcontext` handler)
+- Over days of running every 60 seconds, this leaked thousands of Postgres connections
+- Eventually Postgres would reject new connections (`max_connections` exceeded)
+
+**Fix:** Created `get_worker_db()` in `models/database.py` that creates a standalone connection not tied to Flask's `g`. The worker opens a connection, does its work, and closes it in a `finally` block every cycle.
+
+**3. Silent exception swallowing in `queue_pending_notifications`**
+
+The original inner exception handler was:
+```python
+except Exception:
+    db.rollback()
+```
+
+No logging. If the INSERT into `pending_notifications` failed for any reason (connection issue, constraint violation, transaction state), the error was silently swallowed. The notification was never queued and there was no trace of the failure.
+
+**Fix:** Added `logger.error()` to all exception handlers in the notification pipeline.
+
+**4. Dashboard never refreshed unread counts**
+
+`loadSessions()` was called once on page load and never again. If a message arrived while the user was on the dashboard, the unread badge would not appear until a manual page refresh. Users perceived this as "in-app notifications not working."
+
+**Fix:** Added `setInterval(loadSessions, 30000)` to poll every 30 seconds.
+
+**5. Unread indicator too subtle**
+
+The original indicator was an 8px green dot next to the session type badge -- easy to miss.
+
+**Fix:** Replaced with a numbered badge (white text on green pill showing the count, e.g., "3") and added a green background tint to session cards with unread messages.
+
+### What Made This Hard to Diagnose
+
+1. **No observability into the worker.** Without `PYTHONUNBUFFERED`, the daemon thread was a black box. The worker could run for days with zero log output.
+2. **Railway deploy log retention is limited.** Even after fixing the buffering, verbose worker logs ("Connecting.../Connected..." every 60 seconds) filled Railway's log retention and pushed out the actual notification events. This made it appear that notifications were never queued when they may have been.
+3. **Multiple interacting failure modes.** The buffering issue, DB leak, silent exceptions, and dashboard polling were all contributing simultaneously. Fixing one didn't visibly improve things because the others masked it.
+4. **60-minute processing delay.** The notification system intentionally waits 60 minutes before sending. This meant every test required waiting an hour for results, making iterative debugging very slow.
+5. **`last_seen_at` skip logic.** If the user visits the session at any point between message posting and the 60-minute processing window, the notification is silently cancelled. This is working as designed but makes testing tricky -- you must stay out of the session for a full hour.
+
+### Diagnostic Tools Added
+
+**`/api/admin/notification-diagnostics`** (login required) returns:
+- `worker_state`: cycle count, last run timestamp, last error, last result
+- `pending_notifications`: all currently queued notifications
+- `recent_notification_log`: last 20 sent notifications with user details
+- `sessions`: all sessions with mode, participant count, `last_seen_at`, latest message timestamp
+
+**Logging throughout the pipeline:**
+- `[Notify] Queued: session=X target_user=Y sender=Z` -- when notification is inserted
+- `[Notify] FAILED to queue: ...` -- when INSERT fails
+- `[Notify] Processing N pending notification(s)` -- when worker finds work
+- `[Notify] Skipped ... visited since trigger` -- when user already saw it
+- `[Notify] Sending email: ...` / `Email sent successfully` / `Email send FAILED`
+- `[Notify] Skipped email: daily cap / session cap / email_enabled=False`
+
+### Checklist for Future Notification Issues
+
+If notifications stop working again:
+
+1. **Check `/api/admin/notification-diagnostics`** (while logged in). Look at:
+   - `worker_state.cycle` -- is it advancing? If stuck at 0, worker never started.
+   - `worker_state.last_run` -- is it recent? If stale, worker thread died.
+   - `worker_state.last_error` -- any crash message?
+   - `pending_notifications` -- are notifications queued but not processed?
+   - `recent_notification_log` -- when was the last email sent?
+
+2. **Check Railway deploy logs** (`railway logs --filter "Notify"`). Look for:
+   - "Queued" entries when messages are posted
+   - "Processing" entries from the worker
+   - "Skipped" entries explaining why notifications were not sent
+   - Error/crash entries
+
+3. **Check the session mode.** Personal-mode sessions (`session_mode = 'personal'`) never queue notifications. This is by design.
+
+4. **Check `PYTHONUNBUFFERED=1`** is set in Railway env vars. Without it, daemon thread output is invisible.
+
+5. **Check `SENDGRID_API_KEY`** is set. Without it, emails log to stderr instead of sending (graceful degradation, but no actual delivery).
+
+6. **Remember the 60-minute delay.** Notifications are not sent until 60 minutes after `triggered_at`. If the user visits the session during that window, the notification is cancelled. Each new message resets the 60-minute clock.
+
+7. **Check frequency caps.** Max 1 email per 4 hours per session, max 6 emails per 24 hours per user. Check `notification_log` timestamps to see if caps were hit.
