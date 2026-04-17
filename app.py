@@ -1693,10 +1693,33 @@ def notification_diagnostics():
             if not isinstance(v, (str, int, float, bool, type(None))):
                 r[k] = str(v)
 
+    # Session info (modes, participants, unread counts)
+    cur3 = _exec(db, "SELECT id, topic, session_mode, session_type FROM mediation_sessions ORDER BY id")
+    sessions_info = []
+    for s in cur3.fetchall():
+        s_dict = dict(s)
+        for k, v in s_dict.items():
+            if not isinstance(v, (str, int, float, bool, type(None))):
+                s_dict[k] = str(v)
+        # Get participant count
+        cur4 = _exec(db, "SELECT COUNT(*) as cnt FROM session_participants WHERE session_id = ?", (s['id'],))
+        s_dict['participant_count'] = cur4.fetchone()['cnt']
+        # Get last_seen_at for current user
+        cur5 = _exec(db, "SELECT last_seen_at FROM session_last_seen WHERE session_id = ? AND user_id = ?",
+                      (s['id'], current_user.id))
+        ls = cur5.fetchone()
+        s_dict['my_last_seen_at'] = str(ls['last_seen_at']) if ls else None
+        # Get latest message timestamp
+        cur6 = _exec(db, "SELECT created_at FROM messages WHERE session_id = ? ORDER BY created_at DESC LIMIT 1", (s['id'],))
+        lm = cur6.fetchone()
+        s_dict['latest_message_at'] = str(lm['created_at']) if lm else None
+        sessions_info.append(s_dict)
+
     return jsonify({
         'worker_state': _notification_worker_state,
         'pending_notifications': pending,
         'recent_notification_log': recent_logs,
+        'sessions': sessions_info,
     })
 
 
