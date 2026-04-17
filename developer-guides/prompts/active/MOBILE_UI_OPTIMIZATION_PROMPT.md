@@ -1,7 +1,7 @@
 # Mobile UI Optimization
 
 **Created:** April 2, 2026
-**Last Updated:** April 8, 2026
+**Last Updated:** April 17, 2026
 **Status:** Largely Complete (Phase 2 major session room redesign pending)
 **Dependencies:** None (can begin independently)
 **Priority:** High. Majority of consumer app usage happens on mobile. Current UI is desktop-first.
@@ -191,10 +191,16 @@ Remove visual chrome from the message list to maximize space, following ChatGPT'
 - Add-reaction button (smiley) is always visible on touch devices (no hover) -- already implemented
 - Verify picker doesn't overlap the input area or get hidden behind the keyboard
 
-#### 2.5 Invite Banner
+#### 2.5 Invite Banner (Critical -- See April 17 Screenshot)
 
-- The link input + Copy + Send Invite row needs to stack on mobile
-- Recommendation: Stack vertically (full-width input, buttons below)
+The invite banner is the single biggest mobile space offender. On iPhone 12, it shows all of: email input, "Text Invite" option, the full session URL, a Copy button, and a Share section. This pushes chat messages entirely off screen.
+
+**Options (pick one):**
+- **(a) Collapse by default:** Show a single compact "Invite a participant" button/link in the header area. Tapping it expands the banner or opens a modal with the invite options. After the session has 2+ participants, hide it entirely.
+- **(b) Modal/bottom sheet:** Move the entire invite flow into a modal (triggered from header). The session room shows zero invite UI by default.
+- **(c) Auto-dismiss:** Show the banner once on first visit. After the user copies or sends an invite, collapse it to a small "Invite" link. Subsequent visits show just the link.
+
+Recommendation: Option (b) -- move to modal. This matches the mobile pattern of progressive disclosure and keeps the session room focused on chat.
 
 #### 2.6 Summary and Council Panels
 
@@ -405,6 +411,7 @@ All mobile CSS should be added to the existing `@media (max-width: 768px)` block
 
 - **Design Reference:** `developer-guides/architecture/design-reference.md`
 - **Application Architecture:** `developer-guides/architecture/application-architecture.md`
+- **Mobile Audit Command:** `.claude/commands/mobile-audit.md` -- Runnable audit checklist (best from VS Code extension with Puppeteer). Covers viewport meta tags, CSS breakpoint scan, touch target checks, template-by-template review, JS component audit (voice.js, polish.js, api.js scroll lock), and Puppeteer screenshot verification at 375px/1280px. Includes WSL-specific Puppeteer setup instructions. Run this after making changes.
 - **Apple HIG Touch Targets:** 44x44pt minimum
 - **Google Material Design:** 48x48dp recommended touch target
 
@@ -414,7 +421,8 @@ These screenshots were captured on a real iPhone 12 and serve as reference for m
 
 | Screenshot | File | Key Observations |
 |------------|------|-----------------|
-| **Vilora session** | `vilora-session-iphone12.png` | Footer visible in chat view (~60px wasted). Three outlined action buttons take full row. Topic wraps to 2 lines. "Ask Vilora to weigh in" is a bordered pill button. Message list has visible border/padding. Emoji reaction smiley is visible below messages. |
+| **Vilora session (April 4)** | `vilora-session-iphone12.png` | Footer visible in chat view (~60px wasted). Three outlined action buttons take full row. Topic wraps to 2 lines. "Ask Vilora to weigh in" is a bordered pill button. Message list has visible border/padding. Emoji reaction smiley is visible below messages. |
+| **Vilora session (April 17)** | `vilora-session-iphone12-2026-04-17.png` | Updated screenshot showing current state. Issues visible: (1) Invite banner takes up massive screen real estate with email input, text invite, URL field, Copy button, and Share section all visible at once -- pushes chat content off screen entirely. (2) Message input area ("Share your thoughts") is barely visible at bottom. (3) Topic title truncated but still takes significant space. (4) "2 participants / Council / Summary" links row visible. (5) Polish/Bold/Underline formatting toolbar visible inside input area. (6) "Ask Vilora to weigh in" and "Ask the Council to weigh in" both shown as full-width buttons at very bottom. (7) Overall: on a real iPhone 12, the invite banner + header consume nearly the entire viewport, leaving almost no space for actual chat messages. |
 | **ChatGPT chat** | `chatgpt-chat-iphone12.png` | Input bar flush at bottom, no footer, no extra buttons. Messages edge-to-edge with minimal padding. Header is one thin row. "Ask anything" input is clean with just mic and voice icons. No visible container borders. Disclaimer text is tiny and unobtrusive. |
 | **Claude home** | `claude-home-iphone12.png` | Extremely clean and spacious. Minimal navigation chrome. Large greeting text, single input area. Action chips below input are compact text with small icons. No borders, no outlines on secondary actions. Warm background with no visual noise. |
 
@@ -452,6 +460,8 @@ These screenshots were captured on a real iPhone 12 and serve as reference for m
 | ~~Only one breakpoint~~ | style.css | **FIXED 2026-04-03** | 480px breakpoint now exists |
 | Tone chips don't reflow | dashboard.html | OPEN | Chips are 140-200px wide. On 375px minus padding = 343px. Chips wrap unpredictably |
 | ~~No word-break on messages~~ | `.message` | **FIXED 2026-04-03** | Added `word-break: break-word` |
+| Invite banner dominates mobile viewport | session.html / style.css | OPEN | **Most critical mobile issue (April 17 screenshot).** The invite banner shows email input, text invite field, full URL, Copy button, and Share section all at once. On iPhone 12, this consumes nearly the entire viewport, pushing chat messages completely off screen. The banner should either: (a) collapse to a single "Invite" button that expands on tap, (b) move to a modal/bottom sheet, or (c) auto-dismiss after first use and be accessible from the header. See `vilora-session-iphone12-2026-04-17.png`. |
+| "Ask Vilora" + "Ask Council" both full-width buttons | session.html | OPEN | Both action buttons shown as full-width bordered buttons at the bottom of the session on mobile. Together they consume ~72px. Should be compact text links or a single row with two small links. |
 | Footer visible in session chat | base.html / style.css | OPEN | Footer ("Vilora \| Strength through dialogue" + tagline) is visible in the session page on mobile, wasting ~60px. ChatGPT and Claude hide footers entirely in chat views. Should be hidden on session page on mobile. See competitor screenshots. |
 | Session header wastes space | session.html | OPEN | Header stacks to 2 rows on mobile (~70px). Should be single compact row (~36px). See Phase 2.1 |
 | Action buttons too heavy | session.html | OPEN | "Participants", "Council", "Summary" use outlined `btn-sm` on mobile. Should be plain text links. See Phase 2.1 |
@@ -498,6 +508,7 @@ Available width: 375px
 | 2026-04-04 | Major rewrite of Phase 2 (Session Room): new "maximize chat space" direction. Single-row header with ellipsis title + text-link actions. Edge-to-edge message list (no border/padding). "Ask Vilora" as text link not button. Space budget analysis. Reference table of ChatGPT/iMessage/WhatsApp mobile patterns. Updated all audit findings with fix status and dates. Added new HIGH issues for header/button/message-list space waste |
 | 2026-04-04 | Audit run: **Fixed** inline max-width styles on modals overriding mobile CSS (added `!important` to `.modal-content` max-width at both 768px and 480px breakpoints — inline styles like `max-width: 460px/480px/500px` on session.html, dashboard.html, about_me.html, base.html modals were defeating responsive overrides). **Fixed** iOS Safari scroll lock — added `html.modal-open { overflow: hidden }` in CSS and `document.documentElement.classList` toggle in api.js (iOS Safari requires overflow hidden on both html and body). Added `left: 0; right: 0` to `body.modal-open` for full iOS position anchoring. Added `.council-modal-content { max-width: 100% !important }` at 480px. **Puppeteer visual verification (375px + 1280px):** All 6 pages pass — landing, login, dashboard, session, about-me, settings. No horizontal overflow, no cut-off content, no overlapping elements, text readable on all pages. Screenshots saved to `/tmp/mobile-screenshots/`. **Remaining:** real-device testing on iOS Safari (scroll lock, keyboard behavior with dvh) and Android Chrome recommended. |
 | 2026-04-08 | Status updated to Largely Complete |
+| 2026-04-17 | Added new iPhone 12 screenshot (`vilora-session-iphone12-2026-04-17.png`) showing current mobile state. Added invite banner as most critical mobile issue -- it consumes entire viewport on iPhone 12. Added "Ask Vilora" + "Ask Council" double full-width buttons as HIGH issue. Rewrote Phase 2.5 invite banner section with three solution options. Added mobile-audit command reference. |
 
 ---
 
@@ -505,4 +516,7 @@ Available width: 375px
 
 **Built:** Chat space maximization - footer hidden on session page on mobile, compact single-row header, edge-to-edge messages on mobile with reduced padding. Emoji picker renders as bottom sheet on mobile. Safe-area inset padding for iPhone notch/home indicator. Speed button filtering by viewport (0.5x/2x hidden on desktop, 1.75x hidden on mobile). 44px touch targets on input icons, buttons, and chips at 480px breakpoint. Modal overflow fixes with !important overrides. iOS Safari scroll lock fix. Word-break on messages. 480px breakpoint added alongside existing 768px. Summary and council panels at 100% width on mobile. Puppeteer visual verification passing on all pages.
 
-**Pending:** Phase 2 major session room redesign - single-row header with ellipsis title and text-link actions, border/padding removal on message list, "Ask Vilora" as text link instead of button. Several MEDIUM polish issues remain open (hero text sizing, onboarding button spacing, delete button touch target, invite banner stacking, settings toast positioning, mobile font scaling).
+**Pending (Priority Order):**
+1. **Invite banner overhaul (CRITICAL):** The invite banner consumes the entire mobile viewport on iPhone 12 (April 17 screenshot). Must move to modal/bottom sheet or collapse to a single button. This is the most impactful single fix for mobile usability.
+2. **Phase 2 session room redesign:** Single-row header with ellipsis title and text-link actions, border/padding removal on message list, "Ask Vilora" + "Ask Council" as compact text links instead of full-width buttons.
+3. **MEDIUM polish:** Hero text sizing, onboarding button spacing, delete button touch target, settings toast positioning, mobile font scaling.
