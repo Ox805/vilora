@@ -1177,7 +1177,6 @@ def send_message(session_id):
         sys.stderr.write(f"[Vilora] Mediation error: {e}\n")
 
     # Queue activity notifications for other participants
-    logger.info(f"[Notify] Calling queue_pending_notifications: session={session_id} sender={current_user.id}")
     queue_pending_notifications(db, session_id, current_user.id)
 
     result = {'success': True, 'user_message': user_msg.to_dict()}
