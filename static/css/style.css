@@ -330,12 +330,28 @@ body {
 
 .session-card.has-unread {
     border-left: 3px solid var(--primary);
+    background: #e6f7f0;
 }
 
 .session-badge-group {
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
+}
+
+.session-unread-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 6px;
+    border-radius: 11px;
+    background: var(--primary);
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1;
 }
 
 .session-unread-dot {
@@ -348,8 +364,9 @@ body {
 
 .session-unread-count {
     display: block;
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     color: var(--primary);
+    font-weight: 600;
     margin-top: 0.15rem;
 }
 

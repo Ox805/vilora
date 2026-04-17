@@ -1177,6 +1177,7 @@ def send_message(session_id):
         sys.stderr.write(f"[Vilora] Mediation error: {e}\n")
 
     # Queue activity notifications for other participants
+    logger.info(f"[Notify] Calling queue_pending_notifications: session={session_id} sender={current_user.id}")
     queue_pending_notifications(db, session_id, current_user.id)
 
     result = {'success': True, 'user_message': user_msg.to_dict()}
@@ -1761,9 +1762,7 @@ def process_pending_notifications():
     """Process pending notifications older than 60 minutes. Called by background worker."""
     db = None
     try:
-        logger.info("[Notify] Connecting to database...")
         db = get_worker_db()
-        logger.info("[Notify] Connected, querying pending notifications...")
 
         # Find pending notifications older than 60 minutes
         if _is_postgres():

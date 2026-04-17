@@ -704,13 +704,13 @@ async function loadSessions() {
     }
 
     list.innerHTML = data.sessions.map(s => {
-        const unreadDot = s.has_unread ? '<span class="session-unread-dot"></span>' : '';
+        const unreadBadge = s.unread_count > 0 ? `<span class="session-unread-badge">${s.unread_count}</span>` : '';
         const unreadText = s.unread_count > 0 ? `<span class="session-unread-count">${s.unread_count} new message${s.unread_count === 1 ? '' : 's'}</span>` : '';
         return `
         <div class="session-card-wrapper">
             <a href="/session/${s.id}" class="session-card${s.has_unread ? ' has-unread' : ''}">
                 <div class="session-card-header">
-                    <span class="session-badge-group"><span class="session-type-badge">${s.session_mode === 'personal' ? 'one-on-one' : s.session_type}</span>${unreadDot}</span>
+                    <span class="session-badge-group"><span class="session-type-badge">${s.session_mode === 'personal' ? 'one-on-one' : s.session_type}</span>${unreadBadge}</span>
                     <span class="session-status ${s.status}">${s.status}</span>
                 </div>
                 <h3>${escapeHtml(s.topic)}</h3>
@@ -738,6 +738,8 @@ function escapeHtml(text) {
 }
 
 loadSessions();
+// Poll for new messages every 30 seconds
+setInterval(loadSessions, 30000);
 </script>
 {% endblock %}
 
