@@ -750,6 +750,26 @@ html.modal-open {
     height: calc(100vh - 140px);
 }
 
+/* Session-page-only: lock the page to the viewport so the chat area
+   fills the screen and there's no outer scrollbar. The chat (.message-list)
+   still scrolls internally. The footer is hidden because the bottom of
+   the page is already taken up by the compose bar and Ask Vilora row. */
+body.page-session {
+    height: 100dvh;
+    overflow: hidden;
+}
+
+.page-session .footer { display: none; }
+
+.page-session .container {
+    padding: 0.75rem 1rem;
+    overflow: hidden;
+}
+
+.page-session .mediation-room {
+    height: 100%;
+}
+
 .room-header {
     display: flex;
     justify-content: space-between;
@@ -2584,9 +2604,9 @@ body.summary-open .container {
     .council-modal-content { max-width: 100% !important; }
 
     /* --- Session room --- */
-    .page-session .footer { display: none; }
-    .mediation-room {
-        height: calc(100dvh - 100px); /* dvh handles mobile keyboard, tighter now with hidden footer */
+    /* footer hide and viewport-lock now live in the base .page-session rules */
+    .page-session .container {
+        padding: 0.5rem 0.75rem;
     }
 
     /* Header: topic truncated on one line, actions as text links on second line */
