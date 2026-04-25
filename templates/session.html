@@ -97,8 +97,8 @@
                     onkeydown="if(event.key==='Enter' && event.ctrlKey){event.preventDefault();sendMessage(event)}"
                     oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"></textarea>
                 <div class="message-input-icons">
-                    <button type="button" class="input-icon-btn format-btn" onclick="wrapSelection('**')" title="Bold (wrap with **)"><strong>B</strong></button>
-                    <button type="button" class="input-icon-btn format-btn" onclick="wrapSelection('__')" title="Underline (wrap with __)"><u>U</u></button>
+                    <button type="button" class="input-icon-btn format-btn" onclick="wrapSelection('message-input', '**')" title="Bold (wrap with **)"><strong>B</strong></button>
+                    <button type="button" class="input-icon-btn format-btn" onclick="wrapSelection('message-input', '__')" title="Underline (wrap with __)"><u>U</u></button>
                     <label class="input-icon-btn attach-icon-btn" title="Attach a file">
                         <input type="file" id="file-input" style="display:none"
                             accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.pptx,.txt,.csv,.zip,.md"
@@ -1337,8 +1337,9 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-function wrapSelection(marker) {
-    const ta = document.getElementById('message-input');
+function wrapSelection(textareaId, marker) {
+    const ta = document.getElementById(textareaId);
+    if (!ta) return;
     const start = ta.selectionStart;
     const end = ta.selectionEnd;
     const text = ta.value;
@@ -1347,6 +1348,49 @@ function wrapSelection(marker) {
     ta.value = text.substring(0, start) + marker + selected + marker + text.substring(end);
     ta.selectionStart = start + marker.length;
     ta.selectionEnd = end + marker.length;
+    ta.focus();
+}
+
+function toggleBulletList(textareaId) {
+    const ta = document.getElementById(textareaId);
+    if (!ta) return;
+    const text = ta.value;
+    const selStart = ta.selectionStart;
+    const selEnd = ta.selectionEnd;
+
+    // Expand selection to full-line boundaries
+    let lineStart = text.lastIndexOf('\n', selStart - 1) + 1;
+    let lineEnd = text.indexOf('\n', selEnd);
+    if (lineEnd === -1) lineEnd = text.length;
+
+    const before = text.substring(0, lineStart);
+    const block = text.substring(lineStart, lineEnd);
+    const after = text.substring(lineEnd);
+
+    // Empty textarea or empty line: insert "- " at cursor
+    if (block === '') {
+        ta.value = before + '- ' + after;
+        ta.selectionStart = ta.selectionEnd = lineStart + 2;
+        ta.focus();
+        return;
+    }
+
+    const lines = block.split('\n');
+    const allBulleted = lines.every(l => /^\s*[-*]\s/.test(l));
+
+    let newLines;
+    if (allBulleted) {
+        // Toggle off: strip leading "- " or "* " (preserving any leading whitespace)
+        newLines = lines.map(l => l.replace(/^(\s*)[-*]\s/, '$1'));
+    } else {
+        // Toggle on: prefix every non-empty line with "- "
+        newLines = lines.map(l => l === '' ? l : '- ' + l);
+    }
+
+    const newBlock = newLines.join('\n');
+    ta.value = before + newBlock + after;
+    ta.selectionStart = lineStart;
+    ta.selectionEnd = lineStart + newBlock.length;
     ta.focus();
 }
 
