@@ -93,7 +93,7 @@
         <form id="message-form" onsubmit="sendMessage(event)">
             <div class="compose-bar">
                 <div class="compose-bar-main">
-                    <textarea id="message-input" rows="4"
+                    <textarea id="message-input" rows="3"
                         placeholder="Share your thoughts..."
                         onkeydown="if(event.key==='Enter' && event.ctrlKey){event.preventDefault();sendMessage(event)}"></textarea>
                     <div class="compose-toolbar">
@@ -128,10 +128,10 @@
         {% if not is_personal %}
         <div class="ask-vilora-bar">
             <button type="button" onclick="askVilora()" class="btn btn-sm btn-ask-vilora" id="ask-vilora-btn" title="Request Vilora's input on the conversation so far. Vilora will read the discussion and offer perspective, suggestions, or information.">
-                Ask Vilora to weigh in
+                Ask Vilora
             </button>
             <button type="button" onclick="askCouncilToWeighIn()" class="btn btn-sm btn-ask-vilora" id="ask-council-btn" title="The Council provides five expert perspectives on the conversation so far, then synthesizes them into a clear recommendation.">
-                Ask the Council to weigh in
+                Ask Council
             </button>
         </div>
         {% endif %}
