@@ -656,9 +656,35 @@ html.modal-open {
     max-width: 500px;
     max-height: 90vh;
     overflow-y: auto;
+    position: relative;
 }
 
 .modal-content h2 { margin-bottom: 1.5rem; }
+
+.modal-close-x {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    width: 2rem;
+    height: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+    border-radius: 50%;
+    transition: background 0.15s, color 0.15s;
+    padding: 0;
+}
+
+.modal-close-x:hover {
+    background: var(--bg);
+    color: var(--text);
+}
 
 .welcome-modal-content {
     max-width: 550px;
