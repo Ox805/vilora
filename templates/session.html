@@ -760,7 +760,6 @@ async function sendMessage(e) {
 
     const sendBtn = document.getElementById('send-btn');
     sendBtn.disabled = true;
-    sendBtn.textContent = 'Sending...';
     input.value = '';
 
     try {
@@ -775,7 +774,6 @@ async function sendMessage(e) {
         }
     } finally {
         sendBtn.disabled = false;
-        sendBtn.textContent = 'Send';
     }
 }
 
