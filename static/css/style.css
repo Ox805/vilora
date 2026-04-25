@@ -731,6 +731,18 @@ html.modal-open {
 
 /* participant-status inherits .btn.btn-sm styling */
 
+.invite-share-link {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+}
+
+.invite-share-link p {
+    font-size: 0.85rem;
+    color: var(--text-light);
+    margin: 0 0 0.5rem;
+}
+
 /* === Mediation Room === */
 .mediation-room {
     display: flex;

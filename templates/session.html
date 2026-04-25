@@ -45,6 +45,14 @@
                 <button type="button" onclick="hideInviteModal()" class="btn">Cancel</button>
                 <button type="button" onclick="sendInviteEmail()" class="btn btn-primary" id="send-invite-btn">Send Invite</button>
             </div>
+            <div class="invite-share-link">
+                <p>Or copy the link to share another way:</p>
+                <div class="invite-link-row">
+                    <input type="text" id="invite-link" value="{{ invite_link }}" readonly>
+                    <button type="button" onclick="copyInviteLink()" class="btn btn-sm" id="copy-btn">Copy</button>
+                    <button type="button" onclick="shareViaText()" class="btn btn-sm btn-text-invite">Text</button>
+                </div>
+            </div>
         </div>
     </div>
     {% elif show_welcome %}
@@ -1487,6 +1495,22 @@ async function sendInviteEmail() {
         btn.disabled = false;
         btn.textContent = 'Send Invite';
     }
+}
+
+function copyInviteLink() {
+    const input = document.getElementById('invite-link');
+    navigator.clipboard.writeText(input.value);
+    const btn = document.getElementById('copy-btn');
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy', 2000);
+}
+
+function shareViaText() {
+    const link = document.getElementById('invite-link').value;
+    const topic = document.querySelector('.room-topic')?.innerText?.trim() || 'a conversation';
+    const msg = `Hey, I'd like to work through something together using Vilora. The topic is "${topic}". Join here: ${link}`;
+    const btn = document.querySelector('[onclick="shareViaText()"]');
+    shareOrCopy(msg, btn);
 }
 
 const IS_PERSONAL = {{ 'true' if is_personal else 'false' }};
