@@ -789,7 +789,6 @@ body.page-session {
 
 .page-session .container {
     padding: 0.75rem 1rem;
-    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
     overflow: hidden;
 }
 
