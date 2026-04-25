@@ -1003,6 +1003,96 @@ html.modal-open {
     z-index: 3;
 }
 
+/* === Compose Bar (textarea + toolbar + optional send column) === */
+.compose-bar {
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    border: 1px solid var(--border);
+    border-radius: 1.5rem;
+    background: var(--bg-card);
+    overflow: hidden;
+    transition: border-color 0.2s;
+    margin-top: 0.5rem;
+}
+
+.compose-bar:focus-within {
+    border-color: var(--primary);
+}
+
+.compose-bar-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.compose-bar textarea {
+    width: 100%;
+    border: none;
+    outline: none;
+    padding: 0.75rem 1rem;
+    font-family: inherit;
+    font-size: 0.95rem;
+    line-height: 1.4;
+    background: transparent;
+    resize: vertical;
+    min-height: 110px;
+    max-height: 400px;
+    box-sizing: border-box;
+}
+
+.compose-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.4rem 0.75rem 0.4rem 0.75rem;
+    flex-shrink: 0;
+}
+
+.compose-toolbar .btn-polish {
+    font-size: 0.75rem;
+    padding: 0.3rem 0.6rem;
+    border-radius: 1rem;
+    opacity: 0.5;
+    border: 1px solid var(--border);
+    background: none;
+    cursor: pointer;
+    color: var(--text-light);
+    transition: all 0.15s;
+}
+
+.compose-toolbar .btn-polish:hover {
+    opacity: 1;
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.compose-send {
+    flex-shrink: 0;
+    width: 3rem;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+    align-self: stretch;
+}
+
+.compose-send:hover {
+    background: var(--primary-dark, var(--primary));
+    filter: brightness(0.92);
+}
+
+.compose-send svg {
+    width: 22px;
+    height: 22px;
+}
+
 /* Polish bar: always a sibling after textarea/mic-wrapper, never inside */
 .polish-bar {
     display: flex;
@@ -2529,6 +2619,13 @@ body.summary-open .container {
     .message-input-bar textarea {
         font-size: 16px; /* prevents iOS zoom */
     }
+
+    /* Compose bar mobile adjustments */
+    .compose-bar { border-radius: 1.25rem; }
+    .compose-bar textarea { min-height: 80px; padding: 0.6rem 0.85rem; font-size: 0.9rem; }
+    .compose-toolbar { padding: 0.3rem 0.5rem; }
+    .compose-send { width: 2.5rem; }
+    .compose-send svg { width: 18px; height: 18px; }
 
     /* Ask Vilora: text link instead of button */
     .btn-ask-vilora {
