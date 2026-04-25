@@ -5,7 +5,7 @@
 {% block content %}
 <div class="mediation-room">
     <div class="room-header">
-        <h2>{{ session.topic }} <span class="session-type-badge">{% if is_personal %}Personal{% else %}{{ session.session_type }}{% endif %}</span></h2>
+        <h2><span class="room-topic" title="{{ session.topic }}">{{ session.topic }}</span> <span class="session-type-badge">{% if is_personal %}Personal{% else %}{{ session.session_type }}{% endif %}</span></h2>
         <div class="room-actions">
             {% if not is_personal and is_creator %}<button class="btn btn-primary btn-room-invite" onclick="showInviteModal()" title="Invite another party to this session by email, text, or link.">Invite</button>{% endif %}
             {% if not is_personal %}<button id="participant-status" class="btn btn-sm" onclick="showParticipantsPanel()" title="View participants and send nudge reminders">Participants</button>{% endif %}
