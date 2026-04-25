@@ -7,24 +7,10 @@
     <div class="room-header">
         <h2>{{ session.topic }} <span class="session-type-badge">{% if is_personal %}Personal{% else %}{{ session.session_type }}{% endif %}</span></h2>
         <div class="room-actions">
+            {% if not is_personal and is_creator %}<button class="btn btn-primary btn-room-invite" onclick="showInviteModal()" title="Invite another party to this session by email, text, or link.">Invite</button>{% endif %}
             {% if not is_personal %}<button id="participant-status" class="btn btn-sm" onclick="showParticipantsPanel()" title="View participants and send nudge reminders">Participants</button>{% endif %}
             <button onclick="showCouncilModal()" class="btn btn-sm" title="Five AI advisors analyze your question from different angles, peer-review each other's blind spots, and deliver a synthesized recommendation with a concrete next step.">Council</button>
             <button onclick="getSummary()" class="btn btn-sm" title="Vilora generates a structured summary of the conversation so far, including key points, areas of agreement, unresolved issues, and suggested next steps.">Summary</button>
-        </div>
-    </div>
-
-    {% if is_personal %}
-    {# No invite banner for personal sessions #}
-    {% elif is_creator %}
-    <div id="invite-banner" class="invite-banner">
-        <div class="invite-banner-content">
-            <strong>Invite another party.</strong> Send them an email, text, or share the link:
-            <div class="invite-link-row">
-                <button onclick="showInviteModal()" class="btn btn-primary btn-sm" title="Send a branded email invitation to the other party with a link to join this session.">Email Invite</button>
-                <button onclick="shareViaText()" class="btn btn-sm btn-text-invite" title="Open your messaging app with a pre-written invite message and link.">Text Invite</button>
-                <input type="text" id="invite-link" value="{{ invite_link }}" readonly>
-                <button onclick="copyInviteLink()" class="btn btn-sm" id="copy-btn">Copy</button>
-            </div>
         </div>
     </div>
 
@@ -1008,7 +994,7 @@ function textNudge(name, btn) {
 }
 
 function textNudgePending(email, btn) {
-    const link = document.getElementById('invite-link')?.value || `${window.location.origin}/session/${SESSION_ID}`;
+    const link = `${window.location.origin}/session/${SESSION_ID}`;
     const topic = document.querySelector('.room-header h2')?.innerText?.split('\n')[0]?.trim() || 'a conversation';
     const msg = `Hey, I invited you to a conversation on Vilora about "${topic}". Would love your input. Join here: ${link}`;
     shareOrCopy(msg, btn);
@@ -1500,22 +1486,6 @@ async function sendInviteEmail() {
     }
 }
 
-function shareViaText() {
-    const link = document.getElementById('invite-link').value;
-    const topic = document.querySelector('.room-header h2')?.innerText?.split('\n')[0]?.trim() || 'a conversation';
-    const msg = `Hey, I'd like to work through something together using Vilora. The topic is "${topic}". Join here: ${link}`;
-    const btn = document.querySelector('[onclick="shareViaText()"]');
-    shareOrCopy(msg, btn);
-}
-
-function copyInviteLink() {
-    const input = document.getElementById('invite-link');
-    navigator.clipboard.writeText(input.value);
-    const btn = document.getElementById('copy-btn');
-    btn.textContent = 'Copied!';
-    setTimeout(() => btn.textContent = 'Copy', 2000);
-}
-
 const IS_PERSONAL = {{ 'true' if is_personal else 'false' }};
 const IS_CREATOR = {{ 'true' if is_creator else 'false' }};
 
@@ -1528,7 +1498,6 @@ async function checkParticipants() {
         const res = await fetch(`/api/sessions/${SESSION_ID}/participants`);
         if (!res.ok) return;
         const data = await res.json();
-        const banner = document.getElementById('invite-banner');
         const count = (data.participants || []).length;
 
         if (count >= 2) {

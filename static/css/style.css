@@ -115,6 +115,7 @@ body {
 .btn-primary:hover { background: var(--primary-dark); }
 .btn-lg { padding: 0.75rem 2rem; font-size: 1.1rem; }
 .btn-sm { padding: 0.25rem 0.75rem; font-size: 0.8rem; }
+.btn-room-invite { padding: 0.18rem 0.55rem; font-size: 0.72rem; line-height: 1.2; }
 .btn-full { width: 100%; }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
@@ -726,25 +727,6 @@ html.modal-open {
     border: 1px solid var(--border);
     border-radius: var(--radius);
     font-size: 0.85rem;
-}
-
-/* === Invite Banner (Session Room) === */
-.invite-banner {
-    background: var(--intake-bg);
-    border: 1px solid #C6F6D5;
-    border-radius: var(--radius);
-    padding: 1rem 1.25rem;
-    margin-bottom: 1rem;
-    flex-shrink: 0;
-}
-
-.invite-banner-content strong {
-    color: var(--text);
-}
-
-.invite-banner .invite-link-row {
-    margin-top: 0.5rem;
-    margin-bottom: 0;
 }
 
 /* participant-status inherits .btn.btn-sm styling */
@@ -2643,15 +2625,6 @@ body.summary-open .container {
         font-size: 0.75rem;
         min-height: auto;
     }
-
-    /* --- Invite banner --- */
-    .invite-banner { padding: 0.75rem; }
-    .invite-banner .invite-link-row {
-        flex-direction: column;
-        gap: 0.4rem;
-    }
-    .invite-banner .invite-link-row input { width: 100%; }
-    .invite-banner .invite-link-row .btn { width: 100%; min-height: 44px; }
 
     /* --- Summary / Council panels --- */
     .summary-panel {
