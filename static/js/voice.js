@@ -118,7 +118,17 @@
             toggleMic(btn, textarea);
         });
 
-        // For session message input bar, use the icons container
+        // Preferred: place inside .compose-toolbar (new redesigned layout)
+        const composeBar = textarea.closest('.compose-bar');
+        if (composeBar) {
+            const toolbar = composeBar.querySelector('.compose-toolbar');
+            if (toolbar) {
+                toolbar.appendChild(btn); // mic always goes at the end of the toolbar
+                return;
+            }
+        }
+
+        // Fallback: legacy session message input bar with icons container
         const iconsContainer = textarea.closest('.message-input-bar')?.querySelector('.message-input-icons');
         if (iconsContainer) {
             const sendBtn = iconsContainer.querySelector('.send-icon-btn');
@@ -130,9 +140,7 @@
             return;
         }
 
-        // For all other textareas: wrap in a textarea-mic-wrapper
-        // This wrapper ONLY contains the textarea and mic button
-        // Polish bar stays outside as a sibling of the wrapper
+        // Fallback: wrap textarea in a textarea-mic-wrapper for absolute positioning
         const existing = textarea.closest('.textarea-mic-wrapper');
         if (existing) {
             existing.appendChild(btn);
