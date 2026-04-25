@@ -38,7 +38,19 @@ function attachPolish(textareaId, options = {}) {
     preview.className = 'polish-preview';
     preview.style.display = 'none';
 
-    // Insert polish into icons area if in input bar, otherwise after textarea/mic-wrapper
+    // Preferred: place inside .compose-toolbar (new redesigned layout)
+    const composeBar = textarea.closest('.compose-bar');
+    if (composeBar) {
+        const toolbar = composeBar.querySelector('.compose-toolbar');
+        if (toolbar) {
+            toolbar.insertBefore(polishBtn, toolbar.firstChild);
+            composeBar.after(preview);
+            polishBtn.id = textareaId + '-polish-btn';
+            return;
+        }
+    }
+
+    // Fallback: legacy .message-input-bar layout
     if (inputBar) {
         const iconsContainer = inputBar.querySelector('.message-input-icons');
         if (iconsContainer) {
