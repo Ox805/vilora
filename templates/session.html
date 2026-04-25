@@ -1400,7 +1400,28 @@ function formatText(text) {
     html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
     // __underline__ -> <u>underline</u>
     html = html.replace(/__(.+?)__/g, '<u>$1</u>');
-    return html;
+
+    // Wrap consecutive lines starting with "- " or "* " into <ul><li> blocks.
+    // Apply after inline rules so bold/underline inside a bullet item still render.
+    const lines = html.split('\n');
+    const out = [];
+    let bulletBuffer = [];
+    const flush = () => {
+        if (bulletBuffer.length === 0) return;
+        out.push('<ul>' + bulletBuffer.map(l => '<li>' + l + '</li>').join('') + '</ul>');
+        bulletBuffer = [];
+    };
+    for (const line of lines) {
+        const m = /^[-*]\s+(.*)$/.exec(line);
+        if (m) {
+            bulletBuffer.push(m[1]);
+        } else {
+            flush();
+            out.push(line);
+        }
+    }
+    flush();
+    return out.join('\n');
 }
 
 function dismissWelcome() {
