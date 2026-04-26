@@ -2578,12 +2578,16 @@ body.summary-open .container {
 /* === Responsive: Phone (480px) === */
 @media (max-width: 480px) {
     /* --- Base --- */
-    .navbar { padding: 0.5rem 0.75rem; }
-    .navbar .nav-links { gap: 0.4rem; }
+    .navbar { padding: 0.4rem 0.6rem; }
+    .navbar .nav-links { gap: 0.5rem; }
     .navbar .nav-links a { font-size: 0.75rem; }
     .nav-user { display: none; }
     .nav-wordmark { display: none; }
     .container { padding: 0.75rem; }
+
+    /* Session page: hide non-essential nav links to keep navbar compact and avoid crowding */
+    .page-session .navbar .nav-links a[href="/about-me"],
+    .page-session .navbar .nav-links a[href="/settings"] { display: none; }
 
     /* --- Hero --- */
     .hero h1 { font-size: 1.4rem; }
@@ -2687,12 +2691,16 @@ body.summary-open .container {
     }
 
     /* Compose bar mobile adjustments */
-    .compose-bar { border-radius: 1.25rem; }
-    .compose-bar-main { min-height: 95px; }
-    .compose-bar textarea { padding: 0.6rem 0.85rem; font-size: 0.9rem; }
-    .compose-toolbar { padding: 0.3rem 0.5rem; }
-    .compose-send { width: 2.5rem; }
-    .compose-send svg { width: 18px; height: 18px; }
+    .compose-bar { border-radius: 1rem; }
+    .compose-bar-main { min-height: 60px; max-height: 220px; }
+    .compose-bar textarea { padding: 0.35rem 0.65rem; font-size: 16px; line-height: 1.3; }
+    .compose-toolbar { padding: 0.15rem 0.4rem; gap: 0.15rem; }
+    .compose-toolbar .input-icon-btn { padding: 0.2rem; min-width: 32px; min-height: 32px; }
+    .compose-toolbar .btn-polish { padding: 0.15rem 0.45rem; font-size: 0.7rem; min-height: 0; }
+    .compose-send { width: 2.25rem; }
+    .compose-send svg { width: 16px; height: 16px; }
+    .ask-vilora-bar { margin-top: 0.15rem; }
+    .ask-vilora-bar .btn-ask-vilora { padding: 0.18rem 0.55rem; font-size: 0.72rem; min-height: 0; }
 
     /* Ask Vilora: text link instead of button */
     .btn-ask-vilora {
