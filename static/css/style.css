@@ -1089,7 +1089,7 @@ body.page-session {
        not halfway up at the bottom of the textarea itself. */
     resize: vertical;
     overflow: hidden;
-    min-height: 120px;
+    min-height: 90px;
     max-height: 450px;
 }
 
