@@ -763,6 +763,7 @@ async function sendMessage(e) {
         const data = await res.json();
         if (data.success) {
             loadMessages();
+            markSessionSeen();
         }
     } finally {
         sendBtn.disabled = false;
@@ -815,6 +816,7 @@ async function uploadFile(input) {
         const data = await res.json();
         if (data.success) {
             loadMessages();
+            markSessionSeen();
         } else {
             alert(data.error || 'Upload failed.');
         }
@@ -1037,6 +1039,7 @@ async function askVilora() {
         const data = await res.json();
         if (data.success) {
             loadMessages();
+            markSessionSeen();
         } else {
             alert(data.error || 'Vilora could not respond.');
         }
@@ -1272,6 +1275,7 @@ async function shareCouncilSection(text, advisorName) {
             body: JSON.stringify({ content: msg })
         });
         loadMessages();
+        markSessionSeen();
     } catch (err) {
         alert('Could not share with group.');
     }
@@ -1532,13 +1536,29 @@ async function checkParticipants() {
     }
 }
 
+// Mark this session "seen" for the current user. Called only when the user is
+// actually engaged with the page, NOT on every 5s message poll -- that side
+// effect previously cleared the dashboard unread badge from background tabs.
+async function markSessionSeen() {
+    if (document.visibilityState !== 'visible') return;
+    try {
+        await fetch(`/api/sessions/${SESSION_ID}/mark-seen`, { method: 'POST' });
+    } catch (_) {}
+}
+
 // Initial load and polling
 loadMessages();
 if (!IS_PERSONAL) checkParticipants();
+markSessionSeen();
 polling = setInterval(() => {
     loadMessages();
     if (!IS_PERSONAL) checkParticipants();
 }, 5000);
+
+// Re-mark seen when the user comes back to this tab
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') markSessionSeen();
+});
 </script>
 
 <!-- File Lightbox -->

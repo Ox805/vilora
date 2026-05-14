@@ -588,9 +588,15 @@ class MediationSession:
     @staticmethod
     def get_by_user(db, user_id):
         cur = _exec(db,
-            """SELECT ms.* FROM mediation_sessions ms
+            """SELECT ms.*,
+                  COALESCE(
+                    (SELECT MAX(m.created_at) FROM messages m WHERE m.session_id = ms.id),
+                    ms.created_at
+                  ) AS last_activity_at
+               FROM mediation_sessions ms
                JOIN session_participants sp ON ms.id = sp.session_id
-               WHERE sp.user_id = ? ORDER BY ms.created_at DESC""",
+               WHERE sp.user_id = ?
+               ORDER BY last_activity_at DESC""",
             (user_id,)
         )
         return [MediationSession._from_row(r) for r in cur.fetchall()]

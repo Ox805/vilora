@@ -1087,7 +1087,12 @@ def get_messages(session_id):
     message_ids = [m.id for m in messages]
     all_reactions = MessageReaction.get_for_messages(db, message_ids)
 
-    # Get last_seen_at BEFORE updating it (for scroll-to-unread)
+    # Return current last_seen_at to the client (used for scroll-to-first-unread).
+    # We intentionally do NOT update it here -- /messages is polled every 5s by the
+    # session page, including in background tabs, so updating it as a side effect
+    # silently clears the dashboard unread badge even when the user never looked.
+    # Clients must call POST /api/sessions/<id>/mark-seen explicitly when the user
+    # is actually engaged (tab visible, message sent, etc).
     last_seen_at = None
     try:
         cur_ls = _exec(db,
@@ -1117,7 +1122,16 @@ def get_messages(session_id):
         d['reactions'] = reactions_out
         msg_list.append(d)
 
-    # Update last_seen_at for this user in this session
+    return jsonify({'messages': msg_list, 'last_seen_at': last_seen_at})
+
+
+@app.route('/api/sessions/<int:session_id>/mark-seen', methods=['POST'])
+@login_required
+def mark_session_seen(session_id):
+    db = get_db()
+    med_session = MediationSession.get_by_id(db, session_id)
+    if not med_session or not med_session.is_participant(db, current_user.id):
+        return jsonify({'success': False, 'error': 'Access denied'}), 403
     try:
         _exec(db,
             """INSERT INTO session_last_seen (session_id, user_id, last_seen_at)
@@ -1129,8 +1143,8 @@ def get_messages(session_id):
         db.commit()
     except Exception:
         db.rollback()
-
-    return jsonify({'messages': msg_list, 'last_seen_at': last_seen_at})
+        return jsonify({'success': False, 'error': 'Could not mark seen'}), 500
+    return jsonify({'success': True})
 
 
 @app.route('/api/sessions/<int:session_id>/messages', methods=['POST'])
