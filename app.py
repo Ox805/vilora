@@ -332,14 +332,18 @@ def save_extracted_memories(db, user_id, session_id, memories):
 
 SUMMARY_DELIMITER = '<!--SUMMARY-->'
 
-def create_mediator_message(db, session_id, ai_response):
-    """Create a mediator message with an AI-generated summary prefix."""
+def create_mediator_message(db, session_id, ai_response, requested_by=None):
+    """Create a mediator message with an AI-generated summary prefix.
+
+    requested_by is the user who triggered this Vilora response and is the
+    only one (besides legacy creator fallback) allowed to delete it.
+    """
     summary = mediation_engine.summarize_response(ai_response)
     if summary:
         content = f"{summary}{SUMMARY_DELIMITER}{ai_response}"
     else:
         content = ai_response
-    return Message.create(db, session_id, None, content, msg_type='mediator')
+    return Message.create(db, session_id, None, content, msg_type='mediator', requested_by=requested_by)
 
 
 # --- About Me Page ---
@@ -908,7 +912,7 @@ def create_session():
                 creator_name=current_user.display_name,
                 session_mode=session_mode
             )
-            create_mediator_message(db, med_session.id, ai_response)
+            create_mediator_message(db, med_session.id, ai_response, requested_by=current_user.id)
         except Exception as e:
             print(f"Warning: Could not generate welcome message: {e}")
 
@@ -1110,6 +1114,15 @@ def get_messages(session_id):
         d = m.to_dict()
         d['display_name'] = name_map.get(m.user_id)
         d['is_self'] = (m.user_id == current_user.id)
+        if m.user_id == current_user.id:
+            d['can_delete'] = True
+        elif m.msg_type == 'mediator' and m.requested_by == current_user.id:
+            d['can_delete'] = True
+        elif (m.msg_type == 'mediator' and m.requested_by is None
+              and med_session.creator_id == current_user.id):
+            d['can_delete'] = True
+        else:
+            d['can_delete'] = False
         msg_reactions = all_reactions.get(m.id, {})
         reactions_out = {}
         for rkey, rdata in msg_reactions.items():
@@ -1186,7 +1199,7 @@ def send_message(session_id):
                 participant_memories=participant_memories or None,
                 session_mode=med_session.session_mode
             )
-            ai_msg = create_mediator_message(db, session_id, ai_response)
+            ai_msg = create_mediator_message(db, session_id, ai_response, requested_by=current_user.id)
     except Exception as e:
         sys.stderr.write(f"[Vilora] Mediation error: {e}\n")
 
@@ -1296,12 +1309,16 @@ def delete_message(session_id, message_id):
     if not msg:
         return jsonify({'success': False, 'error': 'Message not found'}), 404
 
-    # Users can delete their own messages
-    # Session creator can also delete mediator messages
+    # Users can delete their own messages.
+    # For mediator messages, the user who requested Vilora's input can delete it.
+    # Legacy mediator messages with no recorded requester fall back to creator-delete.
     if msg['user_id'] == current_user.id:
         pass  # allowed
-    elif msg['msg_type'] == 'mediator' and med_session.creator_id == current_user.id:
-        pass  # creator can delete Vilora messages
+    elif msg['msg_type'] == 'mediator' and msg['requested_by'] == current_user.id:
+        pass  # requester can delete the Vilora response they triggered
+    elif (msg['msg_type'] == 'mediator' and msg['requested_by'] is None
+          and med_session.creator_id == current_user.id):
+        pass  # legacy: creator can delete pre-feature mediator messages
     else:
         return jsonify({'success': False, 'error': 'You can only delete your own messages'}), 403
 
@@ -1549,7 +1566,7 @@ def ask_vilora(session_id):
             participant_memories=participant_memories or None,
             session_mode=med_session.session_mode
         )
-        ai_msg = create_mediator_message(db, session_id, ai_response)
+        ai_msg = create_mediator_message(db, session_id, ai_response, requested_by=current_user.id)
         # Queue notifications -- Vilora's response means activity
         queue_pending_notifications(db, session_id, current_user.id)
         return jsonify({'success': True, 'mediator_message': ai_msg.to_dict()})

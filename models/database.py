@@ -100,6 +100,7 @@ def db_init():
                 user_id INTEGER REFERENCES users(id),
                 content TEXT NOT NULL,
                 msg_type TEXT DEFAULT 'user',
+                requested_by INTEGER REFERENCES users(id),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )""",
             """CREATE TABLE IF NOT EXISTS agreements (
@@ -229,6 +230,7 @@ def db_init():
             "ALTER TABLE users ADD COLUMN email_verified BOOLEAN DEFAULT FALSE",
             "ALTER TABLE users ADD COLUMN verification_token TEXT",
             "ALTER TABLE users ADD COLUMN verification_sent_at TIMESTAMP",
+            "ALTER TABLE messages ADD COLUMN requested_by INTEGER REFERENCES users(id)",
         ]
         for migration in migrations:
             try:
@@ -277,9 +279,11 @@ def db_init():
                 user_id INTEGER,
                 content TEXT NOT NULL,
                 msg_type TEXT DEFAULT 'user',
+                requested_by INTEGER,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (session_id) REFERENCES mediation_sessions(id),
-                FOREIGN KEY (user_id) REFERENCES users(id)
+                FOREIGN KEY (user_id) REFERENCES users(id),
+                FOREIGN KEY (requested_by) REFERENCES users(id)
             );
 
             CREATE TABLE IF NOT EXISTS agreements (
@@ -431,6 +435,16 @@ def db_init():
             );
         """)
         db.commit()
+
+        sqlite_migrations = [
+            "ALTER TABLE messages ADD COLUMN requested_by INTEGER REFERENCES users(id)",
+        ]
+        for migration in sqlite_migrations:
+            try:
+                db.execute(migration)
+                db.commit()
+            except Exception:
+                db.rollback()
 
 
 class User(UserMixin):
@@ -603,13 +617,14 @@ class MediationSession:
 
 
 class Message:
-    def __init__(self, id, session_id, user_id, content, msg_type, created_at=None):
+    def __init__(self, id, session_id, user_id, content, msg_type, created_at=None, requested_by=None):
         self.id = id
         self.session_id = session_id
         self.user_id = user_id
         self.content = content
         self.msg_type = msg_type
         self.created_at = created_at
+        self.requested_by = requested_by
 
     def to_dict(self):
         return {
@@ -618,25 +633,26 @@ class Message:
             'user_id': self.user_id,
             'content': self.content,
             'msg_type': self.msg_type,
+            'requested_by': self.requested_by,
             'created_at': str(self.created_at) if self.created_at else None
         }
 
     @staticmethod
-    def create(db, session_id, user_id, content, msg_type='user'):
+    def create(db, session_id, user_id, content, msg_type='user', requested_by=None):
         if _is_postgres():
             cur = _exec(db,
-                "INSERT INTO messages (session_id, user_id, content, msg_type) VALUES (?, ?, ?, ?) RETURNING id",
-                (session_id, user_id, content, msg_type)
+                "INSERT INTO messages (session_id, user_id, content, msg_type, requested_by) VALUES (?, ?, ?, ?, ?) RETURNING id",
+                (session_id, user_id, content, msg_type, requested_by)
             )
             msg_id = cur.fetchone()['id']
         else:
             cur = _exec(db,
-                "INSERT INTO messages (session_id, user_id, content, msg_type) VALUES (?, ?, ?, ?)",
-                (session_id, user_id, content, msg_type)
+                "INSERT INTO messages (session_id, user_id, content, msg_type, requested_by) VALUES (?, ?, ?, ?, ?)",
+                (session_id, user_id, content, msg_type, requested_by)
             )
             msg_id = cur.lastrowid
         db.commit()
-        return Message(msg_id, session_id, user_id, content, msg_type)
+        return Message(msg_id, session_id, user_id, content, msg_type, requested_by=requested_by)
 
     @staticmethod
     def get_by_session(db, session_id):
@@ -646,7 +662,10 @@ class Message:
         )
         rows = cur.fetchall()
         return [
-            Message(r['id'], r['session_id'], r['user_id'], r['content'], r['msg_type'], r['created_at'])
+            Message(
+                r['id'], r['session_id'], r['user_id'], r['content'], r['msg_type'], r['created_at'],
+                requested_by=r['requested_by']
+            )
             for r in rows
         ]
 
