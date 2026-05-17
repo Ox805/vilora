@@ -1011,14 +1011,42 @@ def delete_session(session_id):
     if med_session.creator_id != current_user.id:
         return jsonify({'success': False, 'error': 'Only the session creator can delete it'}), 403
 
-    _exec(db, "DELETE FROM session_summaries WHERE session_id = ?", (session_id,))
-    _exec(db, "DELETE FROM session_invites WHERE session_id = ?", (session_id,))
-    _exec(db, "DELETE FROM user_memories WHERE source_session_id = ?", (session_id,))
-    _exec(db, "DELETE FROM messages WHERE session_id = ?", (session_id,))
-    _exec(db, "DELETE FROM agreements WHERE session_id = ?", (session_id,))
-    _exec(db, "DELETE FROM session_participants WHERE session_id = ?", (session_id,))
-    _exec(db, "DELETE FROM mediation_sessions WHERE id = ?", (session_id,))
-    db.commit()
+    # Collect file-attachment blob paths before deleting the rows (messages cascade
+    # to file_attachments via ON DELETE CASCADE, but we still need the paths to
+    # clean up the GCS objects).
+    blob_paths = []
+    try:
+        cur_blobs = _exec(db, "SELECT blob_path FROM file_attachments WHERE session_id = ?", (session_id,))
+        blob_paths = [r['blob_path'] for r in cur_blobs.fetchall()]
+    except Exception:
+        pass
+
+    try:
+        _exec(db, "DELETE FROM session_summaries WHERE session_id = ?", (session_id,))
+        _exec(db, "DELETE FROM session_invites WHERE session_id = ?", (session_id,))
+        _exec(db, "DELETE FROM user_memories WHERE source_session_id = ?", (session_id,))
+        _exec(db, "DELETE FROM council_results WHERE session_id = ?", (session_id,))
+        _exec(db, "DELETE FROM nudge_log WHERE session_id = ?", (session_id,))
+        _exec(db, "DELETE FROM session_last_seen WHERE session_id = ?", (session_id,))
+        _exec(db, "DELETE FROM notification_log WHERE session_id = ?", (session_id,))
+        _exec(db, "DELETE FROM pending_notifications WHERE session_id = ?", (session_id,))
+        _exec(db, "DELETE FROM file_attachments WHERE session_id = ?", (session_id,))
+        _exec(db, "DELETE FROM messages WHERE session_id = ?", (session_id,))
+        _exec(db, "DELETE FROM agreements WHERE session_id = ?", (session_id,))
+        _exec(db, "DELETE FROM session_participants WHERE session_id = ?", (session_id,))
+        _exec(db, "DELETE FROM mediation_sessions WHERE id = ?", (session_id,))
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        sys.stderr.write(f"[delete_session] failed for session {session_id}: {e}\n")
+        return jsonify({'success': False, 'error': 'Could not delete session.'}), 500
+
+    for path in blob_paths:
+        try:
+            storage.delete_file(path)
+        except Exception as e:
+            sys.stderr.write(f"[delete_session] blob cleanup failed for {path}: {e}\n")
+
     return jsonify({'success': True})
 
 
