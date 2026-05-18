@@ -379,6 +379,18 @@ function renderMessages(messages) {
             } catch (e) {
                 return '';
             }
+        } else if (m.msg_type === 'ask') {
+            const canDelete = !!m.can_delete;
+            const asker = escapeHtml(m.display_name || 'Someone');
+            const question = escapeHtml(m.content);
+            return `<div class="message message-ask" data-message-id="${m.id}">
+                <div class="ask-indicator">
+                    <span class="ask-indicator-label">${asker} asked Vilora:</span>
+                    <span class="ask-indicator-question">"${question}"</span>
+                    <span class="ask-indicator-time">${localTime(m.created_at)}</span>
+                    ${canDelete ? `<button class="msg-delete-btn" onclick="deleteMessage(${m.id})" title="Delete this question and Vilora's reply">&times;</button>` : ''}
+                </div>
+            </div>`;
         } else if (m.msg_type === 'intake') {
             let intakeContent = m.content.replace(/\[Session tone:[^\]]*\]\s*/g, '');
             return `<div class="message message-intake" data-message-id="${m.id}">

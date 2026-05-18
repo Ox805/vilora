@@ -2362,6 +2362,48 @@ body.summary-open .container {
     font-family: inherit;
 }
 
+.message-ask {
+    align-self: center !important;
+    max-width: 90% !important;
+    background: none !important;
+    padding: 0 !important;
+}
+
+.ask-indicator {
+    background: #F4FBF8;
+    border: 1px dashed var(--primary-light);
+    border-radius: var(--radius);
+    padding: 0.6rem 1rem 0.7rem;
+    text-align: center;
+    font-size: 0.85rem;
+    position: relative;
+}
+
+.ask-indicator .msg-delete-btn {
+    position: absolute;
+    top: 0.35rem;
+    right: 0.5rem;
+    margin-left: 0;
+}
+
+.ask-indicator-label {
+    color: var(--text-muted);
+}
+
+.ask-indicator-question {
+    display: block;
+    color: var(--text);
+    font-style: italic;
+    margin: 0.25rem 0 0.25rem;
+}
+
+.ask-indicator-time {
+    display: block;
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    margin-top: 0.2rem;
+}
+
 /* === Polish Component === */
 
 .btn-polish {
