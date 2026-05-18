@@ -1353,6 +1353,11 @@ def delete_message(session_id, message_id):
         return jsonify({'success': False, 'error': 'You can only delete your own messages'}), 403
 
     # Identify a paired ask <-> mediator. Deleting either deletes both.
+    # Authorization invariant from the design: ask.user_id == mediator.requested_by
+    # (both written from current_user.id in the same handler call in ask_vilora,
+    # never updated afterwards). Whoever passed the auth check above for one half
+    # of the pair therefore owns the other half as well -- the paired delete
+    # below cannot remove someone else's row.
     paired_id = None
     if msg['msg_type'] == 'ask':
         cur_p = _exec(db, "SELECT id FROM messages WHERE parent_message_id = ? AND session_id = ?", (message_id, session_id))
@@ -1369,18 +1374,13 @@ def delete_message(session_id, message_id):
         if att_row:
             storage.delete_file(att_row['blob_path'])
 
-    # Delete the paired (child) row first to avoid any FK ordering issue.
-    # The child is the mediator (its parent_message_id points at the ask).
-    if paired_id is not None and msg['msg_type'] == 'ask':
-        # paired_id is the mediator child of this ask -> delete mediator first
+    # ON DELETE SET NULL on parent_message_id keeps either order safe: deleting
+    # the parent ask first nulls the child mediator's FK, then the child can be
+    # deleted; deleting the child first leaves the parent free-standing. Same
+    # statement order works in both directions.
+    if paired_id is not None:
         _exec(db, "DELETE FROM messages WHERE id = ?", (paired_id,))
-        _exec(db, "DELETE FROM messages WHERE id = ?", (message_id,))
-    elif paired_id is not None and msg['msg_type'] == 'mediator':
-        # msg is the child; paired_id is the ask parent -> delete this row first
-        _exec(db, "DELETE FROM messages WHERE id = ?", (message_id,))
-        _exec(db, "DELETE FROM messages WHERE id = ?", (paired_id,))
-    else:
-        _exec(db, "DELETE FROM messages WHERE id = ?", (message_id,))
+    _exec(db, "DELETE FROM messages WHERE id = ?", (message_id,))
 
     db.commit()
     return jsonify({'success': True})
