@@ -101,6 +101,7 @@ def db_init():
                 content TEXT NOT NULL,
                 msg_type TEXT DEFAULT 'user',
                 requested_by INTEGER REFERENCES users(id),
+                parent_message_id INTEGER REFERENCES messages(id) ON DELETE SET NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )""",
             """CREATE TABLE IF NOT EXISTS agreements (
@@ -231,6 +232,7 @@ def db_init():
             "ALTER TABLE users ADD COLUMN verification_token TEXT",
             "ALTER TABLE users ADD COLUMN verification_sent_at TIMESTAMP",
             "ALTER TABLE messages ADD COLUMN requested_by INTEGER REFERENCES users(id)",
+            "ALTER TABLE messages ADD COLUMN parent_message_id INTEGER REFERENCES messages(id) ON DELETE SET NULL",
         ]
         for migration in migrations:
             try:
@@ -280,10 +282,12 @@ def db_init():
                 content TEXT NOT NULL,
                 msg_type TEXT DEFAULT 'user',
                 requested_by INTEGER,
+                parent_message_id INTEGER,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (session_id) REFERENCES mediation_sessions(id),
                 FOREIGN KEY (user_id) REFERENCES users(id),
-                FOREIGN KEY (requested_by) REFERENCES users(id)
+                FOREIGN KEY (requested_by) REFERENCES users(id),
+                FOREIGN KEY (parent_message_id) REFERENCES messages(id) ON DELETE SET NULL
             );
 
             CREATE TABLE IF NOT EXISTS agreements (
@@ -438,6 +442,7 @@ def db_init():
 
         sqlite_migrations = [
             "ALTER TABLE messages ADD COLUMN requested_by INTEGER REFERENCES users(id)",
+            "ALTER TABLE messages ADD COLUMN parent_message_id INTEGER REFERENCES messages(id)",
         ]
         for migration in sqlite_migrations:
             try:
