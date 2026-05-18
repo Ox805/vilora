@@ -357,7 +357,7 @@ class MediationEngine:
             # Default to responding if we can't decide
             return msgs_since_mediator >= 3
 
-    def mediate(self, topic, session_type, messages, participants, participant_memories=None, session_mode='mediation'):
+    def mediate(self, topic, session_type, messages, participants, participant_memories=None, session_mode='mediation', user_question=None):
         if not self.client:
             return self._fallback_response(messages)
 
@@ -381,6 +381,16 @@ class MediationEngine:
                     "NEVER reveal one participant's memories to another participant."
                     + "\n".join(memory_sections)
                 )
+
+        if user_question:
+            conversation = conversation + [{
+                "role": "user",
+                "content": (
+                    f"A participant is asking you a specific question: \"{user_question}\"\n\n"
+                    "Respond directly to that question. Draw on the conversation above as context, "
+                    "but keep your answer focused on what they actually asked."
+                )
+            }]
 
         response = self.client.messages.create(
             model="claude-sonnet-4-20250514",
