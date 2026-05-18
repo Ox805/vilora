@@ -442,7 +442,7 @@ def db_init():
 
         sqlite_migrations = [
             "ALTER TABLE messages ADD COLUMN requested_by INTEGER REFERENCES users(id)",
-            "ALTER TABLE messages ADD COLUMN parent_message_id INTEGER REFERENCES messages(id)",
+            "ALTER TABLE messages ADD COLUMN parent_message_id INTEGER REFERENCES messages(id) ON DELETE SET NULL",
         ]
         for migration in sqlite_migrations:
             try:
