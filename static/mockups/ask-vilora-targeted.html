@@ -55,40 +55,85 @@
         margin: 0 0 1rem;
     }
 
-    /* Compose-bar mock so the ask-vilora-bar sits in realistic context. */
+    /* Compose-bar mock so the ask-vilora-bar sits in realistic context.
+       Mirrors the real .compose-bar / .compose-bar-main / .compose-toolbar
+       structure so reviewers can confirm attach, voice (mic), polish, send,
+       and the user-resize handle are all preserved. */
     .mock-compose {
         border-top: 1px solid var(--border, #E2E0D8);
         padding-top: 0.75rem;
     }
-    .mock-compose-row {
+    .mock-compose-bar {
         display: flex;
-        gap: 0.5rem;
-        align-items: flex-end;
+        gap: 0.4rem;
+        align-items: stretch;
+        border: 1px solid var(--border, #E2E0D8);
+        border-radius: var(--radius, 12px);
+        background: white;
+        padding: 0.35rem;
         margin-bottom: 0.5rem;
+    }
+    .mock-compose-main {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-height: 80px;
+        resize: vertical;
+        overflow: hidden;
+        position: relative;
     }
     .mock-textarea {
         flex: 1;
-        border: 1px solid var(--border, #E2E0D8);
-        border-radius: var(--radius, 12px);
-        padding: 0.6rem 0.8rem;
+        border: none;
+        outline: none;
+        padding: 0.5rem 0.75rem 0;
         color: var(--text-muted, #888780);
-        background: white;
+        background: transparent;
         font-size: 0.95rem;
-        min-height: 2.4rem;
+        line-height: 1.4;
     }
+    .mock-toolbar {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0 0.5rem 0.4rem;
+        color: var(--text-muted, #888780);
+    }
+    .mock-icon-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 0.2rem;
+        color: var(--text-muted, #888780);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 6px;
+    }
+    .mock-icon-btn:hover { background: #F2F0E8; color: var(--primary, #1D9E75); }
+    .mock-icon-btn svg { width: 20px; height: 20px; }
     .mock-send {
         background: var(--primary, #1D9E75);
         color: white;
         border: none;
         border-radius: var(--radius, 12px);
         width: 2.4rem;
-        height: 2.4rem;
+        align-self: stretch;
         display: flex;
         align-items: center;
         justify-content: center;
         cursor: pointer;
     }
     .mock-send svg { width: 16px; height: 16px; }
+    .mock-resize-handle {
+        position: absolute;
+        bottom: 2px;
+        right: 4px;
+        font-size: 0.7rem;
+        color: var(--text-muted, #888780);
+        opacity: 0.6;
+        pointer-events: none;
+    }
 
     /* The proposed inline question input (new). */
     .ask-vilora-input-row {
@@ -207,6 +252,9 @@
     <span class="state-label">State 1</span>
     <h2>Default — same as today, with a small <code>&#9662;</code> on the button</h2>
     <p class="state-note">The caret hints that the button can do more than a single click. Behavior is unchanged if you just click and don't expand.</p>
+    <div class="annotation" style="background:#EEF6FF; border-left-color:#7AA9D9; color:#234a72;">
+        The compose bar (textarea, <strong>+ attach</strong>, <strong>🎙 mic</strong>, <strong>Polish</strong>, <strong>send</strong>, and the user-draggable resize handle in the bottom-right) is unchanged. The new Ask Vilora input only appears <em>below</em> this row, after clicking <code>Ask Vilora ▾</code>.
+    </div>
 
     <div class="messages-mock">
         <div class="message message-mediator">
@@ -222,9 +270,20 @@
     </div>
 
     <div class="mock-compose">
-        <div class="mock-compose-row">
-            <div class="mock-textarea">Type your message…</div>
-            <button class="mock-send" type="button" aria-label="Send"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z"/></svg></button>
+        <div class="mock-compose-bar">
+            <div class="mock-compose-main">
+                <div class="mock-textarea">Share your thoughts…</div>
+                <div class="mock-toolbar">
+                    <button class="mock-icon-btn" type="button" title="Attach a file">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    </button>
+                    <button class="mock-icon-btn" type="button" title="Voice input (mic)">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                    </button>
+                </div>
+                <span class="mock-resize-handle" title="Drag to resize">⇕</span>
+            </div>
+            <button class="mock-send" type="button" aria-label="Send" title="Send (Ctrl+Enter)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z"/></svg></button>
         </div>
         <div class="ask-vilora-bar">
             <button type="button" class="btn btn-sm btn-polish">Polish</button>
@@ -256,9 +315,20 @@
     </div>
 
     <div class="mock-compose">
-        <div class="mock-compose-row">
-            <div class="mock-textarea">Type your message…</div>
-            <button class="mock-send" type="button" aria-label="Send"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z"/></svg></button>
+        <div class="mock-compose-bar">
+            <div class="mock-compose-main">
+                <div class="mock-textarea">Share your thoughts…</div>
+                <div class="mock-toolbar">
+                    <button class="mock-icon-btn" type="button" title="Attach a file">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    </button>
+                    <button class="mock-icon-btn" type="button" title="Voice input (mic)">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                    </button>
+                </div>
+                <span class="mock-resize-handle" title="Drag to resize">⇕</span>
+            </div>
+            <button class="mock-send" type="button" aria-label="Send" title="Send (Ctrl+Enter)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z"/></svg></button>
         </div>
 
         <div class="ask-vilora-input-row">
@@ -366,9 +436,20 @@
     </div>
 
     <div class="mock-compose">
-        <div class="mock-compose-row">
-            <div class="mock-textarea">Type your message…</div>
-            <button class="mock-send" type="button" aria-label="Send"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z"/></svg></button>
+        <div class="mock-compose-bar">
+            <div class="mock-compose-main">
+                <div class="mock-textarea">Share your thoughts…</div>
+                <div class="mock-toolbar">
+                    <button class="mock-icon-btn" type="button" title="Attach a file">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    </button>
+                    <button class="mock-icon-btn" type="button" title="Voice input (mic)">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                    </button>
+                </div>
+                <span class="mock-resize-handle" title="Drag to resize">⇕</span>
+            </div>
+            <button class="mock-send" type="button" aria-label="Send" title="Send (Ctrl+Enter)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z"/></svg></button>
         </div>
         <div class="ask-vilora-input-row">
             <input class="ask-vilora-input" type="text" placeholder="Ask Vilora… (optional)" />
