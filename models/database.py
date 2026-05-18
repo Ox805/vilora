@@ -622,7 +622,7 @@ class MediationSession:
 
 
 class Message:
-    def __init__(self, id, session_id, user_id, content, msg_type, created_at=None, requested_by=None):
+    def __init__(self, id, session_id, user_id, content, msg_type, created_at=None, requested_by=None, parent_message_id=None):
         self.id = id
         self.session_id = session_id
         self.user_id = user_id
@@ -630,6 +630,7 @@ class Message:
         self.msg_type = msg_type
         self.created_at = created_at
         self.requested_by = requested_by
+        self.parent_message_id = parent_message_id
 
     def to_dict(self):
         return {
@@ -639,25 +640,26 @@ class Message:
             'content': self.content,
             'msg_type': self.msg_type,
             'requested_by': self.requested_by,
+            'parent_message_id': self.parent_message_id,
             'created_at': str(self.created_at) if self.created_at else None
         }
 
     @staticmethod
-    def create(db, session_id, user_id, content, msg_type='user', requested_by=None):
+    def create(db, session_id, user_id, content, msg_type='user', requested_by=None, parent_message_id=None):
         if _is_postgres():
             cur = _exec(db,
-                "INSERT INTO messages (session_id, user_id, content, msg_type, requested_by) VALUES (?, ?, ?, ?, ?) RETURNING id",
-                (session_id, user_id, content, msg_type, requested_by)
+                "INSERT INTO messages (session_id, user_id, content, msg_type, requested_by, parent_message_id) VALUES (?, ?, ?, ?, ?, ?) RETURNING id",
+                (session_id, user_id, content, msg_type, requested_by, parent_message_id)
             )
             msg_id = cur.fetchone()['id']
         else:
             cur = _exec(db,
-                "INSERT INTO messages (session_id, user_id, content, msg_type, requested_by) VALUES (?, ?, ?, ?, ?)",
-                (session_id, user_id, content, msg_type, requested_by)
+                "INSERT INTO messages (session_id, user_id, content, msg_type, requested_by, parent_message_id) VALUES (?, ?, ?, ?, ?, ?)",
+                (session_id, user_id, content, msg_type, requested_by, parent_message_id)
             )
             msg_id = cur.lastrowid
         db.commit()
-        return Message(msg_id, session_id, user_id, content, msg_type, requested_by=requested_by)
+        return Message(msg_id, session_id, user_id, content, msg_type, requested_by=requested_by, parent_message_id=parent_message_id)
 
     @staticmethod
     def get_by_session(db, session_id):
@@ -669,7 +671,8 @@ class Message:
         return [
             Message(
                 r['id'], r['session_id'], r['user_id'], r['content'], r['msg_type'], r['created_at'],
-                requested_by=r['requested_by']
+                requested_by=r['requested_by'],
+                parent_message_id=r['parent_message_id']
             )
             for r in rows
         ]

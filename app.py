@@ -332,18 +332,20 @@ def save_extracted_memories(db, user_id, session_id, memories):
 
 SUMMARY_DELIMITER = '<!--SUMMARY-->'
 
-def create_mediator_message(db, session_id, ai_response, requested_by=None):
+def create_mediator_message(db, session_id, ai_response, requested_by=None, parent_message_id=None):
     """Create a mediator message with an AI-generated summary prefix.
 
     requested_by is the user who triggered this Vilora response and is the
     only one (besides legacy creator fallback) allowed to delete it.
+    parent_message_id links this reply to the 'ask' message that prompted
+    it, when applicable.
     """
     summary = mediation_engine.summarize_response(ai_response)
     if summary:
         content = f"{summary}{SUMMARY_DELIMITER}{ai_response}"
     else:
         content = ai_response
-    return Message.create(db, session_id, None, content, msg_type='mediator', requested_by=requested_by)
+    return Message.create(db, session_id, None, content, msg_type='mediator', requested_by=requested_by, parent_message_id=parent_message_id)
 
 
 # --- About Me Page ---
