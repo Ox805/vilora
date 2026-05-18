@@ -1572,11 +1572,24 @@ def download_file(session_id, attachment_id):
 @app.route('/api/sessions/<int:session_id>/ask-vilora', methods=['POST'])
 @login_required
 def ask_vilora(session_id):
-    """Explicitly request Vilora's input in a group session."""
+    """Explicitly request Vilora's input in a group session.
+
+    Optional JSON body:
+        { "question": "..." }   # if present and non-empty, Vilora answers
+                                # this specific question rather than reviewing
+                                # the whole session.
+    """
     db = get_db()
     med_session = MediationSession.get_by_id(db, session_id)
     if not med_session or not med_session.is_participant(db, current_user.id):
         return jsonify({'success': False, 'error': 'Access denied'}), 403
+
+    payload = request.get_json(silent=True) or {}
+    question = (payload.get('question') or '').strip()
+
+    ask_msg = None
+    if question:
+        ask_msg = Message.create(db, session_id, current_user.id, question, msg_type='ask')
 
     messages = Message.get_by_session(db, session_id)
     participants = med_session.get_participants(db)
@@ -1594,14 +1607,25 @@ def ask_vilora(session_id):
             messages=messages,
             participants=participants,
             participant_memories=participant_memories or None,
-            session_mode=med_session.session_mode
+            session_mode=med_session.session_mode,
+            user_question=question or None,
         )
-        ai_msg = create_mediator_message(db, session_id, ai_response, requested_by=current_user.id)
+        ai_msg = create_mediator_message(
+            db, session_id, ai_response,
+            requested_by=current_user.id,
+            parent_message_id=(ask_msg.id if ask_msg else None),
+        )
         # Queue notifications -- Vilora's response means activity
         queue_pending_notifications(db, session_id, current_user.id)
-        return jsonify({'success': True, 'mediator_message': ai_msg.to_dict()})
+
+        result = {'success': True, 'mediator_message': ai_msg.to_dict()}
+        if ask_msg:
+            result['ask_message'] = ask_msg.to_dict()
+        return jsonify(result)
     except Exception as e:
         sys.stderr.write(f"[Vilora] Ask Vilora error: {e}\n")
+        # If we already inserted an ask row but mediate() failed, leave it.
+        # The user will see their question chip with no reply and can delete it.
         return jsonify({'success': False, 'error': 'Vilora could not respond. Please try again.'}), 500
 
 
