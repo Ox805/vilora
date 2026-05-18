@@ -1352,6 +1352,16 @@ def delete_message(session_id, message_id):
     else:
         return jsonify({'success': False, 'error': 'You can only delete your own messages'}), 403
 
+    # Identify a paired ask <-> mediator. Deleting either deletes both.
+    paired_id = None
+    if msg['msg_type'] == 'ask':
+        cur_p = _exec(db, "SELECT id FROM messages WHERE parent_message_id = ? AND session_id = ?", (message_id, session_id))
+        prow = cur_p.fetchone()
+        if prow:
+            paired_id = prow['id']
+    elif msg['msg_type'] == 'mediator' and msg['parent_message_id']:
+        paired_id = msg['parent_message_id']
+
     # If this is a file message, clean up the GCS blob
     if msg['msg_type'] == 'file':
         cur_att = _exec(db, "SELECT blob_path FROM file_attachments WHERE message_id = ?", (message_id,))
@@ -1359,7 +1369,19 @@ def delete_message(session_id, message_id):
         if att_row:
             storage.delete_file(att_row['blob_path'])
 
-    _exec(db, "DELETE FROM messages WHERE id = ?", (message_id,))
+    # Delete the paired (child) row first to avoid any FK ordering issue.
+    # The child is the mediator (its parent_message_id points at the ask).
+    if paired_id is not None and msg['msg_type'] == 'ask':
+        # paired_id is the mediator child of this ask -> delete mediator first
+        _exec(db, "DELETE FROM messages WHERE id = ?", (paired_id,))
+        _exec(db, "DELETE FROM messages WHERE id = ?", (message_id,))
+    elif paired_id is not None and msg['msg_type'] == 'mediator':
+        # msg is the child; paired_id is the ask parent -> delete this row first
+        _exec(db, "DELETE FROM messages WHERE id = ?", (message_id,))
+        _exec(db, "DELETE FROM messages WHERE id = ?", (paired_id,))
+    else:
+        _exec(db, "DELETE FROM messages WHERE id = ?", (message_id,))
+
     db.commit()
     return jsonify({'success': True})
 
