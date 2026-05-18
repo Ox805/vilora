@@ -113,13 +113,24 @@
             </div>
         </form>
         <div id="message-input-polish-preview" class="polish-preview" style="display:none"></div>
+        {% if not is_personal %}
+        <div id="ask-vilora-input-row" class="ask-vilora-input-row" style="display:none">
+            <input id="ask-vilora-question" type="text" class="ask-vilora-input"
+                   placeholder="Ask Vilora something specific (optional)…"
+                   onkeydown="if(event.key==='Enter'){event.preventDefault();submitAskVilora();} else if(event.key==='Escape'){event.preventDefault();collapseAskVilora();}" />
+            <button type="button" class="btn btn-sm btn-ask-vilora" onclick="submitAskVilora()">Ask</button>
+        </div>
+        <p id="ask-vilora-hint" class="ask-vilora-hint" style="display:none">
+            Leave blank to get Vilora's take on the whole session. <kbd>Esc</kbd> to close.
+        </p>
+        {% endif %}
         <div class="ask-vilora-bar">
             <button type="button" id="message-input-polish-btn" class="btn btn-sm btn-polish" onclick="doPolish('message-input')" title="Vilora will clean up spelling, punctuation, and clarity in your draft above while keeping your voice and meaning exactly the same.">
                 Polish
             </button>
             {% if not is_personal %}
-            <button type="button" onclick="askVilora()" class="btn btn-sm btn-ask-vilora" id="ask-vilora-btn" title="Request Vilora's input on the conversation so far. Vilora will read the discussion and offer perspective, suggestions, or information.">
-                Ask Vilora
+            <button type="button" onclick="toggleAskVilora()" class="btn btn-sm btn-ask-vilora" id="ask-vilora-btn" title="Click to ask a specific question, or click and submit blank for Vilora's take on the whole session.">
+                Ask Vilora <span id="ask-vilora-caret">▾</span>
             </button>
             <button type="button" onclick="askCouncilToWeighIn()" class="btn btn-sm btn-ask-vilora" id="ask-council-btn" title="The Council provides five expert perspectives on the conversation so far, then synthesizes them into a clear recommendation.">
                 Ask Council
@@ -1026,18 +1037,55 @@ async function deleteMessage(msgId) {
 }
 
 // --- Ask Vilora ---
-async function askVilora() {
+function toggleAskVilora() {
+    const row = document.getElementById('ask-vilora-input-row');
+    if (!row) return;
+    const hint = document.getElementById('ask-vilora-hint');
+    const caret = document.getElementById('ask-vilora-caret');
+    const input = document.getElementById('ask-vilora-question');
+
+    const expanded = row.style.display !== 'none';
+    if (expanded) {
+        collapseAskVilora();
+    } else {
+        row.style.display = 'flex';
+        if (hint) hint.style.display = 'block';
+        if (caret) caret.textContent = '▴';
+        if (input) { input.value = ''; setTimeout(() => input.focus(), 0); }
+    }
+}
+
+function collapseAskVilora() {
+    const row = document.getElementById('ask-vilora-input-row');
+    const hint = document.getElementById('ask-vilora-hint');
+    const caret = document.getElementById('ask-vilora-caret');
+    const input = document.getElementById('ask-vilora-question');
+    if (row) row.style.display = 'none';
+    if (hint) hint.style.display = 'none';
+    if (caret) caret.textContent = '▾';
+    if (input) input.value = '';
+}
+
+async function submitAskVilora() {
     const btn = document.getElementById('ask-vilora-btn');
+    const askBtn = document.querySelector('#ask-vilora-input-row button');
+    const input = document.getElementById('ask-vilora-question');
+    const question = (input && input.value || '').trim();
+
     btn.disabled = true;
-    btn.textContent = 'Vilora is thinking...';
+    const originalLabel = btn.innerHTML;
+    btn.innerHTML = 'Vilora is thinking…';
+    if (askBtn) askBtn.disabled = true;
 
     try {
         const res = await fetch(`/api/sessions/${SESSION_ID}/ask-vilora`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ question })
         });
         const data = await res.json();
         if (data.success) {
+            collapseAskVilora();
             loadMessages();
             markSessionSeen();
         } else {
@@ -1047,7 +1095,8 @@ async function askVilora() {
         alert('Failed to reach Vilora. Please try again.');
     } finally {
         btn.disabled = false;
-        btn.textContent = 'Ask Vilora to weigh in';
+        btn.innerHTML = originalLabel;
+        if (askBtn) askBtn.disabled = false;
     }
 }
 

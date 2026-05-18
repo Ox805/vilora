@@ -2319,6 +2319,49 @@ body.summary-open .container {
     border-color: var(--primary);
 }
 
+.ask-vilora-input-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    margin-top: 0.5rem;
+    padding: 0 0.25rem;
+}
+
+.ask-vilora-input {
+    flex: 1;
+    border: 1px solid var(--primary-light);
+    background: white;
+    border-radius: var(--radius);
+    padding: 0.45rem 0.75rem;
+    font-size: 0.9rem;
+    color: var(--text);
+    outline: none;
+    font-family: inherit;
+}
+
+.ask-vilora-input::placeholder { color: var(--text-muted); }
+
+.ask-vilora-input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(29, 158, 117, 0.15);
+}
+
+.ask-vilora-hint {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    text-align: center;
+    margin: 0.25rem 0 0.4rem;
+}
+
+.ask-vilora-hint kbd {
+    background: #F2F0E8;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 0.7rem;
+    padding: 0 0.3rem;
+    font-family: inherit;
+}
+
 /* === Polish Component === */
 
 .btn-polish {
