@@ -1068,6 +1068,7 @@ function collapseAskVilora() {
 
 async function submitAskVilora() {
     const btn = document.getElementById('ask-vilora-btn');
+    if (!btn) return;
     const askBtn = document.querySelector('#ask-vilora-input-row button');
     const input = document.getElementById('ask-vilora-question');
     const question = (input && input.value || '').trim();
@@ -1097,6 +1098,14 @@ async function submitAskVilora() {
         btn.disabled = false;
         btn.innerHTML = originalLabel;
         if (askBtn) askBtn.disabled = false;
+        // Restoring innerHTML re-creates the caret span from the snapshot, which
+        // can be out of sync with the panel after collapseAskVilora() ran in
+        // the success path. Sync it to the panel's current display state.
+        const caret = document.getElementById('ask-vilora-caret');
+        const row = document.getElementById('ask-vilora-input-row');
+        if (caret && row) {
+            caret.textContent = (row.style.display !== 'none') ? '▴' : '▾';
+        }
     }
 }
 
