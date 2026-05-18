@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Mockup — Ask Vilora targeted questions</title>
+<link rel="stylesheet" href="/static/css/style.css" />
+<style>
+    /* Mockup-only chrome. Nothing here ships to the real app. */
+    body {
+        background: var(--bg-main, #FAF9F6);
+        padding: 2rem 1rem 4rem;
+        max-width: 780px;
+        margin: 0 auto;
+    }
+    .mockup-header {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+    .mockup-header h1 {
+        margin: 0 0 0.25rem;
+        color: var(--primary-dark, #0F6E56);
+    }
+    .mockup-header p {
+        color: var(--text-muted, #888780);
+        font-size: 0.9rem;
+        margin: 0;
+    }
+    .state {
+        background: white;
+        border: 1px solid var(--border, #E2E0D8);
+        border-radius: var(--radius, 12px);
+        padding: 1.25rem 1.25rem 1.5rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    }
+    .state-label {
+        display: inline-block;
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--primary, #1D9E75);
+        background: var(--mediator-bg, #E1F5EE);
+        padding: 0.18rem 0.55rem;
+        border-radius: 999px;
+        margin-bottom: 0.4rem;
+    }
+    .state h2 {
+        margin: 0 0 0.25rem;
+        font-size: 1.05rem;
+    }
+    .state-note {
+        color: var(--text-muted, #888780);
+        font-size: 0.85rem;
+        margin: 0 0 1rem;
+    }
+
+    /* Compose-bar mock so the ask-vilora-bar sits in realistic context. */
+    .mock-compose {
+        border-top: 1px solid var(--border, #E2E0D8);
+        padding-top: 0.75rem;
+    }
+    .mock-compose-row {
+        display: flex;
+        gap: 0.5rem;
+        align-items: flex-end;
+        margin-bottom: 0.5rem;
+    }
+    .mock-textarea {
+        flex: 1;
+        border: 1px solid var(--border, #E2E0D8);
+        border-radius: var(--radius, 12px);
+        padding: 0.6rem 0.8rem;
+        color: var(--text-muted, #888780);
+        background: white;
+        font-size: 0.95rem;
+        min-height: 2.4rem;
+    }
+    .mock-send {
+        background: var(--primary, #1D9E75);
+        color: white;
+        border: none;
+        border-radius: var(--radius, 12px);
+        width: 2.4rem;
+        height: 2.4rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+    }
+    .mock-send svg { width: 16px; height: 16px; }
+
+    /* The proposed inline question input (new). */
+    .ask-vilora-input-row {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+        margin: 0.5rem 0 0.35rem;
+    }
+    .ask-vilora-input {
+        flex: 1;
+        border: 1px solid var(--primary-light, #5DCAA5);
+        background: white;
+        border-radius: var(--radius, 12px);
+        padding: 0.45rem 0.75rem;
+        font-size: 0.9rem;
+        color: #333;
+        outline: none;
+    }
+    .ask-vilora-input::placeholder { color: var(--text-muted, #888780); }
+    .ask-vilora-input:focus {
+        border-color: var(--primary, #1D9E75);
+        box-shadow: 0 0 0 2px rgba(29, 158, 117, 0.15);
+    }
+    .ask-vilora-hint {
+        color: var(--text-muted, #888780);
+        font-size: 0.75rem;
+        text-align: center;
+        margin: 0 0 0.4rem;
+    }
+    .ask-vilora-hint kbd {
+        background: #F2F0E8;
+        border: 1px solid var(--border, #E2E0D8);
+        border-radius: 4px;
+        font-size: 0.7rem;
+        padding: 0 0.3rem;
+        font-family: inherit;
+    }
+
+    /* The chip that announces a targeted question. Mirrors .council-indicator. */
+    .ask-indicator {
+        background: #F4FBF8;
+        border: 1px dashed var(--primary-light, #5DCAA5);
+        border-radius: var(--radius, 12px);
+        padding: 0.6rem 1rem 0.7rem;
+        text-align: center;
+        font-size: 0.85rem;
+        position: relative;
+        margin: 0.6rem auto;
+        max-width: 90%;
+    }
+    .ask-indicator-label { color: var(--text-muted, #888780); }
+    .ask-indicator-question {
+        display: block;
+        color: var(--text, #2A2A2A);
+        font-style: italic;
+        margin-top: 0.2rem;
+    }
+    .ask-indicator-time {
+        display: block;
+        color: var(--text-muted, #888780);
+        font-size: 0.72rem;
+        margin-top: 0.3rem;
+    }
+    .ask-indicator .msg-delete-btn {
+        position: absolute;
+        top: 0.35rem;
+        right: 0.5rem;
+        margin-left: 0;
+        opacity: 0.6; /* mockup: always visible so reviewer can see it */
+    }
+
+    /* Mockup-only: keep the delete X always visible so reviewer can evaluate it. */
+    .state .msg-delete-btn { opacity: 0.6 !important; }
+    .state .msg-delete-btn:hover { opacity: 1 !important; }
+
+    /* Container the message bubbles live in (mocks #messages). */
+    .messages-mock {
+        display: flex;
+        flex-direction: column;
+        gap: 0.6rem;
+        padding: 0.5rem 0 1rem;
+    }
+    .messages-mock .message { margin: 0; }
+
+    .state-divider {
+        height: 1px;
+        background: var(--border, #E2E0D8);
+        margin: 1.25rem 0 1rem;
+    }
+
+    .caret-up::after { content: " \25B4"; }
+    .caret-down::after { content: " \25BE"; }
+
+    .annotation {
+        background: #FFF9E6;
+        border-left: 3px solid #E2C667;
+        padding: 0.5rem 0.75rem;
+        font-size: 0.82rem;
+        color: #6b5a1a;
+        border-radius: 4px;
+        margin-top: 0.75rem;
+    }
+</style>
+</head>
+<body>
+
+<div class="mockup-header">
+    <h1>Ask Vilora — targeted question mockup</h1>
+    <p>For review only. Uses the real <code>style.css</code>. Not wired up to anything.</p>
+</div>
+
+<!-- ============================================================
+     STATE 1 — DEFAULT (collapsed), same as today + a small caret
+     ============================================================ -->
+<div class="state">
+    <span class="state-label">State 1</span>
+    <h2>Default — same as today, with a small <code>&#9662;</code> on the button</h2>
+    <p class="state-note">The caret hints that the button can do more than a single click. Behavior is unchanged if you just click and don't expand.</p>
+
+    <div class="messages-mock">
+        <div class="message message-mediator">
+            <div class="message-author">Vilora</div>
+            <div class="message-content">Both of you are circling the same underlying concern about time. It might help to name that out loud before discussing logistics.</div>
+            <div class="message-time">10:42 AM</div>
+        </div>
+        <div class="message message-self">
+            <div class="message-author">You</div>
+            <div class="message-content">Yeah, I think that's fair.</div>
+            <div class="message-time">10:43 AM</div>
+        </div>
+    </div>
+
+    <div class="mock-compose">
+        <div class="mock-compose-row">
+            <div class="mock-textarea">Type your message…</div>
+            <button class="mock-send" type="button" aria-label="Send"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z"/></svg></button>
+        </div>
+        <div class="ask-vilora-bar">
+            <button type="button" class="btn btn-sm btn-polish">Polish</button>
+            <button type="button" class="btn btn-sm btn-ask-vilora caret-down">Ask Vilora</button>
+            <button type="button" class="btn btn-sm btn-ask-vilora">Ask Council</button>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================
+     STATE 2 — EXPANDED, input revealed, ready to type
+     ============================================================ -->
+<div class="state">
+    <span class="state-label">State 2</span>
+    <h2>Clicked — inline input expands above the button row</h2>
+    <p class="state-note">Input gets focus immediately. Enter submits, Esc collapses and clears.</p>
+
+    <div class="messages-mock">
+        <div class="message message-mediator">
+            <div class="message-author">Vilora</div>
+            <div class="message-content">Both of you are circling the same underlying concern about time. It might help to name that out loud before discussing logistics.</div>
+            <div class="message-time">10:42 AM</div>
+        </div>
+        <div class="message message-self">
+            <div class="message-author">You</div>
+            <div class="message-content">Yeah, I think that's fair.</div>
+            <div class="message-time">10:43 AM</div>
+        </div>
+    </div>
+
+    <div class="mock-compose">
+        <div class="mock-compose-row">
+            <div class="mock-textarea">Type your message…</div>
+            <button class="mock-send" type="button" aria-label="Send"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z"/></svg></button>
+        </div>
+
+        <div class="ask-vilora-input-row">
+            <input class="ask-vilora-input" type="text"
+                   placeholder="Ask Vilora something specific (optional)…"
+                   autofocus />
+            <button type="button" class="btn btn-sm btn-ask-vilora">Ask</button>
+        </div>
+        <p class="ask-vilora-hint">Leave blank to get Vilora's take on the whole session. <kbd>Esc</kbd> to close.</p>
+
+        <div class="ask-vilora-bar">
+            <button type="button" class="btn btn-sm btn-polish">Polish</button>
+            <button type="button" class="btn btn-sm btn-ask-vilora caret-up">Ask Vilora</button>
+            <button type="button" class="btn btn-sm btn-ask-vilora">Ask Council</button>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================
+     STATE 3 — SUBMITTED WITH QUESTION, chip + reply landed
+     ============================================================ -->
+<div class="state">
+    <span class="state-label">State 3</span>
+    <h2>After submit — chip appears, Vilora replies underneath</h2>
+    <p class="state-note">The chip styling mirrors the Council indicator so users learn one "an agent was asked something" pattern.</p>
+
+    <div class="messages-mock">
+        <div class="message message-self">
+            <div class="message-author">You</div>
+            <div class="message-content">Yeah, I think that's fair.</div>
+            <div class="message-time">10:43 AM</div>
+        </div>
+
+        <div class="ask-indicator">
+            <span class="ask-indicator-label">Tim asked Vilora:</span>
+            <span class="ask-indicator-question">"How do I bring up the schedule shift without making Jess defensive?"</span>
+            <span class="ask-indicator-time">10:45 AM</span>
+            <button class="msg-delete-btn" type="button" title="Delete this exchange">&times;</button>
+        </div>
+
+        <div class="message message-mediator" style="position:relative;">
+            <div class="message-author">
+                Vilora
+                <button class="msg-delete-btn" type="button" title="Delete this exchange" style="margin-left:auto;">&times;</button>
+            </div>
+            <div class="message-content">Tim, that's a worthwhile thing to name. A few angles that might help:
+
+1. Start with what you already agree on — that the rhythm has shifted and you'd both like something sustainable.
+2. Lead with curiosity rather than diagnosis: "I want to understand how this is landing for you" beats "I think you've been…".
+3. Be specific about the change you want, not the failure you saw. Concrete asks are easier to receive.</div>
+            <div class="message-time">10:45 AM</div>
+        </div>
+    </div>
+
+    <div class="annotation">
+        Either <code>&times;</code> deletes the pair in one request. Only the asker (Tim) sees the X buttons.
+    </div>
+</div>
+
+<!-- ============================================================
+     STATE 4 — SUBMITTED BLANK, current full-review behavior, unchanged
+     ============================================================ -->
+<div class="state">
+    <span class="state-label">State 4</span>
+    <h2>Submitted blank — same as today, no chip</h2>
+    <p class="state-note">Empty input falls through to the existing full-review path. Identical to current behavior.</p>
+
+    <div class="messages-mock">
+        <div class="message message-self">
+            <div class="message-author">You</div>
+            <div class="message-content">Yeah, I think that's fair.</div>
+            <div class="message-time">10:43 AM</div>
+        </div>
+        <div class="message message-mediator">
+            <div class="message-author">Vilora</div>
+            <div class="message-content">Looking at the conversation so far, I notice you've both been careful to listen, which is great. The main open thread is the schedule — neither of you has named what a workable version actually looks like. That feels like the next useful conversation to have.</div>
+            <div class="message-time">10:46 AM</div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================
+     STATE 5 — MOBILE / NARROW VIEWPORT preview
+     ============================================================ -->
+<div class="state" style="max-width: 380px; margin-left: auto; margin-right: auto;">
+    <span class="state-label">State 5</span>
+    <h2>Narrow viewport (mobile-ish)</h2>
+    <p class="state-note">The input fills the row; the hint wraps; buttons stay compact.</p>
+
+    <div class="messages-mock">
+        <div class="ask-indicator">
+            <span class="ask-indicator-label">Tim asked Vilora:</span>
+            <span class="ask-indicator-question">"How do I bring up the schedule shift?"</span>
+            <span class="ask-indicator-time">10:45 AM</span>
+            <button class="msg-delete-btn" type="button" title="Delete">&times;</button>
+        </div>
+        <div class="message message-mediator">
+            <div class="message-author">
+                Vilora
+                <button class="msg-delete-btn" type="button" title="Delete" style="margin-left:auto;">&times;</button>
+            </div>
+            <div class="message-content">Lead with curiosity. Name the rhythm you've both noticed before suggesting a fix…</div>
+            <div class="message-time">10:45 AM</div>
+        </div>
+    </div>
+
+    <div class="mock-compose">
+        <div class="mock-compose-row">
+            <div class="mock-textarea">Type your message…</div>
+            <button class="mock-send" type="button" aria-label="Send"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z"/></svg></button>
+        </div>
+        <div class="ask-vilora-input-row">
+            <input class="ask-vilora-input" type="text" placeholder="Ask Vilora… (optional)" />
+            <button type="button" class="btn btn-sm btn-ask-vilora">Ask</button>
+        </div>
+        <p class="ask-vilora-hint">Leave blank for a full review. <kbd>Esc</kbd> to close.</p>
+        <div class="ask-vilora-bar">
+            <button type="button" class="btn btn-sm btn-polish">Polish</button>
+            <button type="button" class="btn btn-sm btn-ask-vilora caret-up">Ask Vilora</button>
+            <button type="button" class="btn btn-sm btn-ask-vilora">Ask Council</button>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
