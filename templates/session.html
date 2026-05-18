@@ -1033,7 +1033,17 @@ function textNudgePending(email, btn) {
 
 // --- Delete Message ---
 async function deleteMessage(msgId) {
-    if (!confirm('Delete this message?')) return;
+    // Show a paired-delete prompt when removing one half of an ask-vilora exchange.
+    const target = document.querySelector(`[data-message-id="${msgId}"]`);
+    const isPair = target && (
+        target.classList.contains('message-ask') ||
+        (target.classList.contains('message-mediator') && target.previousElementSibling
+         && target.previousElementSibling.classList.contains('message-ask'))
+    );
+    const prompt = isPair
+        ? 'Delete this question and Vilora\'s reply?'
+        : 'Delete this message?';
+    if (!confirm(prompt)) return;
 
     try {
         const res = await fetch(`/api/sessions/${SESSION_ID}/messages/${msgId}`, { method: 'DELETE' });
