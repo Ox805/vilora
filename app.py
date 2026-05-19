@@ -11,6 +11,7 @@ from mediation.engine import MediationEngine
 from notifications import send_invite_email, send_password_reset_email, send_nudge_email, send_verification_email, send_activity_email
 from sms import send_sms, send_verification_sms, send_activity_sms, generate_verification_code
 import storage
+from mediation import file_extraction
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(32))
@@ -346,6 +347,105 @@ def create_mediator_message(db, session_id, ai_response, requested_by=None, pare
     else:
         content = ai_response
     return Message.create(db, session_id, None, content, msg_type='mediator', requested_by=requested_by, parent_message_id=parent_message_id)
+
+
+PER_CALL_CHAR_CAP = 100000
+PER_CALL_IMAGE_LIMIT = 6
+
+
+def resolve_file_contents_for_vilora(db, session_id, messages):
+    """Return a dict {message_id: ExtractionResult} for every file message
+    in `messages` whose attachment has vilora_access = TRUE.
+
+    Uses file_attachments.extracted_text as a persistent cache for text
+    extractions; images are re-encoded on every call (intentional, see spec).
+    Enforces per-call character and image budgets; excess files are dropped
+    and a sentinel entry under key `-1` carries the omission count.
+    """
+    file_msg_ids = [m.id for m in messages if m.msg_type == 'file']
+    if not file_msg_ids:
+        return {}
+
+    placeholders = ",".join(["?"] * len(file_msg_ids))
+    cur = _exec(db,
+        f"SELECT id, message_id, content_type, blob_path, vilora_access, "
+        f"extracted_text, extraction_failed, extraction_truncated "
+        f"FROM file_attachments WHERE message_id IN ({placeholders})",
+        tuple(file_msg_ids)
+    )
+    rows_by_msg = {}
+    for row in cur.fetchall():
+        if row['vilora_access']:
+            rows_by_msg[row['message_id']] = row
+
+    out = {}
+    char_budget = PER_CALL_CHAR_CAP
+    image_budget = PER_CALL_IMAGE_LIMIT
+    omitted = 0
+
+    for m in messages:
+        if m.msg_type != 'file' or m.id not in rows_by_msg:
+            continue
+        row = rows_by_msg[m.id]
+
+        if row['extraction_failed']:
+            out[m.id] = file_extraction.ExtractionResult(
+                kind='unreadable',
+                error='previous extraction failed',
+            )
+            continue
+
+        if row['extracted_text'] is not None:
+            text = row['extracted_text']
+            if len(text) > char_budget:
+                omitted += 1
+                continue
+            char_budget -= len(text)
+            out[m.id] = file_extraction.ExtractionResult(
+                kind='text',
+                text=text,
+                was_truncated=bool(row['extraction_truncated']),
+            )
+            continue
+
+        blob_bytes = storage.read_bytes(row['blob_path'])
+        if blob_bytes is None:
+            _exec(db, "UPDATE file_attachments SET extraction_failed = ? WHERE id = ?", (1, row['id']))
+            db.commit()
+            out[m.id] = file_extraction.ExtractionResult(kind='unreadable', error='storage fetch failed')
+            continue
+
+        result = file_extraction.extract(row['content_type'], blob_bytes)
+
+        if result.kind == 'text':
+            _exec(db,
+                "UPDATE file_attachments SET extracted_text = ?, extraction_truncated = ? WHERE id = ?",
+                (result.text, 1 if result.was_truncated else 0, row['id'])
+            )
+            db.commit()
+            if len(result.text) > char_budget:
+                omitted += 1
+                continue
+            char_budget -= len(result.text)
+            out[m.id] = result
+        elif result.kind == 'image':
+            if image_budget <= 0:
+                omitted += 1
+                continue
+            image_budget -= 1
+            out[m.id] = result
+        else:
+            _exec(db, "UPDATE file_attachments SET extraction_failed = ? WHERE id = ?", (1, row['id']))
+            db.commit()
+            out[m.id] = result
+
+    if omitted:
+        out[-1] = file_extraction.ExtractionResult(
+            kind='unreadable',
+            error=f'{omitted} file(s) omitted: per-call budget reached',
+        )
+
+    return out
 
 
 # --- About Me Page ---
