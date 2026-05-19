@@ -1332,13 +1332,15 @@ def send_message(session_id):
                 if memories:
                     participant_memories[p.id] = memories
 
+            file_contents = resolve_file_contents_for_vilora(db, session_id, messages)
             ai_response = mediation_engine.mediate(
                 topic=med_session.topic,
                 session_type=med_session.session_type,
                 messages=messages,
                 participants=participants,
                 participant_memories=participant_memories or None,
-                session_mode=med_session.session_mode
+                session_mode=med_session.session_mode,
+                file_contents=file_contents,
             )
             ai_msg = create_mediator_message(db, session_id, ai_response, requested_by=current_user.id)
     except Exception as e:
@@ -1734,6 +1736,7 @@ def ask_vilora(session_id):
             if memories:
                 participant_memories[p.id] = memories
 
+        file_contents = resolve_file_contents_for_vilora(db, session_id, messages)
         ai_response = mediation_engine.mediate(
             topic=med_session.topic,
             session_type=med_session.session_type,
@@ -1742,6 +1745,7 @@ def ask_vilora(session_id):
             participant_memories=participant_memories or None,
             session_mode=med_session.session_mode,
             user_question=question or None,
+            file_contents=file_contents,
         )
         ai_msg = create_mediator_message(
             db, session_id, ai_response,
