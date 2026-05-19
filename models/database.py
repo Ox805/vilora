@@ -215,6 +215,10 @@ def db_init():
                 content_type TEXT NOT NULL,
                 file_size INTEGER NOT NULL,
                 blob_path TEXT NOT NULL,
+                vilora_access BOOLEAN DEFAULT FALSE,
+                extracted_text TEXT,
+                extraction_failed BOOLEAN DEFAULT FALSE,
+                extraction_truncated BOOLEAN DEFAULT FALSE,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )""",
         ]
@@ -233,6 +237,10 @@ def db_init():
             "ALTER TABLE users ADD COLUMN verification_sent_at TIMESTAMP",
             "ALTER TABLE messages ADD COLUMN requested_by INTEGER REFERENCES users(id)",
             "ALTER TABLE messages ADD COLUMN parent_message_id INTEGER REFERENCES messages(id) ON DELETE SET NULL",
+            "ALTER TABLE file_attachments ADD COLUMN vilora_access BOOLEAN DEFAULT FALSE",
+            "ALTER TABLE file_attachments ADD COLUMN extracted_text TEXT",
+            "ALTER TABLE file_attachments ADD COLUMN extraction_failed BOOLEAN DEFAULT FALSE",
+            "ALTER TABLE file_attachments ADD COLUMN extraction_truncated BOOLEAN DEFAULT FALSE",
         ]
         for migration in migrations:
             try:
@@ -432,6 +440,10 @@ def db_init():
                 content_type TEXT NOT NULL,
                 file_size INTEGER NOT NULL,
                 blob_path TEXT NOT NULL,
+                vilora_access INTEGER DEFAULT 0,
+                extracted_text TEXT,
+                extraction_failed INTEGER DEFAULT 0,
+                extraction_truncated INTEGER DEFAULT 0,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE,
                 FOREIGN KEY (session_id) REFERENCES mediation_sessions(id),
@@ -443,6 +455,10 @@ def db_init():
         sqlite_migrations = [
             "ALTER TABLE messages ADD COLUMN requested_by INTEGER REFERENCES users(id)",
             "ALTER TABLE messages ADD COLUMN parent_message_id INTEGER REFERENCES messages(id) ON DELETE SET NULL",
+            "ALTER TABLE file_attachments ADD COLUMN vilora_access INTEGER DEFAULT 0",
+            "ALTER TABLE file_attachments ADD COLUMN extracted_text TEXT",
+            "ALTER TABLE file_attachments ADD COLUMN extraction_failed INTEGER DEFAULT 0",
+            "ALTER TABLE file_attachments ADD COLUMN extraction_truncated INTEGER DEFAULT 0",
         ]
         for migration in sqlite_migrations:
             try:
