@@ -84,3 +84,16 @@ def delete_file(blob_path):
     except Exception as e:
         sys.stderr.write(f"[Vilora] File delete error: {e}\n")
         return False
+
+
+def read_bytes(blob_path):
+    """Fetch the raw bytes of a stored file. Returns None on failure."""
+    bucket = _get_bucket()
+    if not bucket:
+        return None
+    blob = bucket.blob(blob_path)
+    try:
+        return blob.download_as_bytes()
+    except Exception as e:
+        sys.stderr.write(f"[Vilora] File read error ({blob_path}): {e}\n")
+        return None
