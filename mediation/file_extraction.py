@@ -62,14 +62,17 @@ def _extract_docx(blob_bytes):
 def _extract_xlsx(blob_bytes):
     from openpyxl import load_workbook
     wb = load_workbook(io.BytesIO(blob_bytes), data_only=True, read_only=True)
-    parts = []
-    for sheet in wb.worksheets:
-        parts.append(f'Sheet "{sheet.title}":')
-        for row in sheet.iter_rows(values_only=True):
-            cells = [str(v) for v in row if v is not None]
-            if cells:
-                parts.append(" | ".join(cells))
-    return "\n".join(parts)
+    try:
+        parts = []
+        for sheet in wb.worksheets:
+            parts.append(f'Sheet "{sheet.title}":')
+            for row in sheet.iter_rows(values_only=True):
+                cells = [str(v) for v in row if v is not None]
+                if cells:
+                    parts.append(" | ".join(cells))
+        return "\n".join(parts)
+    finally:
+        wb.close()
 
 
 def _extract_pptx(blob_bytes):
