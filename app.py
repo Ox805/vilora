@@ -1704,6 +1704,36 @@ def download_file(session_id, attachment_id):
         return jsonify({'success': False, 'error': 'Could not load file'}), 500
 
 
+@app.route('/api/sessions/<int:session_id>/file-attachments/<int:attachment_id>/vilora-access', methods=['POST'])
+@login_required
+def toggle_file_vilora_access(session_id, attachment_id):
+    db = get_db()
+    med_session = MediationSession.get_by_id(db, session_id)
+    if not med_session or not med_session.is_participant(db, current_user.id):
+        return jsonify({'success': False, 'error': 'Access denied'}), 403
+
+    cur = _exec(db,
+        "SELECT id, user_id FROM file_attachments WHERE id = ? AND session_id = ?",
+        (attachment_id, session_id)
+    )
+    row = cur.fetchone()
+    if not row:
+        return jsonify({'success': False, 'error': 'File not found'}), 404
+    if row['user_id'] != current_user.id:
+        return jsonify({'success': False, 'error': 'Only the uploader can change Vilora access'}), 403
+
+    data = request.get_json(silent=True) or {}
+    enabled = bool(data.get('enabled'))
+
+    _exec(db,
+        "UPDATE file_attachments SET vilora_access = ? WHERE id = ?",
+        (1 if enabled else 0, attachment_id)
+    )
+    db.commit()
+
+    return jsonify({'success': True, 'vilora_access': enabled})
+
+
 @app.route('/api/sessions/<int:session_id>/ask-vilora', methods=['POST'])
 @login_required
 def ask_vilora(session_id):
