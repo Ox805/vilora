@@ -1250,6 +1250,16 @@ def get_messages(session_id):
     except Exception:
         pass
 
+    file_msg_ids = [m.id for m in messages if m.msg_type == 'file']
+    file_access_by_msg = {}
+    if file_msg_ids:
+        placeholders = ",".join(["?"] * len(file_msg_ids))
+        cur_fa = _exec(db,
+            f"SELECT message_id, vilora_access FROM file_attachments WHERE message_id IN ({placeholders})",
+            tuple(file_msg_ids)
+        )
+        file_access_by_msg = {row['message_id']: bool(row['vilora_access']) for row in cur_fa.fetchall()}
+
     msg_list = []
     for m in messages:
         d = m.to_dict()
@@ -1264,6 +1274,8 @@ def get_messages(session_id):
             d['can_delete'] = True
         else:
             d['can_delete'] = False
+        if m.msg_type == 'file':
+            d['vilora_access'] = file_access_by_msg.get(m.id, False)
         msg_reactions = all_reactions.get(m.id, {})
         reactions_out = {}
         for rkey, rdata in msg_reactions.items():
