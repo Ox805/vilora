@@ -370,17 +370,26 @@ def resolve_file_contents_for_vilora(db, session_id, messages):
     cur = _exec(db,
         f"SELECT id, message_id, content_type, blob_path, vilora_access, "
         f"extracted_text, extraction_failed, extraction_truncated "
-        f"FROM file_attachments WHERE message_id IN ({placeholders})",
-        tuple(file_msg_ids)
+        f"FROM file_attachments WHERE session_id = ? AND message_id IN ({placeholders})",
+        (session_id,) + tuple(file_msg_ids)
     )
     rows_by_msg = {}
     for row in cur.fetchall():
         if row['vilora_access']:
             rows_by_msg[row['message_id']] = row
 
+    # Per-spec, when more than PER_CALL_IMAGE_LIMIT images are toggled, we keep the
+    # *most recently uploaded*. Pre-compute which image message ids survive the
+    # cap so the main pass can drop the older ones without counter bookkeeping.
+    image_msg_ids_in_order = [
+        m.id for m in messages
+        if m.msg_type == 'file' and m.id in rows_by_msg
+        and (rows_by_msg[m.id]['content_type'] or '').startswith('image/')
+    ]
+    keep_image_ids = set(image_msg_ids_in_order[-PER_CALL_IMAGE_LIMIT:])
+
     out = {}
     char_budget = PER_CALL_CHAR_CAP
-    image_budget = PER_CALL_IMAGE_LIMIT
     omitted = 0
 
     for m in messages:
@@ -418,6 +427,9 @@ def resolve_file_contents_for_vilora(db, session_id, messages):
         result = file_extraction.extract(row['content_type'], blob_bytes)
 
         if result.kind == 'text':
+            # Cache the extraction first, then apply the per-call budget.
+            # Persisting regardless of budget means a future call can use the
+            # cached value even if this call dropped the file.
             _exec(db,
                 "UPDATE file_attachments SET extracted_text = ?, extraction_truncated = ? WHERE id = ?",
                 (result.text, 1 if result.was_truncated else 0, row['id'])
@@ -429,10 +441,9 @@ def resolve_file_contents_for_vilora(db, session_id, messages):
             char_budget -= len(result.text)
             out[m.id] = result
         elif result.kind == 'image':
-            if image_budget <= 0:
+            if m.id not in keep_image_ids:
                 omitted += 1
                 continue
-            image_budget -= 1
             out[m.id] = result
         else:
             _exec(db, "UPDATE file_attachments SET extraction_failed = ? WHERE id = ?", (1, row['id']))
