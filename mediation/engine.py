@@ -1,5 +1,6 @@
 import os
 import sys
+import json
 import random
 from concurrent.futures import ThreadPoolExecutor
 from anthropic import Anthropic
@@ -507,11 +508,11 @@ class MediationEngine:
         if result.kind == 'unreadable':
             conversation.append({
                 "role": "user",
-                "content": f"[{name} shared a file: \"{filename}\" — Vilora could not read it: {result.error}]"
+                "content": f"[{name} shared a file: \"{filename}\". Vilora could not read it: {result.error}]"
             })
         elif result.kind == 'text':
             truncation_note = (
-                "\n\n[Document truncated — only the first portion is shown.]"
+                "\n\n[Document truncated. Only the first portion is shown.]"
                 if result.was_truncated else ""
             )
             conversation.append({
@@ -536,7 +537,6 @@ class MediationEngine:
             })
 
     def _extract_filename_from_file_content(self, content):
-        import json
         try:
             return json.loads(content).get('filename', 'unnamed file')
         except Exception:
