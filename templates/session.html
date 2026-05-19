@@ -436,9 +436,19 @@ function renderMessages(messages) {
                 }
 
                 const authorName = m.is_self ? 'You' : escapeHtml(m.display_name || 'Participant');
+                const viloraAccess = !!m.vilora_access;
+                let viloraTag = '';
+                if (m.is_self) {
+                    viloraTag = viloraAccess
+                        ? `<button class="btn-vilora-access on" onclick="toggleViloraFileAccess(${fileData.attachment_id}, false, this)">✓ Vilora is reading this</button>`
+                        : `<button class="btn-vilora-access" onclick="toggleViloraFileAccess(${fileData.attachment_id}, true, this)">Let Vilora read this</button>`;
+                } else if (viloraAccess) {
+                    viloraTag = `<span class="vilora-access-badge">Vilora is reading this</span>`;
+                }
                 return `<div class="message ${m.is_self ? 'message-self' : 'message-other'}" data-message-id="${m.id}">
                     <div class="message-author">${authorName}${m.is_self ? deleteBtn : ''}</div>
                     ${preview}
+                    ${viloraTag}
                     ${reactionBar}
                     <div class="message-time">${localTime(m.created_at)}</div>
                 </div>`;
@@ -1055,6 +1065,34 @@ async function deleteMessage(msgId) {
         }
     } catch (err) {
         alert('Failed to delete message.');
+    }
+}
+
+// --- Vilora File Access ---
+async function toggleViloraFileAccess(attachmentId, enabled, btn) {
+    if (!btn) return;
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = enabled ? 'Granting…' : 'Revoking…';
+
+    try {
+        const res = await fetch(`/api/sessions/${SESSION_ID}/file-attachments/${attachmentId}/vilora-access`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ enabled })
+        });
+        const data = await res.json();
+        if (data.success) {
+            loadMessages();
+        } else {
+            alert(data.error || 'Could not update Vilora access.');
+            btn.textContent = originalText;
+            btn.disabled = false;
+        }
+    } catch (err) {
+        alert('Failed to reach the server. Please try again.');
+        btn.textContent = originalText;
+        btn.disabled = false;
     }
 }
 
